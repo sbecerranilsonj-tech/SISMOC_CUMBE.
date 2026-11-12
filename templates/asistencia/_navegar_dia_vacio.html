@@ -1,0 +1,6 @@
+<form method="post" action="{% url 'registrar_trabajo_omitido' %}" style="display:inline-flex;margin:0">
+    {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+    <input type="hidden" name="navegar_dia" value="si">
+    <input type="hidden" name="fecha" value="{{ fecha_destino|date:'Y-m-d' }}">
+    <button type="submit" class="btn-dark-outline btn-nav-day" title="{{ texto_dia }}: {{ fecha_destino|date:'d/m/Y' }}">{% if es_anterior %}<svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-left"></use></svg>{% endif %}<span>{{ texto_dia }}</span>{% if not es_anterior %}<svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>{% endif %}</button>
+</form>

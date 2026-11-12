@@ -1,0 +1,10 @@
+<details class="day-situation-choice"><summary>{{ titulo_situacion|default:"Seleccionar situación" }}</summary>
+    <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" class="formulario-vertical" data-situacion-form>
+        {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+        <input type="hidden" name="solo_situacion" value="si"><input type="hidden" name="accion" value="aprobar_dia_situacion">
+        {% if mantener_detalle %}<input type="hidden" name="mantener_detalle" value="si">{% endif %}
+        <label>Situación del día<select name="tipo" required><option value="">Seleccione antes de aprobar</option><option value="TRABAJO_SIN_MARCAR" data-fecha="{{ d.resumen.fecha|date:'Y-m-d' }}">Trabajó sin marcar</option><option value="DESCANSO_SEMANAL">Descanso semanal</option><option value="FERIADO_NO_LABORADO">Feriado no laborado</option><option value="NO_LABORO">No laboró</option><option value="PERMISO">Permiso</option><option value="VACACIONES">Vacaciones</option><option value="CUMPLEANOS">Cumpleaños</option><option value="DESCANSO_MEDICO">Descanso médico</option><option value="CAMBIO_DESCANSO">Cambio de descanso</option></select></label>
+        <label data-justificacion-permiso hidden>Justificación del permiso<textarea name="motivo" rows="2" disabled>{% if d.situacion_dia.tipo == 'PERMISO' %}{{ d.situacion_dia.motivo }}{% endif %}</textarea></label>
+        <button class="btn-dark-outline" type="submit">{{ boton_situacion|default:"Aprobar día" }}</button>
+    </form>
+</details>

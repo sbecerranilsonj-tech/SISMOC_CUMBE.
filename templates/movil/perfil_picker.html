@@ -1,0 +1,7 @@
+<div class="movil-persona-picker" data-persona-picker data-url="{% url 'movil_sugerencias_personas' %}?scope={{ picker_scope|default:'perfiles' }}">
+  <label for="{{ picker_id }}">{{ picker_label|default:'Trabajador' }}</label>
+  <input id="{{ picker_id }}" type="search" placeholder="Escribe nombre, apellido o código" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="{{ picker_id }}-opciones" data-persona-input required>
+  <input type="hidden" name="{{ picker_name|default:'perfil' }}" data-persona-id>
+  <div id="{{ picker_id }}-opciones" class="movil-persona-opciones" role="listbox" hidden data-persona-opciones></div>
+  <small class="cd-muted" role="status" data-persona-estado>Selecciona una sugerencia.</small>
+</div>

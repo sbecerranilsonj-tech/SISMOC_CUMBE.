@@ -1,0 +1,1237 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISMOC-CUMBE | Sistema Integrado de Gestión Operativa y Asistencia</title>
+
+    <!-- Tipografía de la interfaz -->
+
+    <!-- Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <style>
+        :root {
+            --cumbe-orange: #e87400;
+            --cumbe-orange-hover: #ff850a;
+            --cumbe-orange-dark: #b85c00;
+            --bg-dark: #0a1322;
+            --bg-card: #0f1c30;
+            --bg-card-header: #14243d;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(232, 116, 0, 0.4);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent-emerald: #10b981;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding-left: 260px; /* Ancho del sidebar */
+            overflow-x: hidden;
+        }
+
+        /* =====================================================================
+           SIDEBAR INSTITUCIONAL EL CUMBE (Heredado de trabajos anteriores)
+        ===================================================================== */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--cumbe-orange);
+            color: white;
+            padding: 20px 0 0 0;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 4px 10px 10px 10px;
+            margin: 0;
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .menu-list::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .menu-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        .menu-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.28);
+            border-radius: 4px;
+        }
+
+        .sidebar-footer {
+            flex-shrink: 0;
+            margin-top: auto;
+            padding: 12px 14px 14px 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.22);
+            background: rgba(0, 0, 0, 0.18);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .user-badge-sidebar {
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.22);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .user-avatar-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: white;
+            color: var(--cumbe-orange);
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
+
+        .user-badge-info {
+            font-size: 0.8rem;
+            line-height: 1.25;
+            overflow: hidden;
+        }
+
+        .user-badge-name {
+            font-weight: 700;
+            color: #ffffff;
+            font-size: 0.84rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-badge-role {
+            font-size: 0.72rem;
+            color: #ffe8cc;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btn-sidebar-logout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 9px 12px;
+            background: rgba(0, 0, 0, 0.32);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 0.84rem;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-sidebar-logout:hover {
+            background: #dc2626 !important;
+            border-color: #ef4444 !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
+        }
+
+        .sidebar .brand {
+            padding: 0 20px 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar .brand-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: white;
+            padding: 4px;
+            object-fit: contain;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+        }
+
+        .sidebar .brand-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            color: white;
+            line-height: 1.1;
+        }
+
+        .sidebar .brand-sub {
+            font-size: 0.72rem;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 500;
+        }
+
+        /* Perfil de Usuario en el Sidebar */
+        .user-badge-sidebar {
+            margin: 15px 16px;
+            padding: 12px 14px;
+            background: rgba(0, 0, 0, 0.18);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .user-avatar-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: white;
+            color: var(--cumbe-orange);
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .user-badge-info {
+            font-size: 0.8rem;
+            line-height: 1.2;
+        }
+
+        .user-badge-name {
+            font-weight: 700;
+            color: white;
+        }
+
+        .user-badge-role {
+            font-size: 0.72rem;
+            color: #ffe8cc;
+        }
+
+        /* Lista del Menu */
+        .menu-list {
+            list-style: none;
+            padding: 0 10px;
+            margin-top: 5px;
+            flex-grow: 1;
+        }
+
+        .menu-category {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 12px 14px 4px 14px;
+        }
+
+        .menu-item {
+            margin-bottom: 3px;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+
+        .menu-link:hover {
+            background: rgba(255, 255, 255, 0.18);
+            color: white;
+            transform: translateX(3px);
+        }
+
+        .menu-link.active {
+            background: #ffffff;
+            color: var(--cumbe-orange-dark);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            font-weight: 700;
+        }
+
+        .menu-icon {
+            font-size: 1.15rem;
+            width: 22px;
+            text-align: center;
+        }
+
+        /* =====================================================================
+           CONTENEDOR PRINCIPAL & TOPBAR
+        ===================================================================== */
+        .main-wrapper {
+            padding: 24px 32px 60px 32px;
+            max-width: 1440px;
+        }
+
+        .top-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 28px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .top-title h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0;
+            background: linear-gradient(90deg, #ffffff, #ffa94d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .top-title p {
+            margin: 0;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Badge Huellero ZKTeco */
+        .badge-huellero {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #34d399;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .pulse-indicator {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse-glow 1.8s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .btn-cumbe {
+            background: var(--cumbe-orange);
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            padding: 8px 16px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(232, 116, 0, 0.3);
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-cumbe:hover {
+            background: var(--cumbe-orange-hover);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-dark-outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            padding: 8px 16px;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-dark-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* =====================================================================
+           TARJETAS KPI (Diseño de dashboard.html de trabajos anteriores)
+        ===================================================================== */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .kpi-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .kpi-box:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-highlight);
+        }
+
+        .kpi-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+        .bar-orange { background: var(--cumbe-orange); }
+        .bar-emerald { background: var(--accent-emerald); }
+        .bar-cyan { background: var(--accent-cyan); }
+        .bar-purple { background: var(--accent-purple); }
+
+        .kpi-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .kpi-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .kpi-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* =====================================================================
+           PANELES & TABLAS (Diseño conductor_list.html y persona_list.html)
+        ===================================================================== */
+        .content-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        .panel-header-custom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .panel-title-text {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .custom-dark-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .custom-dark-table th {
+            background: var(--bg-card-header);
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 10px 14px;
+            text-transform: uppercase;
+            font-size: 0.74rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .custom-dark-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        .custom-dark-table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        /* Badges de Estado */
+        .status-pill {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .pill-emerald { background: rgba(16, 185, 129, 0.16); color: #34d399; }
+        .pill-orange { background: rgba(232, 116, 0, 0.18); color: #ffa94d; }
+        .pill-cyan { background: rgba(6, 182, 212, 0.16); color: #38bdf8; }
+        .pill-purple { background: rgba(139, 92, 246, 0.16); color: #c084fc; }
+        .pill-rose { background: rgba(244, 63, 94, 0.16); color: #fb7185; }
+
+        /* Vistas por Pestaña */
+        .view-section {
+            display: none;
+        }
+        .view-section.active {
+            display: block;
+            animation: fadeInView 0.25s ease-out;
+        }
+        @keyframes fadeInView {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Zona de Carga Excel */
+        .excel-drop-zone {
+            border: 2px dashed rgba(232, 116, 0, 0.5);
+            background: rgba(232, 116, 0, 0.03);
+            border-radius: 14px;
+            padding: 36px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .excel-drop-zone:hover {
+            border-color: var(--cumbe-orange);
+            background: rgba(232, 116, 0, 0.08);
+        }
+
+        /* Modal */
+        .custom-modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .custom-modal-box {
+            background: #111e33;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+    
+
+    </style>
+    <link rel="stylesheet" href="{% static 'importacion_progreso.css' %}?v=20261024-1">
+    <link rel="stylesheet" href="{% static 'asistencia.css' %}?v=20261107-fechas">
+    <link rel="stylesheet" href="{% static 'dashboard_contable.css' %}?v=20261023-2">
+    <link rel="stylesheet" href="{% static 'interfaz.css' %}?v=20261030-filtros-area-1">
+    <link rel="stylesheet" href="{% static 'app.css' %}?v=20261023-zkpopup-1">
+    {% include '_theme_head.html' %}
+    <link rel="stylesheet" href="{% static 'envio_asistencia.css' %}?v=20261024-2">
+    <link rel="stylesheet" href="{% static 'ediciones.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% include "_icons.html" %}
+    <button type="button" class="sidebar-scrim" id="cerrar-navegacion" aria-label="Cerrar navegación" tabindex="-1"></button>
+
+    <!-- ===================================================================
+         SIDEBAR INSTITUCIONAL EL CUMBE (Estilo heredado de trabajos anteriores)
+    =================================================================== -->
+    <nav class="sidebar" id="navegacion-principal" aria-label="Navegación principal">
+        <div class="brand">
+            <img src="{% static 'img/el-cumbe-marca.png' %}"
+                 class="brand-logo" alt="El Cumbe Logo">
+            <div>
+                <div class="brand-title">Panel operativo</div>
+                <div class="brand-sub">SISMOC-CUMBE</div><span class="sismoc-edition">{{ sismoc_edicion }}</span>
+            </div>
+        </div>
+
+        <ul class="menu-list">
+            {% if sismoc_movil_habilitado and user.rol == 'BOLETERIA' %}
+            <li class="menu-category">Ventas y embarque</li>
+            <li class="menu-item"><a class="menu-link" href="{% url 'movil_ventas' %}"><span class="menu-icon"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span><span>Programación y embarque</span></a></li>
+            <li class="menu-item"><a class="menu-link" href="{% url 'dashboard' %}?vista=asistencia"><span class="menu-icon"><svg class="ui-icon"><use href="#icon-clock"></use></svg></span><span>Mi asistencia</span></a></li>
+            {% else %}
+
+            <li class="menu-category">Operación & Asistencia</li>
+            <li class="menu-item">
+                <button class="menu-link active" onclick="mostrarSeccion('dashboard')">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-grid"></use></svg></span>
+                    <span>Dashboard</span>
+                </button>
+            </li>
+            <li class="menu-item">
+                <button class="menu-link" onclick="mostrarSeccion('huellero')">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-clock"></use></svg></span>
+                    <span>Huellero en tiempo real</span>
+                </button>
+            </li>
+            <li class="menu-item">
+                <button class="menu-link" onclick="mostrarSeccion('asistencia')">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-calendar"></use></svg></span>
+                    <span>Asistencia & HH.EE.</span>
+                </button>
+            </li>
+            {% if puede_gestionar %}
+            <li class="menu-item"><button class="menu-link" onclick="mostrarSeccion('personal')"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-users"></use></svg></span><span>Personal y jornadas</span></button></li>
+            {% endif %}
+            <li class="menu-item">
+                <button class="menu-link" onclick="mostrarSeccion('excel-zk')">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-file"></use></svg></span>
+                    <span>Importador Excel ZKTeco</span>
+                </button>
+            </li>
+
+            <li class="menu-category">Gestión bancaria</li>
+            <li class="menu-item">
+                <button class="menu-link" onclick="window.location.href='{% url 'bancos_importar' %}'">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bank"></use></svg></span>
+                    <span>Importar y validar estados BCP</span>
+                </button>
+            </li>
+
+            <li class="menu-item"><a class="menu-link" href="{% url 'bancos_control' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bank"></use></svg></span><span>Control bancario</span></a></li>
+
+            {% if sismoc_movil_habilitado %}{% if user.es_contadora or user.rol == 'BOLETERIA' %}<li class="menu-category">Ventas y embarque</li><li class="menu-item"><a class="menu-link" href="{% url 'movil_ventas' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span><span>Programación y embarque</span></a></li>{% endif %}{% endif %}
+<li class="menu-category">Gestión de conductores</li>
+            <li class="menu-item"><a class="menu-link" data-conductores="importar" href="{% url 'conductores_importar' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-file"></use></svg></span><span>Importar itinerarios</span></a></li>
+            <li class="menu-item"><a class="menu-link" data-conductores="control" href="{% url 'conductores_control' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span><span>Control de conductores</span></a></li>
+
+            <li class="menu-category">Administración & Roles</li>
+            {% if sismoc_movil_habilitado and user.es_contadora %}<li class="menu-item"><a class="menu-link" href="{% url 'movil_panel' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-users"></use></svg></span><span>Aplicativo de trabajadores</span></a></li>{% endif %}
+            <li class="menu-item">
+                <button class="menu-link" onclick="mostrarSeccion('roles')">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-users"></use></svg></span>
+                    <span>Usuarios y permisos</span>
+                </button>
+            </li>
+            <li class="menu-item">
+                <button class="menu-link" onclick="mostrarSeccion('flota')">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span>
+                    <span>Buses & Flota (1 y 2 Pisos)</span>
+                </button>
+            </li>
+
+            {% if not sismoc_escritorio %}
+            <li class="menu-category">Enlaces Técnicos</li>
+            <li class="menu-item">
+                <a class="menu-link" href="/api/docs" target="_blank">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-file"></use></svg></span>
+                    <span>Swagger API Docs</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a class="menu-link" href="/admin/" target="_blank">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-shield"></use></svg></span>
+                    <span>Django Admin</span>
+                </a>
+            </li>
+            {% endif %}
+            {% endif %}
+        </ul>
+        <!-- Pie del Sidebar: Perfil de Usuario y Cerrar Sesion juntos abajo -->
+        <div class="sidebar-footer">
+            <div class="user-badge-sidebar">
+                <div class="user-avatar-circle">
+                    {% if request.user.first_name and request.user.last_name %}
+                        {{ request.user.first_name|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
+                    {% else %}
+                        {{ request.user.username|slice:":2"|upper }}
+                    {% endif %}
+                </div>
+                <div class="user-badge-info">
+                    <div class="user-badge-name" title="{{ request.user.nombre_corto }}">
+                        {{ request.user.nombre_corto }}
+                    </div>
+                    <div class="user-badge-role">
+                        {{ request.user.get_rol_display }}
+                    </div>
+                </div>
+            </div>
+
+            <a href="{% url 'logout' %}" class="btn-sidebar-logout" title="Cerrar sesión de {{ request.user.nombre_corto }}">
+                <svg class="ui-icon" aria-hidden="true"><use href="#icon-exit"></use></svg>
+                <span>Cerrar Sesión</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- ===================================================================
+         CONTENIDO PRINCIPAL
+    =================================================================== -->
+    <div class="main-wrapper">
+        <!-- Top Navbar -->
+        <header class="top-navbar">
+            <button type="button" id="contraer-navegacion" class="desktop-menu-toggle" aria-label="Contraer navegación" aria-controls="navegacion-principal" aria-expanded="true"><svg class="ui-icon" aria-hidden="true"><use href="#icon-menu"></use></svg></button>
+            <button type="button" id="abrir-navegacion" class="mobile-menu-button" aria-label="Abrir navegación" aria-controls="navegacion-principal" aria-expanded="false"><svg class="ui-icon" aria-hidden="true"><use href="#icon-menu"></use></svg></button>
+            <div class="top-title">
+                <nav class="workspace-breadcrumb" aria-label="Ubicación"><span>SISMOC</span><svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg><strong id="workspace-location">Inicio</strong></nav>
+            </div>
+            <div class="header-account">
+                {% include '_theme_toggle.html' %}
+                <span class="account-role">{{ request.user.get_rol_display }}</span>
+                <details class="account-menu">
+                    <summary aria-label="Menú de la cuenta"><span class="account-avatar">{{ request.user.nombre_corto|slice:":1"|upper }}</span></summary>
+                    <div class="account-popover">
+                        <strong>{{ request.user.nombre_corto }}</strong>
+                        <small>{{ request.user.get_rol_display }}</small>
+                        <a href="?vista=dashboard"><svg class="ui-icon" aria-hidden="true"><use href="#icon-grid"></use></svg> Ir al inicio</a>
+                        <a href="{% url 'logout' %}"><svg class="ui-icon" aria-hidden="true"><use href="#icon-exit"></use></svg> Cerrar sesión</a>
+                    </div>
+                </details>
+            </div>
+        </header>
+
+        <!-- Mensajes Flash de Django (Bienvenida / Avisos RBAC) -->
+        {% if messages %}
+            <div style="margin-bottom: 20px;">
+                {% for message in messages %}{% if 'personal-config' not in message.tags or not personal_ficha %}
+                    <div class="app-alert" data-level="{{ message.level_tag }}"{% if 'welcome' in message.tags %} data-auto-dismiss="5000" role="status"{% endif %} style="padding: 12px 18px; border-radius: 10px; font-size: 0.88rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; {% if message.level_tag == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;{% elif message.level_tag == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #6ee7b7;{% else %}background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4); color: #67e8f9;{% endif %}">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.1rem;">{% if message.level_tag == 'error' %}⚠️{% elif message.level_tag == 'success' %}✓{% else %}ℹ️{% endif %}</span>
+                            <span>{{ message }}</span>
+                        </div>
+                        <button type="button" onclick="this.parentElement.style.display='none'" style="background: transparent; border: none; color: inherit; font-size: 1.2rem; cursor: pointer;">×</button>
+                    </div>
+                {% endif %}{% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- ===============================================================
+             DASHBOARD GENERAL Y HUELLERO EN APARTADOS INDEPENDIENTES
+        =============================================================== -->
+        {% block workspace %}
+        <div id="view-dashboard" class="view-section active" role="region" aria-label="Dashboard general">{% if not detalle_jornada %}
+            <div class="dashboard-top-row"><div class="dashboard-welcome"><h3>Hola, {{ request.user.first_name|default:request.user.username }}</h3><p><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> {% now "j \d\e F \d\e Y" %}</p></div>
+            <form method="get" class="filtros-asistencia filtros-dashboard">
+                <input type="hidden" name="vista" value="dashboard">
+                <label>Desde<input type="date" name="desde" value="{{ filtros.desde }}" required onchange="this.form.requestSubmit()"></label>
+                <label>Hasta<input type="date" name="hasta" value="{{ filtros.hasta }}" required onchange="this.form.requestSubmit()"></label>
+            </form></div>
+            {% if filtros.error %}<p class="aviso aviso-error" role="alert">{{ filtros.error }}</p>{% endif %}
+        {% if dashboard_contable %}
+            {% include 'dashboard/contabilidad.html' %}
+        {% else %}
+        <p class="ayuda">Periodo de horas, jornadas y servicios: <strong>{{ filtros.desde }} al {{ filtros.hasta }}</strong>. Personal activo y marcaciones de hoy se muestran por separado.</p>
+        <!-- Tarjetas KPI Resumen -->
+        <div class="kpi-grid">
+            <div class="kpi-box">
+                <div class="kpi-top-bar bar-orange"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg></div>
+                <div class="kpi-title">Con marcación hoy</div>
+                <div class="kpi-value" id="kpiPresentes">{{ info_huellero.total_presentes_hoy }} <span style="font-size: 1rem; color: #ffa94d;">trabajadores</span></div>
+                <div class="kpi-sub">Personas con registros guardados hoy</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-top-bar bar-emerald"><svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></div>
+                <div class="kpi-title">Horas extras del periodo</div>
+                <div class="kpi-value">{{ totales_asistencia.horas_extras_25|floatformat:2 }} <span style="font-size: 1rem; color: #34d399;">h al 25 %</span></div>
+                <div class="kpi-sub">{{ totales_asistencia.horas_extras_35|floatformat:2 }} h al 35 % · Incluye pendientes de revisión</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-top-bar bar-cyan"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg></div>
+                <div class="kpi-title">Jornadas por revisar</div>
+                <div class="kpi-value">{{ conteos_revision.PENDIENTE|add:conteos_revision.OBSERVADO }} <span style="font-size: 1rem; color: #38bdf8;">jornadas</span></div>
+                <div class="kpi-sub">{{ conteos_revision.APROBADO }} de {{ total_jornadas }} aprobadas · {{ conteos_revision.OBSERVADO }} observadas</div>
+            </div>
+
+            <div class="kpi-box">
+                <div class="kpi-top-bar bar-purple"><svg class="ui-icon" aria-hidden="true"><use href="#icon-users"></use></svg></div>
+                <div class="kpi-title">Personal activo registrado</div>
+                <div class="kpi-value">{{ total_usuarios }} <span style="font-size: 1rem; color: #c084fc;">activos</span></div>
+                <div class="kpi-sub">Distribuido en los 7 Roles RBAC</div>
+            </div>
+        </div>
+
+        {% endif %}
+        {% if not dashboard_contable %}
+            {% include 'dashboard/modulos.html' %}
+        {% endif %}
+        {% endif %}</div>
+
+        <div id="view-huellero" class="view-section">
+            {% include 'asistencia/huellero.html' %}
+        </div>
+
+        <!-- ===============================================================
+             SECCION 2: ASISTENCIA & HORAS EXTRAS (D.L. 728)
+        =============================================================== -->
+        <div id="view-asistencia" class="view-section">
+            {% include "asistencia/panel.html" %}
+        </div>
+
+        {% if puede_gestionar %}
+        {% if not detalle_jornada %}{% include 'asistencia/_resumen_contable_popup.html' %}{% endif %}
+        <div id="view-personal" class="view-section">{% include 'asistencia/personal.html' %}</div>
+        {% endif %}
+
+        <!-- ===============================================================
+             SECCION 3: CONDUCTORES & DESCANSOS SUTRAN (8h)
+        =============================================================== -->
+        <div id="view-conductores" class="view-section">
+            <div class="content-panel">
+                <div class="panel-header-custom">
+                    <div class="panel-title-text">
+                        <span>🚌</span>
+                        <span>Módulo de Choferes: Conteo de Vueltas (X/XX) y Descanso Reglamentario SUTRAN</span>
+                    </div>
+                    <span class="status-pill pill-emerald">Regla: X = Vuelta Simple (1) | XX = Vuelta Doble (2)</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="custom-dark-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Conductor</th>
+                                <th>Licencia MTC</th>
+                                <th>Ruta Habitual</th>
+                                <th>Vuelta Registrada</th>
+                                <th>Servicios</th>
+                                <th>Descanso SUTRAN (8h)</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in resumenes_recientes %}
+                            {% if r.usuario.rol == 'CONDUCTOR' %}
+                            <tr>
+                                <td>{{ r.fecha|date:"d/m/Y" }}</td>
+                                <td><strong>{{ r.usuario.nombre_corto }}</strong></td>
+                                <td><span class="status-pill pill-purple">{{ r.usuario.licencia_conducir|default:"A-IIIc" }}</span></td>
+                                <td>{{ r.usuario.agencia_sede }}</td>
+                                <td>
+                                    {% if r.vueltas_codigo == 'XX' %}
+                                    <span class="status-pill pill-orange" style="font-weight: 800;">XX (Doble)</span>
+                                    {% elif r.vueltas_codigo == 'X' %}
+                                    <span class="status-pill pill-cyan" style="font-weight: 800;">X (Simple)</span>
+                                    {% else %}
+                                    <span class="status-pill pill-purple">Descanso</span>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ r.total_vueltas_num }} servicio(s)</strong></td>
+                                <td>
+                                    {% if r.vueltas_codigo == 'DESCANSO' or r.estado == 'DESCANSO_SUTRAN' %}
+                                    <span class="status-pill pill-emerald">✓ 8h Cumplidas</span>
+                                    {% else %}
+                                    <span class="status-pill pill-cyan">En Ruta Autorizada</span>
+                                    {% endif %}
+                                </td>
+                                <td style="color: var(--text-muted); font-size: 0.8rem;">{{ r.observaciones }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===============================================================
+             SECCION 4: IMPORTADOR EXCEL ZKTECO (PANDAS)
+        =============================================================== -->
+        <div id="view-excel-zk" class="view-section">
+            <div class="zk-upload-host">
+                <div class="zk-upload-control">
+                    <button class="btn-cumbe zk-upload-trigger" type="button" onclick="document.getElementById('excelInput').click()" title="Seleccionar archivo de asistencia ZKTeco (.xlsx o .xls)"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg> Subir asistencia</button>
+                    <input type="file" id="excelInput" accept=".xlsx,.xls" hidden onchange="procesarExcel(this.files[0])">
+                </div>
+
+                <div id="resultadoExcelBox" data-import-url="{% url 'importar_excel_web' %}" data-csrf="{{ csrf_token }}" style="margin-top: 20px; display: none;" class="content-panel">
+                    <!-- Dinamico con JS -->
+                </div>
+            </div>
+            {% include 'asistencia/_progreso_importacion.html' %}
+            {% include 'asistencia/identidades.html' %}
+        </div>
+
+        <!-- ===============================================================
+             SECCION 5: 7 ROLES RBAC (MATRIZ OFICIAL)
+        =============================================================== -->
+        <div id="view-roles" class="view-section">
+            <div class="content-panel">
+                <div class="panel-header-custom">
+                    <div class="panel-title-text">
+                        <span>👥</span>
+                        <span>Matriz Oficial de 7 Roles RBAC — Transportes El Cumbe S.A.C.</span>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-purple"><svg class="ui-icon" aria-hidden="true"><use href="#icon-users"></use></svg></div>
+                            <div style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">👑 Gerente General</div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+                                Dashboard Ejecutivo, rentabilidad por ruta Chiclayo-Cajamarca-Trujillo y auditoría.
+                            </p>
+                            <span class="status-pill pill-purple">Usuario: <strong>gerente.cumbe</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-cyan"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg></div>
+                            <div style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">⚙️ Administrador TI</div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+                                Seguridad JWT, catálogo de buses, agencias, terminales y mantenimiento del servidor.
+                            </p>
+                            <span class="status-pill pill-cyan">Usuario: <strong>admin</strong> (Nilson Silupu)</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-emerald"><svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></div>
+                            <div style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">📊 Contadora General</div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+                                Carga de logs ZKTeco, cálculo legal de planillas D.L. 728 y motor de conciliación BCP.
+                            </p>
+                            <span class="status-pill pill-emerald">Usuario: <strong>yaneli.terrones</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-orange"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg></div>
+                            <div style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">🚌 Conductor / Chofer</div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+                                Consulta de vueltas (X/XX), GPS en ruta, peajes y validación de 8h descanso SUTRAN.
+                            </p>
+                            <span class="status-pill pill-orange">Usuario: <strong>carlos.condor</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-purple"><svg class="ui-icon" aria-hidden="true"><use href="#icon-users"></use></svg></div>
+                            <div style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">📱 Operador de Bus</div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+                                Escaneo QR en puerta de bus y paraderos intermedios de carretera (Modo Offline).
+                            </p>
+                            <span class="status-pill pill-purple">Usuario: <strong>miguel.embarque</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-cyan"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg></div>
+                            <div style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">🎟️ Vendedor Boletería</div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+                                Venta en ventanilla, croquis interactivo de asientos, cobros en caja y emisión QR.
+                            </p>
+                            <span class="status-pill pill-cyan">Usuario: <strong>ana.boleteria</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-emerald"><svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></div>
+                            <div style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">👔 Personal Oficina</div>
+                            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+                                Marcación de entrada/salida biométrica o app móvil, consulta de horas y tardanzas.
+                            </p>
+                            <span class="status-pill pill-emerald">Usuario: <strong>pedro.asistente</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===============================================================
+             SECCION 6: FLOTA DE BUSES (1 Y 2 PISOS - DE TRABAJOS ANTERIORES)
+        =============================================================== -->
+        <div id="view-flota" class="view-section">
+            <div class="content-panel">
+                <div class="panel-header-custom">
+                    <div class="panel-title-text">
+                        <span>🚍</span>
+                        <span>Flota de Buses Interprovinciales — Transportes El Cumbe S.A.C.</span>
+                    </div>
+                    <span class="status-pill pill-orange">Servicios: Ejecutivo (1 Piso) y Suite Imperial (2 Pisos)</span>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-orange"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg></div>
+                            <h4 style="font-weight: 800; color: white;">Bus Suite Imperial (2 Pisos)</h4>
+                            <p style="color: var(--text-muted); font-size: 0.85rem;">Placa: <strong>T4A-954</strong> • Capacidad: 54 Asientos (Piso 1: Sofá Cama 160° / Piso 2: Semicama)</p>
+                            <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;">
+                                <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                                    <span class="status-pill pill-emerald">Asiento 01 (Ocupado)</span>
+                                    <span class="status-pill pill-emerald">Asiento 02 (Ocupado)</span>
+                                    <span class="status-pill pill-cyan">Asiento 03 (Libre)</span>
+                                    <span class="status-pill pill-cyan">Asiento 04 (Libre)</span>
+                                    <span class="status-pill pill-orange">Asiento 05 (En Ruta)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="kpi-box">
+                            <div class="kpi-top-bar bar-cyan"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg></div>
+                            <h4 style="font-weight: 800; color: white;">Bus Ejecutivo Clásico (1 Piso)</h4>
+                            <p style="color: var(--text-muted); font-size: 0.85rem;">Placa: <strong>M3B-812</strong> • Capacidad: 42 Asientos Ejecutivos • Ruta: Chiclayo - Chota</p>
+                            <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;">
+                                <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                                    <span class="status-pill pill-emerald">Asiento 01 (Ocupado)</span>
+                                    <span class="status-pill pill-cyan">Asiento 02 (Libre)</span>
+                                    <span class="status-pill pill-cyan">Asiento 03 (Libre)</span>
+                                    <span class="status-pill pill-emerald">Asiento 04 (Ocupado)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===============================================================
+             SECCION 7: CONCILIACIÓN BCP (ADELANTO SPRINT 2)
+        =============================================================== -->
+        <div id="view-bcp" class="view-section">
+            <div class="content-panel">
+                <div class="panel-header-custom">
+                    <div class="panel-title-text">
+                        <span>🏦</span>
+                        <span>Motor de Conciliación Bancaria BCP & Yape (Alcance Sprint 2)</span>
+                    </div>
+                    <span class="status-pill pill-orange">Próxima Entrega: Semanas 6-7</span>
+                </div>
+
+                <div class="kpi-box" style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">💳</div>
+                    <h3 style="font-family: 'Outfit', sans-serif; font-weight: 800; color: white;">
+                        Cruce Algorítmico Automatizado en 1-Clic
+                    </h3>
+                    <p style="color: var(--text-muted); max-width: 650px; margin: 0 auto 20px auto; font-size: 0.9rem;">
+                        Eliminará las 31 hojas de cálculo manuales cruzando automáticamente el extracto bancario BCP (Excel) contra los cobros registrados en agencias por Yape, Plin y POS de pasajes y encomiendas.
+                    </p>
+                    <span class="status-pill pill-emerald" style="font-size: 0.9rem; padding: 8px 16px;">
+                        Planificado · Integración pendiente
+                    </span>
+                    <p style="margin-top: 18px;"><a class="btn-cumbe" href="{% url 'prototipos_iq2' %}#conciliacion">Abrir prototipo de conciliación</a></p>
+                </div>
+            </div>
+        </div>
+
+        {% endblock workspace %}
+    </div>
+
+    <!-- ===================================================================
+         MODAL SIMULADOR DE MARCACION FACIAL / GPS
+    =================================================================== -->
+    <div class="custom-modal-backdrop" id="modalMarcacion">
+        <div class="custom-modal-box">
+            <h4 style="font-family: 'Outfit', sans-serif; font-weight: 800; margin-bottom: 15px; color: white;">
+                📱 Marcar Asistencia en Tiempo Real
+            </h4>
+            
+            <div class="mb-3">
+                <label class="form-label" style="font-size: 0.85rem; color: var(--text-muted);">Colaborador / DNI:</label>
+                <select class="form-select bg-dark text-white border-secondary" id="dniSelect">
+                    {% for u in usuarios_asistencia %}<option value="{{ u.dni }}">{{ u.nombre_corto }} · {{ u.dni }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" style="font-size: 0.85rem; color: var(--text-muted);">Tipo de Marcación:</label>
+                <select class="form-select bg-dark text-white border-secondary" id="tipoSelect">
+                    <option value="ENTRADA">🟢 Entrada a Laborar</option>
+                    <option value="SALIDA">🔴 Salida de Laborar</option>
+                    <option value="SALIDA_REFRIGERIO">☕ Salida a Refrigerio</option>
+                    <option value="RETORNO_REFRIGERIO">🍽️ Retorno de Refrigerio</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label" style="font-size: 0.85rem; color: var(--text-muted);">Canal de Transmisión:</label>
+                <select class="form-select bg-dark text-white border-secondary" id="origenSelect">
+                    <option value="KIOSKO_PIN">Registro web con DNI (sin validación biométrica)</option>
+                </select>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn-dark-outline" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn-cumbe" onclick="confirmarMarcacion()">Registrar Marcación</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'huellero.js' %}"></script>
+    <!-- Scripts de Interacción -->
+    <script>
+        function mostrarSeccion(seccionId) {
+            if (seccionId === 'conductores') { window.location.href = '{% url "conductores_control" %}'; return; }
+            if (seccionId === 'contabilidad' && document.getElementById('resumen-contable-popup')) { mostrarSeccion('asistencia'); document.getElementById('resumen-contable-popup').showModal(); return; }
+            if (document.getElementById('bancos-workspace') || document.querySelector('.conductores-workspace')) { window.location.href = '{% url "dashboard" %}?vista=' + encodeURIComponent(seccionId); return; }
+            const vistaServidor = new URLSearchParams(window.location.search).get('vista');
+            if (new URLSearchParams(window.location.search).has('detalle') && seccionId !== 'asistencia') { window.location.href = '?vista=' + encodeURIComponent(seccionId); return; }
+            if (['personal', 'excel-zk'].includes(seccionId) && vistaServidor !== seccionId) { window.location.href = '?vista=' + encodeURIComponent(seccionId); return; }
+            document.querySelectorAll('.menu-link').forEach(btn => { btn.classList.remove('active'); btn.removeAttribute('aria-current'); });
+            document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+
+            const enlace = Array.from(document.querySelectorAll('.menu-link')).find(btn => (btn.getAttribute('onclick') || '').includes("'" + seccionId + "'"));
+            if (enlace) { enlace.classList.add('active'); enlace.setAttribute('aria-current', 'page'); const location = document.getElementById('workspace-location'); if (location) location.textContent = seccionId === 'dashboard' ? 'Inicio' : enlace.textContent.trim(); }
+            const target = document.getElementById('view-' + seccionId);
+            if (target) {
+                target.classList.add('active');
+                const url = new URL(window.location.href);
+                url.searchParams.set('vista', seccionId);
+                history.replaceState(null, '', url);
+                activarHuellero(seccionId === 'huellero');
+            }
+        }
+
+        function abrirModal() {
+            document.getElementById('modalMarcacion').style.display = 'flex';
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalMarcacion').style.display = 'none';
+        }
+
+        async function sincronizarZKTeco() {
+            const btn = document.getElementById('btnSync');
+            btn.disabled = true;
+            btn.textContent = 'Comprobando conexión…';
+            try {
+                const res = await fetch('{% url "consultar_huellero" %}', {
+                    method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                });
+                if (!res.ok) throw new Error('No se pudo consultar el equipo. Revise su sesión y permisos.');
+                const data = await res.json();
+                document.getElementById('estadoHuellero').textContent = 'ZKTeco · ' + data.estado_dispositivo;
+                document.getElementById('detalleHuellero').textContent = 'Última comprobación: ' + data.ultima_comprobacion + '. Última sincronización: ' + data.ultima_sincronizacion + '. ' + data.mensaje;
+                await actualizarRegistrosHuellero();
+            } catch (err) {
+                document.getElementById('detalleHuellero').textContent = err.message;
+            } finally {
+                btn.textContent = 'Consultar conexión del equipo'; btn.disabled = false;
+            }
+        }
+
+        async function confirmarMarcacion() {
+            const dni = document.getElementById('dniSelect').value;
+            const tipo = document.getElementById('tipoSelect').value;
+            const origen = document.getElementById('origenSelect').value;
+
+            try {
+                const res = await fetch('{% url "marcar_web" %}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: JSON.stringify({
+                        dni: dni,
+                        tipo_evento: tipo,
+                        origen: origen
+                    })
+                });
+                if (res.ok) {
+                    alert('✓ Marcación procesada y registrada en el servidor.');
+                    cerrarModal();
+                    window.location.reload();
+                } else {
+                    const error = await res.json(); alert(error.detail || 'No se pudo registrar la marcación.');
+                }
+            } catch (e) {
+                alert('Error de conexión: ' + e);
+            }
+        }
+
+        const vistaInicial = new URLSearchParams(window.location.search).get('vista');
+        if (vistaInicial === 'contabilidad' && document.getElementById('resumen-contable-popup')) mostrarSeccion('contabilidad');
+        if (vistaInicial === 'bcp') window.location.replace('{% url "bancos_importar" %}');
+        if (vistaInicial && document.getElementById('view-' + vistaInicial)) mostrarSeccion(vistaInicial);
+    </script>
+    <script src="{% static 'importacion_progreso.js' %}?v=20261024-1" defer></script>
+    <script src="{% static 'interfaz.js' %}?v=20261019-welcome-1" defer></script>
+    <script src="{% static 'resumen_contable_popup.js' %}?v=20261106-1" defer></script>
+</body>
+</html>
+

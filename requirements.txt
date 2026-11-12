@@ -1,0 +1,36 @@
+# ==============================================================================
+# SISMOC-CUMBE | Transportes El Cumbe S.A.C.
+# requirements.txt — Dependencias del Backend (Django + Django Ninja + Pandas)
+# Sprint 1: Autenticación RBAC + Parser ZKTeco + Asistencia en Tiempo Real
+# ==============================================================================
+
+# Framework Web
+django>=5.1,<5.2
+django-ninja>=1.3,<2.0
+
+# Base de Datos
+psycopg2-binary>=2.9.9          # Conector PostgreSQL (producción)
+
+# Procesamiento de Archivos Excel (Motor ZKTeco + BCP)
+pandas>=2.2.0
+pdfplumber>=0.11,<0.12
+openpyxl>=3.1.2
+xlrd>=2.0.2,<3.0              # Exportaciones originales ZKTeco en formato .xls
+
+# Conexión Directa con Huellero ZKTeco (Tiempo Real)
+pyzk>=0.9
+
+# Seguridad y Autenticación
+python-dotenv>=1.0.1
+pyjwt>=2.9.0
+
+# Generación de QR y PDF (Sprints posteriores)
+qrcode[pil]>=7.4.2
+reportlab>=4.1.0
+pillow>=10.2.0
+
+# Utilidades
+django-cors-headers>=4.4.0
+gunicorn>=23.0,<24
+whitenoise>=6.8,<7
+dj-database-url>=2.3,<4

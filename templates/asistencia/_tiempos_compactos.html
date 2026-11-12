@@ -1,0 +1,42 @@
+<section class="day-audit-panel" aria-labelledby="titulo-tiempos">
+    <header class="day-audit-heading">
+        <h4 id="titulo-tiempos">Resumen de tiempos</h4>
+        <span>{{ d.resumen.fecha|date:'d/m/Y' }}{% if d.cruza_medianoche %} → {{ d.fin_consulta|date:'d/m/Y' }}{% endif %}</span>
+    </header>
+
+    <!-- Turno de la jornada compacto -->
+    <div class="day-shift-card">
+        <div class="day-shift-info">
+            <span class="day-shift-icon"><svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></span>
+            <div>
+                <span class="day-shift-label">{% if d.control_por_jornada %}Modalidad de control{% else %}Horario programado{% endif %}</span>
+                <strong class="day-shift-name">{% if d.turno %}{{ d.turno.hora_entrada|time:'H:i' }}–{{ d.turno.hora_salida|time:'H:i' }}{% if d.turno.hora_salida < d.turno.hora_entrada %} · día siguiente{% endif %}{% elif d.control_por_jornada %}Control por jornada{% else %}Por confirmar{% endif %}</strong>
+                {% if d.turno %}<span class="day-shift-description">{{ d.turno.nombre }}</span>{% elif d.control_por_jornada %}<span class="day-shift-description">Sin horario fijo asignado · Base {{ d.cuadro_excel.totales.base }}</span>{% endif %}
+            </div>
+        </div>
+        {% if puede_gestionar and not d.cerrada %}
+        {% if d.resumen.trabajador_id %}<a class="btn-dark-outline" href="{% url 'dashboard' %}?vista=personal&amp;ficha={{ d.resumen.trabajador_id }}&amp;volver_a={{ request.get_full_path|urlencode }}">Configurar trabajador</a>{% endif %}
+        {% endif %}
+    </div>
+
+    <!-- 4 Métricas principales en cuadrícula compacta -->
+    <dl class="day-time-summary">
+        <div>
+            <dt>Trabajo efectivo</dt>
+            <dd>{{ d.trabajo_reconstruido|default:'Por revisar' }}</dd>
+        </div>
+        <div>
+            <dt>Refrigerio</dt>
+            <dd>{{ d.refrigerio|default:'Por revisar' }}</dd>
+        </div>
+        <div class="{% if d.tardanza_confirmada and d.resumen.minutos_tardanza %}day-time-warning{% endif %}">
+            <dt>Tardanza</dt>
+            <dd>{% if d.tardanza_confirmada %}{{ d.resumen.minutos_tardanza }} <span>min</span>{% else %}<span>{% if d.turno and not d.turno.evaluar_tardanzas %}No se evalúa en este horario{% elif d.control_por_jornada %}No se evalúa sin horario fijo{% elif not d.turno %}Horario por confirmar{% else %}Pendiente de cálculo{% endif %}</span>{% endif %}</dd>
+        </div>
+        <div>
+            <dt>Tiempo pendiente</dt>
+            <dd>{% if d.deficit_minutos != None %}{{ d.deficit_minutos }} <span>min</span>{% else %}Por revisar{% endif %}</dd>
+        </div>
+    </dl>
+
+</section>

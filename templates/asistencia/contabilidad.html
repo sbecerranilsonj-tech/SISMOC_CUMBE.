@@ -1,0 +1,25 @@
+<div class="content-panel">
+    <div class="panel-header-custom">
+        <div><h3 class="panel-title-text">Resumen para Contabilidad</h3><p class="ayuda">Horas y ajustes por trabajador para el periodo consultado.</p></div>
+        <a class="btn-dark-outline" href="{% url 'exportar_asistencia' %}?{{ consulta_asistencia }}">Exportar resumen CSV</a>
+    </div>
+    <form method="get" class="filtros-asistencia">
+        <input type="hidden" name="vista" value="asistencia"><input type="hidden" name="resumen_contable" value="1">
+        <input type="hidden" name="area" value="{{ filtros.area }}"><input type="hidden" name="revision" value="{{ filtros.revision }}">
+        <label>Desde<input type="date" name="desde" value="{{ filtros.desde }}" required></label>
+        <label>Hasta<input type="date" name="hasta" value="{{ filtros.hasta }}" required></label>
+        <label>Sede<select name="sede"><option value="">Todas las sedes</option>{% for sede in sedes_asistencia %}<option {% if sede == filtros.sede %}selected{% endif %}>{{ sede }}</option>{% endfor %}</select></label>
+        <label>Trabajador<input name="trabajador" value="{{ filtros.trabajador }}" placeholder="Nombre o DNI"></label>
+        <button class="btn-cumbe" type="submit">Consultar</button>
+        <a class="btn-dark-outline" href="?vista=asistencia&amp;resumen_contable=1">Limpiar</a>
+    </form>
+    {% if filtros.error %}<p class="aviso aviso-error" role="alert">{{ filtros.error }}</p>{% endif %}
+    <div class="accounting-period-strip" aria-label="Resumen del periodo consultado">
+        <div class="accounting-period-range"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><div><span>Periodo consultado</span><strong>{{ filtros.desde }} <span aria-hidden="true">→</span> {{ filtros.hasta }}</strong></div></div>
+        <div class="accounting-period-count"><svg class="ui-icon" aria-hidden="true"><use href="#icon-users"></use></svg><strong>{{ total_trabajadores_asistencia }}</strong><span>trabajadores</span></div>
+        <div class="accounting-period-count"><svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg><strong>{{ total_jornadas }}</strong><span>jornadas</span></div>
+    </div>
+    <div class="table-responsive"><table class="custom-dark-table"><thead><tr><th>Trabajador</th><th>Jornadas</th><th>H. efectivas</th><th>Extras 25 %</th><th>Extras 35 %</th><th>Nocturnas</th><th>Descanso / feriado</th><th>Tiempo faltante<small>HH:MM:SS</small></th><th>Revisión</th></tr></thead><tbody>
+    {% for fila in consolidado %}<tr><td><a href="?vista=asistencia&amp;desde={{ filtros.desde }}&amp;hasta={{ filtros.hasta }}&amp;trabajador={{ fila.usuario.dni|urlencode }}">{{ fila.usuario.nombre_corto }}</a></td><td>{{ fila.jornadas }}</td><td>{{ fila.horas_trabajadas|floatformat:2 }}</td><td>{{ fila.horas_extras_25|floatformat:2 }}</td><td>{{ fila.horas_extras_35|floatformat:2 }}</td><td>{{ fila.horas_nocturnas|floatformat:2 }}</td><td>{{ fila.descanso_feriado|floatformat:2 }}</td><td><strong>{{ fila.tiempo_faltante }}</strong>{% if fila.faltante_por_revisar %}<small>{{ fila.faltante_por_revisar }} días por revisar</small>{% endif %}</td><td>{{ fila.aprobadas }}/{{ fila.jornadas }} aprobadas<small>{{ fila.pendientes }} pendientes · {{ fila.observadas }} observadas</small></td></tr>{% empty %}<tr><td colspan="9" class="estado-vacio">Sin resultados en este periodo.</td></tr>{% endfor %}
+    </tbody><tfoot><tr><th>Total (horas)</th><td>{{ total_jornadas }}</td><td>{{ totales_asistencia.horas_trabajadas|floatformat:2 }}</td><td>{{ totales_asistencia.horas_extras_25|floatformat:2 }}</td><td>{{ totales_asistencia.horas_extras_35|floatformat:2 }}</td><td>{{ totales_asistencia.horas_nocturnas|floatformat:2 }}</td><td>{{ totales_asistencia.descanso_feriado|floatformat:2 }}</td><td>{{ total_tiempo_faltante }}</td><td>{{ conteos_revision.APROBADO }} aprobadas</td></tr></tfoot></table></div>
+</div>

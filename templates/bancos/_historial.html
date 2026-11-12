@@ -1,0 +1,6 @@
+<section><h2>Historial de revisión</h2>{% for r in historial %}<details><summary>{{ r.fecha|date:'d/m/Y H:i' }} · {{ r.responsable.get_full_name }} · {{ r.detalle.accion }}</summary>
+{% if r.detalle.accion == 'Importación' %}<p>Se importaron <strong>{{ r.detalle.movimientos }}</strong> movimientos del estado de cuenta. Quedaron pendientes de revisión.</p>
+{% elif r.detalle.accion == 'Corrección' %}<p>Se corrigió el movimiento {{ r.movimiento.orden }}.</p><div class="tabla"><table><thead><tr><th>Dato</th><th>Antes</th><th>Después</th></tr></thead><tbody>{% for cambio in r.cambios_legibles %}<tr><td>{{ cambio.campo }}</td><td>{{ cambio.antes }}</td><td>{{ cambio.despues }}</td></tr>{% endfor %}</tbody></table></div>
+{% elif r.detalle.accion == 'Comprobación del PDF' %}<p>Se volvió a comprobar el documento original. Incidencias pendientes: <strong>{{ r.detalle.incidencias }}</strong>.</p>
+{% elif r.detalle.accion == 'Validación y pase a control' %}<p>Se confirmó la revisión y se incorporaron los movimientos al control bancario.</p>
+{% else %}<p>Se registró una acción de revisión sobre este estado de cuenta.</p>{% endif %}</details>{% empty %}<p class="ayuda">Todavía no hay acciones registradas.</p>{% endfor %}</section>

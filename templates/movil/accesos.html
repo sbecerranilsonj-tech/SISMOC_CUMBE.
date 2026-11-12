@@ -1,0 +1,50 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'movil_busqueda.css' %}?v=20261112-3">
+<section class="cd-card" id="movil-accesos" data-estados-url="{% url 'movil_estados_acceso' %}">
+  <h2>Habilitar o restablecer acceso</h2>
+  <form method="post" class="cd-form cd-inline" data-persona-form>
+    {% csrf_token %}<input type="hidden" name="accion" value="habilitar">
+    <div class="movil-persona-picker" data-persona-picker data-url="{% url 'movil_sugerencias_personas' %}">
+      <label for="movil-persona-buscar">Trabajador o conductor</label>
+      <input id="movil-persona-buscar" type="search" placeholder="Escribe nombre, apellido o DNI" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="movil-persona-opciones" data-persona-input>
+      <input type="hidden" name="persona" data-persona-id>
+      <div id="movil-persona-opciones" class="movil-persona-opciones" role="listbox" hidden data-persona-opciones></div>
+      <small class="cd-muted" role="status" data-persona-estado>Escribe desde la primera letra para ver sugerencias.</small>
+    </div>
+    <label data-funcion-label hidden>Función en la app<select name="funcion_app"><option value="">Conservar función actual</option><option value="ADMINISTRATIVO">Personal · asistencia</option><option value="BOLETERIA">Ventas / Boletería</option><option value="OPERADOR_EMBARQUE">Encargado de embarque</option></select></label>
+    <p class="movil-funcion cd-muted" data-funcion-auto>La función se obtiene del área registrada.</p><button class="cd-button" data-persona-submit disabled>Habilitar acceso y generar código</button>
+    <fieldset class="movil-persona-identidad" data-persona-identidad hidden>
+      <legend>Identidad del conductor</legend>
+      <p>El conductor se identifica con su código SISMOC. No se requiere sede.</p>
+      <label>DNI (opcional)<input name="dni_conductor" maxlength="8" pattern="[0-9]{8}" inputmode="numeric" data-dni-conductor></label>
+    </fieldset>
+  </form>
+  <p class="cd-muted">Se usa la ficha existente. Restablecer el acceso cierra las sesiones del celular anterior.</p>
+  <div class="cd-table-wrap">
+    <table class="cd-table">
+      <thead><tr><th>Código de trabajador</th><th>Trabajador</th><th>Área</th><th>Código de activación</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for p in perfiles %}
+        <tr data-perfil="{{ p.pk }}">
+          <td>{{ p.codigo }}</td>
+          <td>{{ p.trabajador.nombre_completo|default:p.usuario.get_full_name }}</td>
+          <td>{% if p.conductor_id %}Conductores{% else %}{{ p.trabajador.area|default:'Sin área asignada' }}{% endif %}</td>
+          <td data-activacion-cell>
+            {% if p.pk == activacion_perfil %}
+              <span class="cd-muted">Activación:</span>
+              <strong data-activation-code style="display:block;padding:8px 0;font-family:monospace;user-select:all;overflow-wrap:anywhere">{{ activacion_codigo }}</strong>
+              <button type="button" class="cd-button cd-secondary" data-copy-activation>Copiar código</button>
+              <small class="cd-muted" style="display:block;margin-top:6px">Un uso · válido por 24 horas</small>
+            {% elif p.activado %}<span class="cd-muted">Código utilizado</span>
+            {% else %}<span class="cd-muted">Genere un código para mostrarlo aquí</span>{% endif %}
+          </td>
+          <td><strong data-access-status role="status">{{ p.estado_acceso }}</strong></td>
+        </tr>
+        {% empty %}<tr><td colspan="5">Seleccione un trabajador para habilitar su acceso.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="cd-muted">El código temporal se muestra en esta tabla al generarlo. El estado cambia a Activado cuando el trabajador guarda su nueva contraseña en la app.</p>
+</section>
+<script src="{% static 'movil_accesos.js' %}?v=20261112-3" defer></script>
+<script src="{% static 'movil_busqueda.js' %}?v=20261112-3" defer></script>

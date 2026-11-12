@@ -1,0 +1,6 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'resumen_contable_popup.css' %}?v=20261106-1">
+<dialog id="resumen-contable-popup" class="resumen-contable-popup" aria-labelledby="resumen-contable-popup-title">
+    <div class="resumen-popup-bar"><div><span class="ayuda">ASISTENCIA · CONTABILIDAD</span><h2 id="resumen-contable-popup-title">Resumen contable</h2></div><button type="button" class="btn-dark-outline" data-cerrar-resumen-contable aria-label="Cerrar resumen contable">Cerrar <span aria-hidden="true">×</span></button></div>
+    <div class="resumen-popup-content">{% include 'asistencia/contabilidad.html' with resumen_popup=True %}</div>
+</dialog>

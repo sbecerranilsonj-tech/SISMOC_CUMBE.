@@ -1,0 +1,64 @@
+{% if not detalle_jornada %}
+<div class="content-panel attendance-panel">
+    <div class="panel-header-custom">
+        <div><h3 class="panel-title-text">Asistencia por trabajador</h3><p class="ayuda">Seleccione un trabajador para revisar sus marcaciones de entrada, refrigerio y salida.</p></div>
+        {% if puede_gestionar %}<div class="asistencia-header-actions"><button type="button" class="btn-dark-outline" data-abrir-resumen-contable aria-haspopup="dialog" aria-controls="resumen-contable-popup"><svg class="ui-icon" aria-hidden="true"><use href="#icon-bank"></use></svg> Resumen contable</button><a class="btn-dark-outline" href="{% url 'exportar_asistencia' %}?{{ consulta_asistencia }}">Exportar resumen CSV</a></div>{% endif %}
+    </div>
+    <div class="workspace-toolbar">
+        <span class="toolbar-count"><strong>{{ total_trabajadores_asistencia }}</strong> trabajadores en el periodo</span>
+        <div class="toolbar-actions">
+            <button type="button" class="toolbar-button" id="alternar-filtros" aria-expanded="true" aria-controls="filtros-asistencia"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Filtros</button>
+            <button type="button" class="toolbar-button" id="alternar-densidad" aria-pressed="false"><svg class="ui-icon" aria-hidden="true"><use href="#icon-grid"></use></svg> Vista compacta</button>
+        </div>
+    </div>
+    <form method="get" id="filtros-asistencia" class="filtros-asistencia filtros-personal">
+        <input type="hidden" name="vista" value="asistencia">
+        <label>Desde<input type="date" name="desde" value="{{ filtros.desde }}" required></label>
+        <label>Hasta<input type="date" name="hasta" value="{{ filtros.hasta }}" required></label>
+        <label>Sede<select name="sede"><option value="">Todas las sedes</option>{% for sede in sedes_asistencia %}<option {% if sede == filtros.sede %}selected{% endif %}>{{ sede }}</option>{% endfor %}</select></label>
+        <label>Trabajador<input name="trabajador" value="{{ filtros.trabajador }}" placeholder="Nombre o DNI"></label>
+        <label>Área<select name="area"><option value="">Todas las áreas</option>{% for area in areas_asistencia %}<option value="{{ area }}" {% if area == filtros.area %}selected{% endif %}>{{ area }}</option>{% endfor %}</select></label>
+        <label>Revisión<select name="revision"><option value="">Todas</option><option value="PENDIENTE" {% if filtros.revision == 'PENDIENTE' %}selected{% endif %}>Pendiente</option><option value="OBSERVADO" {% if filtros.revision == 'OBSERVADO' %}selected{% endif %}>Observado</option><option value="APROBADO" {% if filtros.revision == 'APROBADO' %}selected{% endif %}>Aprobado</option></select></label>
+        <button class="btn-cumbe" type="submit">Consultar</button>
+        <a class="btn-dark-outline" href="?vista=asistencia">Limpiar</a>
+    </form>
+    {% if filtros.error %}<p class="aviso aviso-error" role="alert">{{ filtros.error }}</p>{% endif %}
+    {% if jornadas_fecha_futura %}<p class="aviso aviso-error">Hay {{ jornadas_fecha_futura }} jornadas con fechas futuras en los registros guardados. Revise sus cargas de origen; no se incluyen cuando quedan fuera del intervalo consultado.</p>{% endif %}
+    <div class="attendance-summary">
+        <span><strong>{{ filtros.desde }} — {{ filtros.hasta }}</strong></span>
+        <span>{{ total_jornadas }} jornadas</span>
+        <span class="summary-state"><i class="state-dot approved" aria-hidden="true"></i>{{ conteos_revision.APROBADO }} aprobadas</span>
+        <span class="summary-state"><i class="state-dot pending" aria-hidden="true"></i>{{ conteos_revision.PENDIENTE }} pendientes</span>
+        <span class="summary-state"><i class="state-dot observed" aria-hidden="true"></i>{{ conteos_revision.OBSERVADO }} observadas</span>
+    </div>
+    <div class="table-responsive tabla-trabajadores-asistencia">
+        <table class="custom-dark-table"><caption class="visually-hidden">Trabajadores con asistencia en el periodo. Seleccione uno para validar sus marcaciones.</caption>
+        <thead><tr><th>Trabajador</th><th>Código importado</th><th>Área</th><th>Sede</th><th>Jornadas</th><th>Validación</th><th>Aprobación contable</th><th>Marcaciones</th></tr></thead>
+        <tbody>{% for fila in pagina_trabajadores %}<tr>
+            <td><a href="?{{ consulta_asistencia }}&amp;persona_dni={{ fila.usuario.dni|urlencode }}"><span class="person-avatar" aria-hidden="true">{{ fila.usuario.nombre_corto|slice:":1"|upper }}</span><strong>{{ fila.usuario.nombre_corto }}</strong></a></td>
+            <td>{{ fila.codigo }}</td><td>{{ fila.area }}</td><td>{{ fila.usuario.agencia_sede }}</td><td>{{ fila.jornadas }}</td>
+            <td><span class="status-pill {% if fila.sin_validar %}pill-orange{% else %}pill-emerald{% endif %}">{{ fila.validadas }} de {{ fila.jornadas }} días validados</span><small>{{ fila.sin_validar }} por completar</small></td>
+            <td><span class="status-pill {% if fila.por_aprobar %}pill-orange{% else %}pill-emerald{% endif %}">{{ fila.aprobadas }} aprobadas</span><small>{{ fila.por_aprobar }} por aprobar · {{ fila.observadas }} observadas</small></td>
+            <td><a class="btn-dark-outline" href="?{{ consulta_asistencia }}&amp;persona_dni={{ fila.usuario.dni|urlencode }}">Revisar marcaciones</a></td>
+        </tr>{% empty %}<tr><td colspan="8" class="estado-vacio">No hay trabajadores con jornadas para estos filtros.</td></tr>{% endfor %}</tbody></table>
+    </div>
+    <nav class="paginacion" aria-label="Páginas de trabajadores">{% if pagina_trabajadores.has_previous %}<a class="btn-dark-outline" href="?{{ consulta_asistencia }}&amp;pagina={{ pagina_trabajadores.previous_page_number }}">Anterior</a>{% endif %}<span>Página {{ pagina_trabajadores.number }} de {{ pagina_trabajadores.paginator.num_pages }}</span>{% if pagina_trabajadores.has_next %}<a class="btn-dark-outline" href="?{{ consulta_asistencia }}&amp;pagina={{ pagina_trabajadores.next_page_number }}">Siguiente</a>{% endif %}</nav>
+</div>
+
+{% endif %}
+{% if revision_trabajador and not detalle_jornada %}{% include 'asistencia/revision_trabajador.html' %}{% endif %}
+{% if detalle_jornada %}
+<dialog id="detalle-jornada-dialog" class="detalle-jornada-dialog" aria-labelledby="titulo-detalle" data-volver="?{{ consulta_asistencia }}{% if revision_trabajador %}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}{% endif %}">
+    {% include 'asistencia/detalle.html' with d=detalle_jornada %}
+</dialog>
+{% endif %}
+{% if revision_trabajador or detalle_jornada %}{% load static %}<script src="{% static 'revision_trabajador.js' %}?v=20261019-permiso-1" defer></script>{% endif %}
+
+{% if puede_gestionar %}
+<div class="content-panel" id="cierre-periodo">
+    <h3 class="panel-title-text">Cierre del periodo</h3>
+    <p class="ayuda">El cierre abarca <strong>todas las sedes y trabajadores</strong> entre {{ filtros.desde }} y {{ filtros.hasta }}, sin aplicar los otros filtros. Requiere jornadas aprobadas y marcaciones conciliadas. Bloquea cambios y guarda los resultados.</p>
+    {% for cierre in cierres_asistencia %}<p class="aviso">Cerrado: {{ cierre.fecha_inicio|date:'d/m/Y' }} al {{ cierre.fecha_fin|date:'d/m/Y' }} · {{ cierre.total_jornadas }} jornadas · {{ cierre.cerrado_por.nombre_corto|default:'Responsable no disponible' }} · {{ cierre.cerrado_el|date:'d/m/Y H:i' }}</p>{% endfor %}
+    {% if puede_aprobar %}<form method="post" action="{% url 'cerrar_periodo' %}">{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<label class="confirmar-cierre"><input type="checkbox" name="confirmar" value="si" required> He revisado el periodo completo y confirmo su cierre.</label><button class="btn-cumbe" type="submit">Cerrar periodo completo</button></form>{% else %}<p class="ayuda">Contabilidad o Gerencia realiza la aprobación y el cierre.</p>{% endif %}
+</div>
+{% endif %}

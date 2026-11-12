@@ -1,0 +1,9 @@
+<dialog id="observacion-dia-dialog" class="manual-entry-dialog" aria-labelledby="titulo-observacion-dia">
+<header class="manual-entry-header"><div><h3 id="titulo-observacion-dia">Observación del día</h3><p>{{ d.resumen.fecha|date:'d/m/Y' }} · {{ d.resumen.persona.nombre_corto }}</p></div><button type="button" class="btn-dark-outline" onclick="this.closest('dialog').close()" aria-label="Cerrar observación">Cerrar</button></header>
+<form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" class="formulario-vertical">
+{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+<input type="hidden" name="accion" value="observacion_dia">
+<label for="observacion-dia">Descripción</label>
+<textarea autofocus id="observacion-dia" name="observacion_dia" rows="5" maxlength="3000" placeholder="Ej.: cubrió a un compañero o atendió una emergencia." {% if d.cerrada or not puede_gestionar %}readonly{% endif %}>{{ d.resumen.observacion_dia }}</textarea>
+<div class="manual-entry-actions"><button type="button" class="btn-dark-outline" onclick="this.closest('dialog').close()">Cancelar</button>{% if puede_gestionar and not d.cerrada %}<button type="submit" class="btn-cumbe">Guardar observación</button>{% endif %}</div>
+</form></dialog>

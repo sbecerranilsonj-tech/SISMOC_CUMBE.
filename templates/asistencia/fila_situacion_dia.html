@@ -1,0 +1,36 @@
+<tr class="dia-no-laborado {% if dia.especial %}dia-especial{% elif dia.es_sabado %}dia-sabado{% endif %}">
+    <td>{% include 'asistencia/_etiqueta_fecha.html' %}{{ d.resumen.fecha|date:'d/m/Y' }}</td>
+    <td>{% if d.situacion_dia.tipo == "CUMPLEANOS" %}{% include "asistencia/_etiqueta_cumpleanos.html" %}{% else %}<strong>{% if d.situacion_dia.tipo == 'OTRO' %}No trabajó · pendiente de justificar{% else %}{{ d.situacion_dia.get_tipo_display }}{% endif %}</strong>{% endif %}
+        {% if d.situacion_dia.tipo == 'OTRO' %}<small><span class="status-pill pill-orange">Justificación pendiente</span></small>
+        {% elif d.resumen.verificado_contabilidad %}<small><span class="status-pill pill-emerald">Día aprobado</span></small>
+        {% elif d.situacion_dia.aprobado_el %}<small><span class="status-pill pill-emerald">Situación aprobada</span></small>
+        {% else %}<small><span class="status-pill pill-orange">Pendiente de aprobación</span></small>{% endif %}
+        {% if d.situacion_dia.tipo == 'PERMISO' and d.situacion_dia.motivo %}
+        <details class="day-permission-note">
+            <summary>Ver justificación</summary>
+            <div class="day-permission-content">
+                <p>{{ d.situacion_dia.motivo|linebreaksbr }}</p>
+                {% if d.situacion_dia.aprobado_el %}<small>Aprobado el {{ d.situacion_dia.aprobado_el|date:'d/m/Y H:i' }}{% if d.situacion_dia.aprobado_por %} · {{ d.situacion_dia.aprobado_por.get_full_name|default:d.situacion_dia.aprobado_por.username }}{% endif %}</small>{% else %}<small>Pendiente de aprobación</small>{% endif %}
+            </div>
+        </details>
+        {% endif %}
+    </td>
+    <td>No laboró</td><td>No laboró</td><td>No laboró</td><td>No laboró</td>
+    <td>{% if d.cerrada %}Periodo cerrado{% else %}
+        {% if puede_aprobar and not d.resumen.verificado_contabilidad %}
+        {% include 'asistencia/_seleccionar_situacion_aprobacion.html' %}
+        {% elif d.situacion_dia.tipo == 'OTRO' and puede_gestionar and not d.resumen.verificado_contabilidad %}
+        <details><summary>Justificar día</summary>
+            <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" class="formulario-vertical" data-situacion-form>
+                {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+                <input type="hidden" name="solo_situacion" value="si"><input type="hidden" name="accion" value="justificar_dia">
+                <label>Situación del día<select name="tipo" required><option value="">Seleccione</option><option value="TRABAJO_SIN_MARCAR" data-fecha="{{ d.resumen.fecha|date:'Y-m-d' }}">Trabajó sin marcar</option><option value="DESCANSO_SEMANAL">Descanso semanal</option><option value="FERIADO_NO_LABORADO">Feriado no laborado</option><option value="NO_LABORO">No laboró</option><option value="PERMISO">Permiso</option><option value="VACACIONES">Vacaciones</option><option value="CUMPLEANOS">Cumpleaños</option><option value="DESCANSO_MEDICO">Descanso médico</option><option value="CAMBIO_DESCANSO">Cambio de descanso</option></select></label>
+                <label data-justificacion-permiso hidden>Justificación del permiso<textarea name="motivo" rows="2" disabled></textarea></label>
+                <button class="btn-dark-outline" type="submit">Guardar situación</button>
+                <small>La situación quedará pendiente de aprobación.</small>
+            </form>
+        </details>
+        {% elif not d.resumen.verificado_contabilidad %}<small>{% if d.situacion_dia.tipo == 'OTRO' %}Pendiente de justificar{% else %}Pendiente de revisión{% endif %}</small>{% endif %}
+    {% endif %}
+</td>
+</tr>

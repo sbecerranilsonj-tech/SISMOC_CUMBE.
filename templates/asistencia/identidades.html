@@ -1,0 +1,245 @@
+{% load static %}
+{% if puede_gestionar %}
+<details class="content-panel panel-identidades-plegable" open>
+    <summary class="cabecera-identidades-plegable"><h3 class="panel-title-text">Códigos del huellero y trabajadores</h3><span class="flecha-identidades" aria-hidden="true">⌃</span><span class="visually-hidden">Contraer o desplegar todo el bloque</span></summary>
+    <div class="contenido-identidades-plegable">
+    {% if grupo_importacion.meses %}
+    <nav class="import-months" aria-label="Meses importados">
+        <a class="import-month {% if grupo_importacion.todos %}is-selected{% endif %}" href="?vista=excel-zk&amp;grupo_mes=todos#lista-codigos-huellero" {% if grupo_importacion.todos %}aria-current="page"{% endif %}><strong>Todos los registros</strong><span>{{ grupo_importacion.total_marcas }} marcaciones</span></a>
+        {% for mes in grupo_importacion.meses %}<a class="import-month {% if mes.valor == grupo_importacion.mes %}is-selected{% endif %}" href="?vista=excel-zk&amp;grupo_mes={% if mes.valor == grupo_importacion.mes %}todos{% else %}{{ mes.valor }}{% endif %}#lista-codigos-huellero" {% if mes.valor == grupo_importacion.mes %}aria-current="page" title="Ver todos los registros"{% endif %}><strong>{{ mes.nombre }}</strong><span>{{ mes.total }} marcaciones</span></a>{% endfor %}
+    </nav>
+    {% endif %}
+    {% if grupo_importacion.error %}<p class="aviso aviso-error" role="alert">{{ grupo_importacion.error }}</p>{% endif %}
+    <form method="get" action="{% url 'dashboard' %}#lista-codigos-huellero" class="formulario-linea filtros-codigos">
+        <input type="hidden" name="vista" value="excel-zk">
+        <input type="hidden" name="identificacion" value="{{ filtros_codigos.identificacion }}">
+        {% if grupo_importacion.mes %}<input type="hidden" name="grupo_mes" value="{{ grupo_importacion.mes }}">{% endif %}
+        {% if grupo_importacion.meses %}<label>Archivo cargado<select name="grupo_carga"><option value="">{% if grupo_importacion.todos %}Todos los archivos{% else %}Todos los archivos de este mes{% endif %}</option>{% for carga in grupo_importacion.cargas %}<option value="{{ carga.pk }}" {% if grupo_importacion.carga_id == carga.pk|stringformat:'s' %}selected{% endif %}>#{{ carga.pk }} · {{ carga.nombre_archivo_original }} · {{ carga.fecha_subida|date:'d/m/Y H:i' }}</option>{% endfor %}</select></label>{% endif %}
+        <label>Sede<select name="sede_codigo"><option value="">Todas las sedes</option>{% for sede in sedes_codigos %}<option value="{{ sede }}" {% if filtros_codigos.sede_codigo == sede %}selected{% endif %}>{{ sede }}</option>{% endfor %}</select></label>
+        <label class="codigo-autocompletar">Código<input type="search" name="filtro_codigo" value="{{ filtros_codigos.filtro_codigo }}" maxlength="60" placeholder="Código importado" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugerencias-codigo" data-sugerir-codigos="{% url 'sugerir_codigos' %}"><span id="sugerencias-codigo" class="sugerencias-codigo" role="listbox" aria-label="Códigos disponibles" hidden></span></label>
+        <label>Nombre del trabajador<input type="search" name="nombre_codigo" value="{{ filtros_codigos.nombre_codigo }}" maxlength="150" placeholder="Nombre o apellido"></label>
+        <button type="submit" class="btn-cumbe">Buscar</button><a class="btn-dark-outline" href="?vista=excel-zk&amp;grupo_mes={{ grupo_importacion.mes }}#lista-codigos-huellero">Limpiar</a>
+    </form>
+    <nav class="identification-filters" aria-label="Filtrar por identificación">{% for filtro in enlaces_identificacion %}<a href="{{ filtro.url }}" class="identification-filter {% if filtro.estado == filtros_codigos.identificacion %}is-active{% endif %}" {% if filtro.estado == filtros_codigos.identificacion %}aria-current="page"{% endif %}>{{ filtro.nombre }} <span>{{ filtro.total }}</span></a>{% endfor %}</nav>
+    <div class="workspace-toolbar" style="margin: 14px 0 16px; padding: 10px 0; border-top: 1px solid var(--border-color, rgba(255,255,255,0.08)); border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));">
+        <div class="toolbar-count">
+            <strong>{{ total_codigos_filtrados }}</strong> código{{ total_codigos_filtrados|pluralize:'s' }} del huellero
+            {% if total_identificados_envio %} · <span style="color: var(--accent-emerald, #10b981); font-weight: 600;">{{ total_identificados_envio }} trabajador{{ total_identificados_envio|pluralize:'es' }} vinculado{{ total_identificados_envio|pluralize:'s' }}</span>{% endif %}
+            {% if total_codigos_filtrados > 200 %} <small class="ayuda">(primeros 200)</small>{% endif %}
+        </div>
+        <div class="toolbar-actions">
+            <button type="button" class="btn-cumbe" id="btn-abrir-envio-modal" {% if not total_identificados_envio or not desde_envio %}disabled{% endif %} style="font-size: 13px; padding: 8px 16px;">
+                <svg class="ui-icon" aria-hidden="true" style="width:14px;height:14px;"><use href="#icon-calendar"></use></svg> Pasar a Asistencia y HH.EE. ({{ total_identificados_envio }} trabajador{{ total_identificados_envio|pluralize:'es' }})
+            </button>
+        </div>
+    </div>
+
+    {% include 'asistencia/_envio_asistencia.html' %}
+    <script>
+    (() => {
+        const dlgEnvio = document.getElementById('dialog-envio-asistencia');
+        const btnAbrir = document.getElementById('btn-abrir-envio-modal');
+        if (!dlgEnvio || !btnAbrir) return;
+        let enviando = false;
+        const formularioEnvio = dlgEnvio.querySelector('form');
+        const botonEnvio = formularioEnvio.querySelector('button[type="submit"]');
+        const deshabilitadoInicial = botonEnvio.disabled;
+        formularioEnvio.addEventListener('submit', (event) => {
+            if (enviando) { event.preventDefault(); return; }
+            enviando = true;
+            formularioEnvio.setAttribute('aria-busy', 'true');
+            botonEnvio.disabled = true;
+            dlgEnvio.querySelector('[data-envio-etiqueta]').textContent = 'Enviando…';
+            dlgEnvio.querySelector('[data-envio-estado]').hidden = false;
+            dlgEnvio.querySelectorAll('.cancelar-envio-modal').forEach(b => b.disabled = true);
+        });
+        dlgEnvio.addEventListener('cancel', event => { if (enviando) event.preventDefault(); });
+        window.addEventListener('pageshow', event => {
+            if (!event.persisted) return;
+            enviando = false;
+            formularioEnvio.removeAttribute('aria-busy');
+            botonEnvio.disabled = deshabilitadoInicial;
+            dlgEnvio.querySelector('[data-envio-etiqueta]').textContent = 'Validar y enviar';
+            dlgEnvio.querySelector('[data-envio-estado]').hidden = true;
+            dlgEnvio.querySelectorAll('.cancelar-envio-modal').forEach(b => b.disabled = false);
+        });
+
+        btnAbrir.addEventListener('click', () => {
+            try {
+                if (typeof dlgEnvio.showModal === 'function') {
+                    dlgEnvio.showModal();
+                } else {
+                    dlgEnvio.setAttribute('open', '');
+                }
+            } catch (e) {
+                dlgEnvio.setAttribute('open', '');
+            }
+        });
+
+        dlgEnvio.querySelectorAll('.cancelar-envio-modal').forEach(btn => {
+            btn.addEventListener('click', () => dlgEnvio.close());
+        });
+
+        dlgEnvio.addEventListener('click', (e) => {
+            const rect = dlgEnvio.getBoundingClientRect();
+            const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height
+                && rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
+            if (!isInDialog && !enviando) dlgEnvio.close();
+        });
+    })();
+    </script>
+    {% if identidad_consultada %}
+    <link rel="stylesheet" href="{% static 'revision_trabajador.css' %}?v=20261023-1">
+    <dialog id="modal-marcaciones-codigo" class="modal-marcaciones-dialog custom-modal-box" aria-labelledby="modal-marcaciones-titulo" data-volver="?{{ consulta_codigos }}#lista-codigos-huellero">
+        <header class="worker-review-header">
+            <div class="worker-review-person">
+                <span class="worker-review-avatar" aria-hidden="true">{{ identidad_consultada.nombre_corto|slice:":1"|upper|default:"#" }}</span>
+                <div>
+                    <h3 id="modal-marcaciones-titulo">{{ identidad_consultada.nombre_corto|default:"Trabajador" }}</h3>
+                    <dl class="worker-review-identity">
+                        <div><dt>Código importado</dt><dd><strong>{{ identidad_consultada.codigo }}</strong></dd></div>
+                        {% if identidad_consultada.trabajador %}
+                            <div><dt>DNI</dt><dd>{{ identidad_consultada.trabajador.dni }}</dd></div>
+                            <div><dt>Área</dt><dd>{{ identidad_consultada.trabajador.area }}</dd></div>
+                        {% endif %}
+                        <div><dt>Sede</dt><dd>{{ identidad_consultada.sede }}</dd></div>
+                        <div><dt>Equipo</dt><dd>{{ identidad_consultada.equipo|default:"1" }}</dd></div>
+                        <div><dt>Total marcaciones</dt><dd>{{ marcas_codigo|length }}</dd></div>
+                    </dl>
+                </div>
+            </div>
+            <div class="toolbar-actions">
+                <a class="btn-dark-outline" id="btn-cerrar-modal-marcaciones" href="?{{ consulta_codigos }}#lista-codigos-huellero">Cerrar ventana</a>
+            </div>
+        </header>
+
+        <div class="worker-review-context">
+            <span class="worker-mark-count"><svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg><strong>{{ marcas_codigo|length }}</strong> marcaciones</span>
+            <span class="worker-period"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg>Registros importados de asistencia</span>
+        </div>
+
+        <div class="table-responsive marcas-trabajador-periodo">
+            <table class="custom-dark-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Hora</th>
+                        <th scope="col">Departamento / compañía</th>
+                        <th scope="col">Evento</th>
+                        <th scope="col">Estado original</th>
+                        <th scope="col">Verificación</th>
+                        <th scope="col">Lote</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in marcas_codigo %}
+                    <tr>
+                        <td>{{ m.fecha_hora|date:'d/m/Y' }}</td>
+                        <td><strong>{{ m.fecha_hora|date:'H:i:s' }}</strong></td>
+                        <td>{{ m.departamento_reportado|default:'No reportado' }}</td>
+                        <td>
+                            <span class="status-pill {% if 'Ent' in m.get_tipo_evento_display or '1' in m.get_tipo_evento_display %}pill-emerald{% elif 'Sal' in m.get_tipo_evento_display or '2' in m.get_tipo_evento_display %}pill-orange{% else %}pill-cyan{% endif %}">
+                                {{ m.get_tipo_evento_display }}
+                            </span>
+                        </td>
+                        <td>{{ m.estado_reportado|default:'No reportado' }}</td>
+                        <td>{{ m.verificacion_reportada|default:'No reportada' }}</td>
+                        <td>#{{ m.carga_origen_id }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">Sin marcaciones guardadas para este código.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </dialog>
+    <script>
+    (() => {
+        const dialog = document.getElementById('modal-marcaciones-codigo');
+        if (!dialog) return;
+
+        try {
+            if (typeof dialog.showModal === 'function') {
+                dialog.showModal();
+            } else {
+                dialog.setAttribute('open', '');
+            }
+        } catch (e) {
+            dialog.setAttribute('open', '');
+        }
+
+        function cerrar() {
+            try { dialog.close(); } catch (err) {}
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('codigo_biometrico')) {
+                url.searchParams.delete('codigo_biometrico');
+                window.history.replaceState({}, '', url.toString());
+            }
+        }
+
+        const btnCerrar = document.getElementById('btn-cerrar-modal-marcaciones');
+        if (btnCerrar) {
+            btnCerrar.addEventListener('click', (e) => {
+                e.preventDefault();
+                cerrar();
+            });
+        }
+
+        dialog.addEventListener('click', (e) => {
+            const rect = dialog.getBoundingClientRect();
+            const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height
+                && rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
+            if (!isInDialog) {
+                cerrar();
+            }
+        });
+
+        dialog.addEventListener('close', () => {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('codigo_biometrico')) {
+                url.searchParams.delete('codigo_biometrico');
+                window.history.replaceState({}, '', url.toString());
+            }
+        });
+    })();
+    </script>
+    {% endif %}
+    <div id="lista-codigos-huellero" class="table-responsive"><table class="custom-dark-table"><thead><tr><th>Sede</th><th>Equipo</th><th>Código</th><th>Trabajador identificado</th><th>Asociación</th></tr></thead><tbody>
+    {% for identidad in identidades_biometricas %}<tr><td>{{ identidad.sede }}</td><td>{{ identidad.equipo|default:'No reportado' }}</td><td><strong>{{ identidad.codigo }}</strong><small><a href="?{{ consulta_codigos }}&amp;codigo_biometrico={{ identidad.pk }}">Ver marcaciones</a></small></td><td>{{ identidad.nombre_corto|default:'Pendiente de nombre' }}<small>{% if identidad.trabajador %}Identificado · {{ identidad.trabajador.dni }} · {{ identidad.trabajador.area }}{% else %}Pendiente de identificar{% endif %}</small></td><td><details class="identificar-ficha"><summary>{% if identidad.trabajador %}Ver identificación{% else %}Identificar trabajador{% endif %}</summary>
+{% if identidad.trabajador %}<p>{{ identidad.trabajador.nombre_corto }}<br>DNI: {{ identidad.trabajador.dni }}<br>Código importado: {{ identidad.codigo }}<br>Área: {{ identidad.trabajador.area }}</p><button type="button" class="btn-dark-outline editar-trabajador" data-url="{% url 'editar_trabajador' identidad.pk %}" data-codigo="{{ identidad.codigo }}" data-nombre="{{ identidad.trabajador.nombre_completo }}" data-nombres="{{ identidad.trabajador.nombres }}" data-apellido-paterno="{{ identidad.trabajador.apellido_paterno }}" data-apellido-materno="{{ identidad.trabajador.apellido_materno }}" data-dni="{{ identidad.trabajador.dni }}" data-area="{{ identidad.trabajador.area }}">Editar trabajador</button>{% else %}
+<form class="buscador-trabajador formulario-vertical" action="{% url 'confirmar_trabajador' identidad.pk %}" data-buscar="{% url 'buscar_trabajadores' %}" data-codigo="{{ identidad.codigo }}" data-registrar="{% url 'registrar_trabajador' identidad.pk %}">
+{% csrf_token %}
+<label>Buscar trabajador por nombre, DNI o código<input class="consulta-trabajador" type="search" autocomplete="off" maxlength="100" placeholder="Escriba al menos 2 caracteres"></label>
+<div class="resultados-trabajador" aria-live="polite"></div><input type="hidden" name="trabajador">
+<p class="seleccion-trabajador ayuda" aria-live="polite"></p><p class="error-trabajador aviso aviso-error" role="alert" hidden></p>
+<div class="acciones-identificar-trabajador" role="group" aria-label="Acciones del trabajador">
+<button class="btn-dark-outline abrir-registro-trabajador" type="button"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Registrar</button>
+<button class="btn-cumbe confirmar-trabajador" type="submit" disabled><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Confirmar</button>
+<button class="btn-dark-outline editar-trabajador editar-seleccionado" type="button" data-codigo="{{ identidad.codigo }}" data-url="{% url 'registrar_trabajador' identidad.pk %}" data-nombre="{{ identidad.nombre }}" data-dni="" data-area="" data-pendiente="si" title="Editar y completar los datos importados"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1L20 7a3 3 0 0 0-4-4L4 15z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Editar</button>
+</div>
+</form>{% endif %}</details></td></tr>{% empty %}<tr><td colspan="5" class="estado-vacio">No se encontraron registros. Revise los filtros o importe un archivo de asistencia.</td></tr>{% endfor %}
+    </tbody></table></div>
+    </div>
+</details>
+<dialog id="registro-trabajador-dialog" class="registro-trabajador-dialog" aria-labelledby="titulo-registro-trabajador">
+<form id="registro-trabajador-form" class="formulario-vertical" method="post">
+{% csrf_token %}<h3 id="titulo-registro-trabajador">Registrar trabajador</h3>
+<p id="descripcion-registro-trabajador" class="ayuda">Se guardará su ficha de personal y se vinculará al código seleccionado. No se creará una cuenta de acceso.</p>
+<label>Código importado del Excel <span class="codigo-origen-etiqueta">Solo lectura</span><output id="codigo-importado-registro" class="codigo-origen-bloqueado" aria-label="Código original del huellero, no editable"></output></label>
+<p id="nombre-anterior-trabajador" class="ayuda" hidden></p>
+<label>Nombres<input name="nombres" required maxlength="75" autocomplete="given-name" placeholder="Ejemplo: Nilson Jesús"></label>
+<label>Primer apellido<input name="apellido_paterno" required maxlength="50" autocomplete="family-name" placeholder="Ejemplo: Silupu"></label>
+<label>Segundo apellido (opcional)<input name="apellido_materno" maxlength="50" placeholder="Ejemplo: Becerra"></label>
+<p class="ayuda">Se guardarán los nombres y apellidos completos. En el sistema aparecerá el primer apellido y el primer nombre.</p>
+<label>DNI<input name="dni" required pattern="[0-9]{8}" minlength="8" maxlength="8" inputmode="numeric"></label>
+<label>Área donde trabaja<input name="area" required maxlength="100" placeholder="Por ejemplo: Administración"></label>
+<p class="ayuda">El código se conserva tal como se importó del Excel. La sede y el equipo se toman de la fila seleccionada.</p>
+<p class="error-registro-trabajador aviso aviso-error" role="alert" hidden></p>
+<div id="conflicto-ficha-trabajador" class="aviso" hidden><p id="datos-ficha-existente"></p><p>Confirme solo si ambas fichas pertenecen a la misma persona. Se conservarán los datos de la ficha existente y se trasladarán los códigos y sus marcaciones; la ficha duplicada se retirará y la corrección quedará en el historial.</p><button type="button" id="usar-ficha-existente" class="btn-cumbe">Usar ficha existente y corregir vínculo</button></div>
+<div class="acciones"><button type="button" class="btn-dark-outline cancelar-registro-trabajador">Cancelar</button><button type="submit" class="btn-cumbe">Guardar y vincular</button></div>
+</form></dialog>
+<script src="{% static 'trabajadores.js' %}?v=20261030-nombres" defer></script>
+<script src="{% static 'sugerencias_codigos.js' %}?v=20261028-1" defer></script>
+{% endif %}

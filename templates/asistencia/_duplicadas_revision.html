@@ -1,0 +1,13 @@
+{% if d.filas_duplicadas %}
+<section class="duplicate-review" aria-labelledby="titulo-duplicadas">
+    <header class="duplicate-review-heading"><div><h4 id="titulo-duplicadas">Revisar duplicadas</h4><p>Elige cuál conservar. Las excluidas pueden restaurarse.</p></div><span class="duplicate-review-count">{{ d.filas_duplicadas|length }} marcas</span></header>
+    <ul class="duplicate-review-list">
+        {% for fila in d.filas_duplicadas %}
+        <li><span class="duplicate-review-time"><svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg><span><strong>{{ fila.fecha_hora|date:'H:i:s' }}</strong><small>{{ fila.fecha_hora|date:'d/m/Y' }} · Código {{ fila.codigo }}</small></span></span>
+            <span class="duplicate-review-state">{% if fila.excluida_duplicada %}Excluida · No se computa{% else %}Posible repetición · hasta 60 s{% endif %}</span>
+            {% if puede_gestionar and not d.cerrada %}{% if fila.posible_duplicada %}<button type="submit" form="excluir-duplicada-form" name="marcacion_id" value="{{ fila.marcacion_id }}" class="duplicate-review-action" aria-label="Excluir por duplicada la marca del {{ fila.fecha_hora|date:'d/m/Y H:i:s' }}">Excluir por duplicada</button>{% else %}<button type="submit" form="restaurar-duplicada-form" name="marcacion_id" value="{{ fila.marcacion_id }}" class="duplicate-review-action" aria-label="Restaurar la marca del {{ fila.fecha_hora|date:'d/m/Y H:i:s' }}">Restaurar</button>{% endif %}{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}

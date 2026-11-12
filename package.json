@@ -1,0 +1,12 @@
+{
+  "name": "sismoc-cumbe-ui",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i assets/app.css -o static/app.css --minify",
+    "watch:css": "tailwindcss -i assets/app.css -o static/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.0",
+    "tailwindcss": "4.3.0"
+  }
+}

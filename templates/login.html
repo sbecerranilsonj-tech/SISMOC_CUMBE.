@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar sesión | SISMOC-CUMBE</title>
+<link rel="stylesheet" href="{% static 'interfaz.css' %}?v=20261018-1">
+<link rel="stylesheet" href="{% static 'acceso.css' %}?v=20261019-login-2">
+</head><body class="login-page">
+{% include "_icons.html" %}
+<main class="login-layout">
+ <section class="login-intro" aria-label="Bienvenida a SISMOC-CUMBE">
+  <div class="login-intro-main">
+   <h1>Bienvenido</h1>
+   <p>Ingresa a tu cuenta para gestionar la asistencia, revisar las jornadas y organizar la operación de El Cumbe.</p>
+  </div>
+  <p class="login-legal">SISMOC-CUMBE · Sistema integrado de gestión operativa</p>
+ </section>
+ <section class="login-form-panel" aria-labelledby="titulo-acceso">
+  <div class="login-form-content">
+  <div class="form-heading"><img class="login-logo-horizontal" src="{% static 'img/el-cumbe-horizontal.png' %}" alt="Empresa de Transportes El Cumbe"><h2 id="titulo-acceso">Inicia sesión</h2><p>Accede a SISMOC con tu cuenta de colaborador.</p></div>
+  <div class="login-form-card">
+  {% if messages %}{% for message in messages %}<div role="alert" class="custom-alert {% if message.level_tag == 'error' %}alert-error-custom{% elif message.level_tag == 'success' %}alert-success-custom{% else %}alert-info-custom{% endif %}">{{ message }}</div>{% endfor %}{% endif %}
+  <form method="POST" action="{% url 'login' %}">
+   {% csrf_token %}<input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+   <div class="input-group-custom"><label class="form-label-custom" for="usernameInput">DNI o nombre de usuario</label><div class="input-wrap"><svg class="field-icon ui-icon" aria-hidden="true"><use href="#icon-users"></use></svg><input type="text" name="username" id="usernameInput" class="form-control-custom" placeholder="Escribe tu DNI o usuario" required autocomplete="username" autofocus></div></div>
+   <div class="input-group-custom"><label class="form-label-custom" for="passwordInput">Contraseña</label><div class="input-wrap"><svg class="field-icon ui-icon" aria-hidden="true"><use href="#icon-lock"></use></svg><input type="password" name="password" id="passwordInput" class="form-control-custom" placeholder="Escribe tu contraseña" required autocomplete="current-password"><button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility()" aria-label="Mostrar u ocultar contraseña" aria-pressed="false"><svg class="ui-icon" id="eyeIcon" aria-hidden="true"><use href="#icon-eye"></use></svg></button></div></div>
+   <button type="submit" class="btn-cumbe-submit"><span>Iniciar sesión</span><svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></button>
+  </form>
+  </div>
+  <p class="login-assistance">Si necesitas acceso o ayuda con tu cuenta, comunícate con el administrador del sistema.</p>
+  <details class="login-evaluation"><summary>Accesos de evaluación por rol</summary><p>Selecciona una cuenta del entorno de demostración.</p>
+                <div class="roles-grid">
+                    <button type="button" class="role-chip-btn" onclick="seleccionarRol('admin', 'cumbe2026', this)">
+                        <span class="role-chip-title">⚙️ Admin TI</span>
+                        <span class="role-chip-user">Nilson S. (00000000)</span>
+                    </button>
+                    <button type="button" class="role-chip-btn" onclick="seleccionarRol('yaneli.terrones', 'cumbe2026', this)">
+                        <span class="role-chip-title">📊 Contadora</span>
+                        <span class="role-chip-user">Yaneli T. (48039773)</span>
+                    </button>
+                    <button type="button" class="role-chip-btn" onclick="seleccionarRol('gerente.cumbe', 'cumbe2026', this)">
+                        <span class="role-chip-title">👑 Gerente Gral</span>
+                        <span class="role-chip-user">Segundo (16548920)</span>
+                    </button>
+                    <button type="button" class="role-chip-btn" onclick="seleccionarRol('carlos.condor', 'cumbe2026', this)">
+                        <span class="role-chip-title">🚌 Conductor</span>
+                        <span class="role-chip-user">Carlos C. (45892147)</span>
+                    </button>
+                    <button type="button" class="role-chip-btn" onclick="seleccionarRol('miguel.embarque', 'cumbe2026', this)">
+                        <span class="role-chip-title">📱 Embarque</span>
+                        <span class="role-chip-user">Miguel A. (71234567)</span>
+                    </button>
+                    <button type="button" class="role-chip-btn" onclick="seleccionarRol('ana.boleteria', 'cumbe2026', this)">
+                        <span class="role-chip-title">🎟️ Boletería</span>
+                        <span class="role-chip-user">Ana M. (72345678)</span>
+                    </button>
+                    <button type="button" class="role-chip-btn" onclick="seleccionarRol('pedro.asistente', 'cumbe2026', this)">
+                        <span class="role-chip-title">👔 Administrativo</span>
+                        <span class="role-chip-user">Pedro M. (73456789)</span>
+                    </button>
+                </div>
+
+  </details>
+  </div>
+ </section>
+</main>
+    <script>
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('passwordInput');
+            const eyeIcon = document.getElementById('eyeIcon');
+            const toggle = document.querySelector('.toggle-password-btn');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                toggle.setAttribute('aria-label', 'Ocultar contraseña');
+                document.querySelector('.toggle-password-btn').setAttribute('aria-pressed','true');
+            } else {
+                passInput.type = 'password';
+                toggle.setAttribute('aria-label', 'Mostrar contraseña');
+                document.querySelector('.toggle-password-btn').setAttribute('aria-pressed','false');
+            }
+        }
+
+        function seleccionarRol(username, password, btnElement) {
+            document.getElementById('usernameInput').value = username;
+            document.getElementById('passwordInput').value = password;
+
+            // Marcar chip activo visualmente
+            document.querySelectorAll('.role-chip-btn').forEach(b => b.classList.remove('active'));
+            if (btnElement) {
+                btnElement.classList.add('active');
+            }
+
+            // Efecto suave de foco
+            document.getElementById('usernameInput').focus();
+        }
+    </script>
+
+</body></html>

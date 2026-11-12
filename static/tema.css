@@ -1,0 +1,51 @@
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:9px 12px;border:1px solid #dce3ed;border-radius:10px;background:#f8f9fc;color:#425975;font:550 12px/1.3 Geist,'Segoe UI',sans-serif;cursor:pointer;white-space:nowrap}
+.theme-toggle:hover{background:#edf1f7;border-color:#bcc9d9}.theme-toggle:focus-visible{outline:3px solid #bd4d14;outline-offset:3px}.theme-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.theme-toggle .theme-sun{display:none}
+html[data-theme="dark"]{--night-bg:#111820;--night-panel:#19232e;--night-raised:#202d3b;--night-field:#131e29;--night-line:#344458;--night-text:#e4ebf3;--night-muted:#b0bfd0;--bg-dark:var(--night-bg);--bg-card:var(--night-panel);--bg-card-header:var(--night-raised);--border-color:var(--night-line);--text-main:var(--night-text);--text-muted:var(--night-muted);color-scheme:dark}
+html[data-theme="dark"] body{background:var(--night-bg)!important;color:var(--night-text)!important}
+html[data-theme="dark"] .theme-toggle{background:var(--night-raised);border-color:var(--night-line);color:#e2b58a}
+html[data-theme="dark"] .theme-toggle:hover{background:#2a3949;border-color:#71839b}
+html[data-theme="dark"] .theme-toggle .theme-moon{display:none}html[data-theme="dark"] .theme-toggle .theme-sun{display:block}
+html[data-theme="dark"] :is(.top-navbar,.account-popover,.content-panel,.kpi-box,.filtros-dashboard,.day-audit-panel,.day-support-card,.cuadro-control-excel,.worker-review-progress,.schedule-editor,.schedule-list,.schedule-catalog,dialog,.modal-content,.panel-finalizar-revision){background:var(--night-panel)!important;color:var(--night-text)!important;border-color:var(--night-line)!important;box-shadow:none!important}
+html[data-theme="dark"] :is(h1,h2,h3,h4,h5,h6,.panel-title-text,.worker-review-person h3,.day-review-person h3,.day-shift-name,.provenance-time strong,.work-interval-list strong,.worker-review-stats dd,.day-time-summary dd,.kpi-value,.toolbar-count strong,.attendance-summary strong,.day-review-identity dd,.worker-review-identity dd,.account-popover strong,.provenance-event,.provenance-facts dd,.day-extra-concepts strong,.schedule-page label){color:var(--night-text)!important}
+html[data-theme="dark"] :is(.ayuda,.text-muted,.account-role,.workspace-breadcrumb,.periodo-asistencia,.attendance-summary,.toolbar-count,.paginacion,.provenance-time>span,.provenance-source,.provenance-facts dt,.day-audit-help,.day-audit-empty,.day-audit-heading>span,.day-shift-label,.day-shift-description,.day-time-summary dt,.day-time-summary dd span,.day-time-detail>summary,.day-time-detail>summary>span,.work-interval-list li,.worker-review-context,.worker-review-identity dt,.day-review-identity dt,.worker-review-stats dt,.worker-review-stats dd span,.worker-review-approval label,.worker-review-idle,.schedule-muted,.schedule-pagination,.schedule-table td small,.schedule-catalog-items small,.manual-entry-note,.manual-entry-card p){color:var(--night-muted)!important}
+html[data-theme="dark"] :is(.custom-dark-table th,.schedule-table th){background:var(--night-raised)!important;color:var(--night-muted)!important;border-color:var(--night-line)!important}
+html[data-theme="dark"] :is(.custom-dark-table td,.schedule-table td){background:var(--night-panel)!important;color:var(--night-text)!important;border-color:var(--night-line)!important}
+html[data-theme="dark"] :is(.custom-dark-table tbody tr:hover td,.schedule-table tbody tr:hover td){background:#233242!important}
+html[data-theme="dark"] :is(.custom-dark-table td a,.schedule-table td a,.tabla-trabajadores-asistencia td:first-child a){color:#c0d9fa!important}
+html[data-theme="dark"] :is(.custom-dark-table tfoot td,.custom-dark-table tfoot th){background:#263546!important;color:var(--night-text)!important}
+html[data-theme="dark"] :is(.filtros-asistencia,.day-shift-card,.day-time-concepts,.day-time-summary,.day-extra-concepts,.worker-period,.worker-review-approval,.worker-review-idle,.provenance-facts,.manual-entry-card,.day-notes-group,.day-note-box,.resultado-aprobacion-masiva,.filtros-dashboard,.schedule-catalog-items>div){background:var(--night-field)!important;border-color:var(--night-line)!important}
+html[data-theme="dark"] :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea){background:var(--night-field)!important;color:var(--night-text)!important;border-color:#485b72!important;box-shadow:none!important;color-scheme:dark}
+html[data-theme="dark"] input::placeholder,html[data-theme="dark"] textarea::placeholder{color:#9eafc3!important;opacity:1}
+html[data-theme="dark"] :is(input,select,textarea):focus-visible{outline:2px solid #efa56e;outline-offset:2px}
+html[data-theme="dark"] :is(.btn-dark-outline,.toolbar-button,.desktop-menu-toggle,.mobile-menu-button,.day-shift-editor>summary,.schedule-secondary){background:var(--night-raised)!important;color:#d5e2f1!important;border-color:#465a73!important}
+html[data-theme="dark"] :is(.btn-dark-outline:hover,.toolbar-button:hover,.day-shift-editor>summary:hover,.schedule-secondary:hover){background:#2b3e53!important;border-color:#7f94ae!important}
+html[data-theme="dark"] :is(.btn-cumbe,.schedule-primary){background:#c6551b!important;color:#fff!important;border-color:#c6551b!important}
+html[data-theme="dark"] :is(.btn-cumbe:hover,.schedule-primary:hover){background:#ad4511!important}
+html[data-theme="dark"] :is(.pill-emerald,.badge-validado,.status-aprobado){background:#163d34!important;color:#a0e5cd!important}
+html[data-theme="dark"] :is(.pill-orange,.status-pendiente){background:#49321d!important;color:#ffd29d!important}
+html[data-theme="dark"] :is(.pill-rose,.status-observado){background:#492933!important;color:#ffc0cc!important}
+html[data-theme="dark"] :is(.aviso,.aviso-error,.schedule-notice){background:#3b2d1d!important;color:#ffdab3!important;border-color:#745432!important}
+html[data-theme="dark"] .app-alert{background:#163d34!important;color:#b2ead6!important;border-color:#315d50!important}
+html[data-theme="dark"] :is(.day-time-warning dd,.worker-stat-ready dd,.workspace-breadcrumb strong,.schedule-back,.schedule-pagination a,.schedule-catalog summary,.provenance-expand,.provenance-facts a){color:#ffb67e!important}
+html[data-theme="dark"] :is(.worker-stat-approved dd,.worker-review-complete){color:#8cdabb!important}
+html[data-theme="dark"] :is(.person-avatar,.worker-review-avatar,.day-review-avatar,.manual-entry-icon){background:#413026!important;color:#ffc296!important}
+html[data-theme="dark"] :is(.provenance-symbol,.day-shift-icon,.day-review-date){background:#263648!important;color:#bfd2eb!important;border-color:var(--night-line)!important}
+html[data-theme="dark"] :is(.provenance-entry,.day-time-detail,.day-time-summary>div,.worker-review-stats>div,.workspace-toolbar,.day-shift-card,.day-extra-concepts>div,.day-notes-group>details,.schedule-days label){border-color:var(--night-line)!important}
+html[data-theme="dark"] .provenance-entry>summary:hover{background:#233242!important}
+html[data-theme="dark"] dialog::backdrop{background:#03080dba}
+html[data-theme="dark"] ::selection{background:#68472f;color:#fff3e8}
+html[data-theme="dark"] *{scrollbar-color:#52647b transparent}
+html[data-theme="dark"] .errorlist{color:#ffb4b4!important}
+html[data-theme="dark"] :is(.custom-dark-table small,.filtros-asistencia label,.formulario-vertical label,.formulario-linea label,.day-control-meta,.day-time-format,.manual-entry-header p,.day-notes-group p,.day-notes-group li,.day-extra-concepts span){color:var(--night-muted)!important}
+html[data-theme="dark"] :is(.day-time-detail>summary::after,.provenance-time>span,.day-support-card>summary,.day-review-context){color:var(--night-muted)!important}
+@media(max-width:700px){.theme-toggle{padding:9px;min-width:40px;flex-shrink:0}.theme-toggle [data-theme-label]{display:none}}
+@media print{.theme-toggle{display:none}}
+.import-months{display:flex;gap:10px;overflow-x:auto;padding:4px 0 16px;margin:8px 0 4px}.import-month{display:flex;flex-direction:column;gap:5px;flex:0 0 auto;min-width:150px;padding:13px 16px;border:1px solid #dce3ed;border-radius:12px;color:#344763;background:#f8fafc;text-decoration:none}.import-month strong{font-size:13px}.import-month span{font-size:11px;color:#566b85}.import-month:hover{border-color:#bd4d14}.import-month.is-selected{border-color:#bd4d14;background:#fff3e9;color:#9e3e0b}.filtros-codigos label:has(select[name=grupo_carga]){min-width:220px;flex:1.5}.filtros-codigos select[name=grupo_carga]{max-width:100%;text-overflow:ellipsis}.import-month:focus-visible{outline:3px solid #bd4d14;outline-offset:2px}
+html[data-theme="dark"] .import-month{background:var(--night-raised);border-color:var(--night-line);color:var(--night-text)}html[data-theme="dark"] .import-month span{color:var(--night-muted)}html[data-theme="dark"] .import-month.is-selected{background:#433024;border-color:#e4935e;color:#ffd2b0}
+
+html[data-theme="dark"] .resumen-contable-card{background:var(--night-field)!important;border-color:var(--night-line)!important;box-shadow:none!important}
+html[data-theme="dark"] .resumen-card-value{color:var(--night-text)!important}
+html[data-theme="dark"] :is(.resumen-card-label,.resumen-card-unit){color:var(--night-muted)!important}
+html[data-theme="dark"] .resumen-card-icon.icon-date{background:#3d2616!important;color:#ffa96b!important;border-color:#63391b!important}
+html[data-theme="dark"] .resumen-card-icon.icon-users{background:#2a1f42!important;color:#c4b5fd!important;border-color:#4c337a!important}
+html[data-theme="dark"] .resumen-card-icon.icon-shifts{background:#14352b!important;color:#6ee7b7!important;border-color:#215c4a!important}

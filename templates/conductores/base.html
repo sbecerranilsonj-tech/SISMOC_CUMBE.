@@ -1,0 +1,7 @@
+{% extends 'index.html' %}{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'conductores.css' %}?v=20261108-alertas-sv">{% endblock %}
+{% block workspace %}
+<div class="conductores-workspace content-panel" data-seccion="{{ seccion }}">
+<header class="cd-heading"><div><span class="cd-eyebrow">OPERACIONES</span><h1>{% block titulo %}Gestión de conductores{% endblock %}</h1><p>{% block descripcion %}Itinerarios y control individual de servicios.{% endblock %}</p></div><div class="cd-heading-actions">{% block acciones_cabecera %}{% endblock %}{% block recuadro_cabecera %}<span class="cd-emblema"><svg class="ui-icon"><use href="#icon-bus"></use></svg> El Cumbe</span>{% endblock %}</div></header>
+{% block contenido %}{% endblock %}</div><script src="{% static 'conductores.js' %}?v=20261108-alertas-sv" defer></script>
+{% endblock %}

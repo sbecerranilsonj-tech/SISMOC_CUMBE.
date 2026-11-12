@@ -1,0 +1,92 @@
+{% load static %}
+<div class="cuadro-control-excel">
+    <div class="day-control-toolbar">
+        <div class="day-control-title-actions">
+            <h4 aria-label="Cuadro de control diario · Formato del Excel">Control diario</h4>
+            {% if puede_gestionar and not d.cerrada %}
+            <button type="button" class="btn-dark-outline btn-agregar-marca" id="abrir-marcacion-manual" aria-haspopup="dialog" aria-controls="marcacion-manual-dialog" title="Completar una marca faltante confirmada">
+                <svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg> <span>Agregar marcación manual</span>
+            </button>
+            {% endif %}
+            {% include 'asistencia/_boton_observacion.html' %}
+            {% if puede_aprobar and not d.cerrada and not d.resumen.verificado_contabilidad and not d.cuadro_excel.filas %}
+            {% if d.descanso_previsto and not d.situacion_dia %}
+            <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" class="day-confirm-scheduled-rest">
+                {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+                <input type="hidden" name="accion" value="aprobar_dia_situacion">
+                <input type="hidden" name="solo_situacion" value="si">
+                <input type="hidden" name="mantener_detalle" value="si">
+                <input type="hidden" name="tipo" value="{% if d.sin_trabajo_programado %}SIN_PROGRAMACION{% else %}DESCANSO_SEMANAL{% endif %}">
+                <button type="submit" class="btn-dark-outline">{% if d.sin_trabajo_programado %}Confirmar día sin trabajo programado{% else %}Confirmar descanso{% endif %}</button>
+            </form>
+            {% else %}<div class="day-register-situation">{% include 'asistencia/_seleccionar_situacion_aprobacion.html' with mantener_detalle=True titulo_situacion="Registrar situación" boton_situacion="Confirmar situación" %}</div>{% endif %}
+            {% if d.descanso_previsto %}<span class="status-pill pill-purple">{% if d.sin_trabajo_programado %}Sin trabajo programado · Por validar{% else %}Descanso programado · Por confirmar{% endif %}</span>{% endif %}
+            {% endif %}
+
+        </div>
+        <div class="day-control-meta"><span>Base <strong>{{ d.cuadro_excel.totales.base }}</strong></span><span class="day-time-format">HH:MM:SS</span>
+            <details class="day-calculation-help"><summary>Cómo se calcula</summary><p>Los intervalos se calculan entre marcas válidas consecutivas. El total trabajado excluye el refrigerio y requiere una secuencia completa de ingreso y salida.</p></details>
+        </div>
+
+    </div>
+    {% include 'asistencia/_descanso_trabajado.html' %}
+    {% if d.descanso_previsto and puede_aprobar and not d.cerrada and not d.cuadro_excel.filas %}<form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" style="margin:12px 0" onsubmit="return confirm('¿Validar los días no laborables programados sin marcaciones de todo el periodo consultado? Los días con registros se conservan para revisión.');">{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="accion" value="validar_descansos"><button class="btn-dark-outline">{% if d.sin_trabajo_programado %}Validar días sin trabajo programado{% else %}Validar descansos del periodo{% endif %}</button><small> {{ filtros.desde }} – {{ filtros.hasta }} · Al avanzar se omitirán las fechas validadas.</small></form>{% endif %}
+    {% if d.cruza_medianoche %}<p class="ayuda"><span class="status-pill pill-purple">Jornada nocturna</span></p>{% endif %}
+    <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" id="correcciones-diarias" class="formulario-vertical correcciones-cuadro-excel">
+        {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="accion" id="accion_cuadro_excel" value="corregir_eventos">
+        <input type="hidden" name="marcacion_id" id="id_marcacion_eliminar" value="">
+    <div class="table-responsive">
+        <table class="custom-dark-table tabla-control-excel">
+            <caption class="visually-hidden">Control diario con los campos del Excel: código, fecha, intervalos, refrigerio, base, saldo, extras, nocturnidad y feriado o descanso.</caption>
+            <thead><tr><th>Código / DNI</th><th>Fecha/Hora</th><th>Evento</th><th>Duración del intervalo</th><th>Refrigerio</th><th>Jornada base</th><th>Saldo de jornada</th><th>HH.EE. 25 %<small>Primeras 2 h</small></th><th>HH.EE. 35 %<small>Exceso de 2 h</small></th><th>Horas nocturnas<small>22:00–06:00</small></th><th>Feriado y/o descanso</th><th>Acciones</th></tr></thead>
+            <tbody>{% for fila in d.cuadro_excel.filas %}<tr class="{% if fila.excluida_duplicada %}marca-excluida {% endif %}{% if fila.es_refrigerio %}marca-refrigerio{% endif %}"><td>{{ fila.codigo }}</td><td>{{ fila.fecha_hora|date:'d/m/Y H:i:s' }}</td><td>{% if puede_gestionar and not d.cerrada and fila.valida %}<input type="hidden" name="original_{{ fila.marcacion_id }}" value="{{ fila.evento_codigo }}"><select name="evento_{{ fila.marcacion_id }}" aria-label="Evento del {{ fila.fecha_hora|date:'d/m/Y H:i:s' }}">{% for codigo, nombre in tipos_evento %}<option value="{{ codigo }}" {% if codigo == fila.evento_seleccionado %}selected{% endif %}>{{ nombre }}</option>{% endfor %}<option value="EXCLUIR_DUPLICADA">Duplicada · No computar</option></select>{% elif not fila.excluida_duplicada %}{{ fila.evento }}{% endif %}{% if fila.excluida_duplicada %}<small class="duplicate-excluded-label">Excluida por duplicada · No se computa</small>{% elif not fila.valida %}<small>Invalidada; no interviene en el cálculo</small>{% endif %}
+</td><td>{{ fila.intervalo }}</td><td>{% if fila.es_refrigerio %}<span class="status-pill pill-orange">REFRIGERIO</span>{% else %}—{% endif %}</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="day-mark-actions">{% if fila.excluida_duplicada and puede_gestionar and not d.cerrada %}<button type="submit" form="restaurar-duplicada-form" name="marcacion_id" value="{{ fila.marcacion_id }}" class="btn-editar-marca-manual btn-restaurar-marca" title="Restaurar marcación" aria-label="Restaurar marcación del {{ fila.fecha_hora|date:'d/m/Y H:i:s' }}"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h11a6 6 0 0 1 0 12M3 10l5-5M3 10l5 5" transform="translate(0 -3)"/></svg></button>{% elif fila.es_manual %}
+                    <div class="marca-manual-container">
+                        <small class="marca-manual-indicador">Manual</small>
+                        {% if puede_gestionar and not d.cerrada %}
+                        <button type="button" class="btn-editar-marca-manual" title="Editar marcación manual" aria-label="Editar marcación manual del {{ fila.fecha_hora|date:'d/m/Y H:i:s' }}" data-editar-manual="{{ fila.marcacion_id }}" data-fecha="{{ fila.fecha_hora|date:'Y-m-d' }}" data-hora="{{ fila.fecha_hora|date:'H:i:s' }}" data-evento="{{ fila.evento_codigo }}" data-motivo="{{ fila.motivo_manual }}"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1L20 7a3 3 0 0 0-4-4L4 15z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>
+                        <button type="submit" aria-label="Eliminar marcación manual" class="btn-eliminar-marca-manual" title="Eliminar marcación manual registrada por error"
+                                onclick="if (!confirm('¿Está seguro de que desea eliminar esta marcación manual?')) return false; document.getElementById('accion_cuadro_excel').value='eliminar_marcacion_manual'; document.getElementById('id_marcacion_eliminar').value='{{ fila.marcacion_id }}';">
+                            <svg class="ui-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                {% endif %}{% if not fila.es_manual and not fila.excluida_duplicada %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="12" class="estado-vacio">No hay marcaciones disponibles para reconstruir el cuadro de esta jornada.</td></tr>{% endfor %}</tbody>
+            <tfoot><tr><th colspan="3">Total trabajado y conceptos del día</th><td>{{ d.cuadro_excel.totales.trabajo }}</td><td>{{ d.cuadro_excel.refrigerio }}</td><td>{% include "asistencia/_tiempo_editable.html" with valor=d.cuadro_excel.totales.base campo="jornada_base" etiqueta="Jornada base" %}</td><td class="{% if d.cuadro_excel.totales.es_deficit %}saldo-deficit{% else %}saldo-jornada{% endif %}">{{ d.cuadro_excel.totales.saldo }}{% if d.cuadro_excel.totales.es_deficit %}<small>Tiempo faltante</small>{% endif %}</td><td>{% include "asistencia/_tiempo_editable.html" with valor=d.cuadro_excel.totales.he25 campo="horas_extras_25" etiqueta="Extras 25 %" %}</td><td>{% include "asistencia/_tiempo_editable.html" with valor=d.cuadro_excel.totales.he35 campo="horas_extras_35" etiqueta="Extras 35 %" %}</td><td>{% include "asistencia/_tiempo_editable.html" with valor=d.cuadro_excel.totales.nocturnas campo="horas_nocturnas" etiqueta="Horas nocturnas" %}</td><td>{{ d.cuadro_excel.totales.feriado }}</td><td class="day-mark-actions">{% if puede_aprobar and not d.cerrada and not d.resumen.verificado_contabilidad and d.completa %}<div class="marca-manual-container"><button type="button" id="editar-conceptos" class="btn-editar-marca-manual" title="Editar los cuatro tiempos" aria-label="Editar jornada base, extras y nocturnas" aria-expanded="false"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1L20 7a3 3 0 0 0-4-4L4 15z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button><button type="submit" form="restaurar-conceptos-form" id="restaurar-conceptos" class="btn-eliminar-marca-manual" title="Restaurar cálculo original" aria-label="Restaurar cálculo original"><svg class="ui-icon" aria-hidden="true"><use href="#icon-trash"></use></svg></button></div>{% else %}—{% endif %}</td></tr></tfoot>
+        </table>
+    </div>
+    <div class="day-save-actions" style="display:flex;align-items:center;flex-wrap:wrap;gap:12px">
+    {% if puede_gestionar and not d.cerrada and d.cuadro_excel.filas %}<button class="btn-cumbe" type="submit" onclick="document.getElementById('accion_cuadro_excel').value='corregir_eventos';" title="Guardar todas las correcciones">{% if d.propuestas_eventos %}Confirmar eventos y validar jornada{% else %}Guardar todas las correcciones{% endif %}</button>{% endif %}
+    {% if puede_aprobar and not d.cerrada and not d.resumen.verificado_contabilidad and d.cuadro_excel.puede_confirmar_feriado %}
+    <button type="submit" form="confirmar-feriado-form" class="btn-dark-outline"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Confirmar feriado trabajado</button>
+    {% endif %}
+    <div id="conceptos-diarios" class="conceptos-diarios-actions" style="margin:0;padding:0" hidden><input type="hidden" id="editar-tiempos" form="correcciones-diarias" name="editar_tiempos" value="no"><button type="button" class="btn-dark-outline" data-cancelar-conceptos>Cancelar edición</button></div></div>
+    </form>
+    {% if puede_gestionar and not d.cerrada %}
+    <form id="excluir-duplicada-form" method="post" action="{% url 'accion_jornada' d.resumen.pk %}" hidden>{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="accion" value="excluir_duplicada"></form>
+    <form id="restaurar-duplicada-form" method="post" action="{% url 'accion_jornada' d.resumen.pk %}" hidden>{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="accion" value="restaurar_duplicada"></form>
+    <dialog id="marcacion-manual-dialog" class="manual-entry-dialog" aria-labelledby="titulo-marcacion-manual">
+        <header class="manual-entry-header"><div><h3 id="titulo-marcacion-manual">Agregar marcación manual</h3><p>{{ d.resumen.fecha|date:'d/m/Y' }} · {{ d.resumen.persona.nombre_corto }}</p></div><button type="button" class="btn-dark-outline" data-cerrar-manual aria-label="Cerrar registro manual">Cerrar</button></header>
+        <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" class="formulario-vertical formulario-marcacion-manual" data-fecha-jornada="{{ d.resumen.fecha|date:'Y-m-d' }}" data-hora-entrada="{{ d.resumen.primera_entrada|time:'H:i:s' }}" data-turno-nocturno="{% if d.turno.hora_salida < d.turno.hora_entrada %}si{% else %}no{% endif %}">
+            {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="accion" value="marcacion_manual"><input type="hidden" name="marcacion_id" value="">
+            {% for campo in d.form_marca_manual %}{% if campo.is_hidden %}{{ campo }}{% else %}<label>{{ campo.label }}{{ campo }}</label>{% endif %}{% endfor %}
+            <p class="manual-entry-note" data-fecha-nocturna hidden aria-live="polite"></p>
+            <p class="manual-entry-note">Se conserva el origen manual y las marcas originales. Guardar valida los eventos; no aprueba la jornada.</p>
+            <div class="manual-entry-actions"><button type="button" class="btn-dark-outline" data-cerrar-manual>Cancelar</button><button class="btn-cumbe" type="submit">Guardar marcación manual y validar</button></div>
+        </form>
+    </dialog>
+    <script src="{% static 'marcacion_manual.js' %}?v=20261105-fecha-nocturna" defer></script>
+    {% endif %}
+    {% if puede_aprobar and not d.cerrada and not d.resumen.verificado_contabilidad and d.completa %}
+
+    {% endif %}
+    <form id="restaurar-conceptos-form" method="post" action="{% url 'accion_jornada' d.resumen.pk %}" hidden>{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="accion" value="restaurar_conceptos"></form>
+    {% if puede_aprobar and not d.cerrada and not d.resumen.verificado_contabilidad and d.cuadro_excel.puede_confirmar_feriado %}
+    <form id="confirmar-feriado-form" method="post" action="{% url 'accion_jornada' d.resumen.pk %}" hidden onsubmit="return confirm('¿Confirma que trabajó este feriado? Se registrará el adicional según la modalidad del trabajador, separado de las horas trabajadas.');">
+        {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+        <input type="hidden" name="accion" value="confirmar_feriado_trabajado">
+    </form>
+    {% endif %}
+    <script src="{% static 'conceptos_diarios.js' %}?v=20261105-restaurar-feriado" defer></script>
+
+</div>

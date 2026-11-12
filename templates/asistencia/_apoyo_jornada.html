@@ -1,0 +1,17 @@
+<div class="day-support-stack">
+    <!-- Tramos trabajados -->
+    {% if d.completa and d.tramos %}
+    <details class="day-time-detail day-support-card" open>
+        <summary>Ver tramos trabajados <span>{{ d.tramos|length }} tramos</span></summary>
+        <ol class="work-interval-list">
+            {% for tramo in d.tramos %}
+            <li><span>{{ tramo.inicio|date:'d/m H:i:s' }} – {{ tramo.fin|date:'d/m H:i:s' }}</span><strong>{{ tramo.duracion }}</strong></li>
+            {% endfor %}
+        </ol>
+    </details>
+    {% endif %}
+
+    {% if d.resumen.observaciones %}
+    <details class="day-time-detail day-support-card"><summary>Observaciones del día</summary><p class="day-audit-help">{{ d.resumen.observaciones }}</p></details>
+    {% endif %}
+</div>

@@ -1,0 +1,8 @@
+{% extends 'conductores/base.html' %}
+{% block titulo %}Importar itinerarios{% endblock %}
+{% block descripcion %}Consulta las salidas importadas por mes, revisa sus datos y confirma el reporte para pasarlo a control.{% endblock %}
+{% block contenido %}
+{% if form.errors %}<div class="cd-notice cd-warning" role="alert">{{ form.errors }}</div>{% endif %}
+{% include 'conductores/registro_mensual.html' %}
+<form method="post" enctype="multipart/form-data" id="cd-upload-directo" class="cd-upload-directo">{% csrf_token %}<input type="file" name="archivo" id="cd-itinerario-file" accept=".xls,.xlsx,.xlsm" hidden required><button class="cd-button" type="button" data-upload-directo aria-controls="cd-itinerario-file"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg> <span>Subir itinerarios</span></button><span class="cd-upload-status" role="status" aria-live="polite"></span></form>
+{% endblock %}

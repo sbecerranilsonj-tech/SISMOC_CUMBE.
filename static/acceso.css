@@ -1,0 +1,43 @@
+@font-face{font-family:Geist;src:url('fonts/geist.ttf') format('truetype');font-weight:100 900;font-display:swap}
+body.login-page{margin:0;padding:0;min-height:100dvh;background:#f8f9fc;color:#172033;font-family:Geist,'Segoe UI',sans-serif;font-size:15px;display:block}
+.login-page *{box-sizing:border-box}
+.login-layout{display:grid;grid-template-columns:1fr 1fr;width:100%;min-height:100dvh;background:#f8f9fc;border:0;border-radius:0;overflow:visible}
+.login-intro{position:relative;display:flex;flex-direction:column;justify-content:center;min-height:100dvh;padding:64px 48px;isolation:isolate;background:#0c1421 url('img/login-bus.png') center center/cover no-repeat;color:white}
+.login-intro::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(5,12,22,.76),rgba(3,8,14,.84) 60%,#000)}
+.login-intro-main{max-width:600px;margin:auto 0}
+.login-intro h1{font-family:inherit;font-size:clamp(36px,3.3vw,60px);line-height:1.12;font-weight:800;letter-spacing:-.04em;color:white;margin:0 0 24px;text-wrap:balance}
+.login-intro p{color:#e1e5eb;font-size:clamp(16px,1.25vw,22px);line-height:1.65;max-width:470px;margin:0}
+.login-intro .login-legal{font-size:11px;color:#b5bfcc;position:absolute;bottom:32px;left:48px;right:32px}
+.login-form-panel{display:flex;align-items:center;justify-content:center;padding:52px 40px;background:#f8f9fc;min-width:0}
+.login-form-content{width:100%;max-width:410px}
+.form-heading{margin-bottom:30px}
+.login-logo-horizontal{display:block;width:235px;max-width:80%;height:88px;object-fit:contain;object-position:left center;margin-bottom:22px}
+.form-heading h2{font-family:inherit;font-size:32px;letter-spacing:-.04em;font-weight:800;line-height:1.2;margin:0 0 12px;color:#111827}
+.form-heading p{font-size:13px;line-height:1.6;color:#526178;margin:0}
+.login-form-card{background:white;border:1px solid #edf0f5;border-radius:18px;padding:30px 26px;box-shadow:0 14px 24px -12px #17203333}
+.input-group-custom{margin-bottom:24px}
+.form-label-custom{display:block;color:#344155;font-weight:550;font-size:13px;margin-bottom:8px}
+.input-wrap{position:relative}
+.form-control-custom{display:block;width:100%;height:48px;border:1px solid #dce3ed;background:#fafbfd;color:#172033;border-radius:10px;padding:12px 44px;font-family:inherit;font-size:14px;line-height:1.5;box-shadow:0 2px 3px #17203308;transition:border-color 150ms,background-color 150ms}
+.form-control-custom::placeholder{color:#687b96;opacity:1}
+.form-control-custom:focus{outline:2px solid #b84d0b;outline-offset:2px;border-color:#b84d0b;background:white}
+.field-icon{position:absolute;top:14px;left:13px;color:#7c8ba3;width:20px;height:20px;pointer-events:none}
+.toggle-password-btn{position:absolute;right:6px;top:6px;width:36px;height:36px;display:grid;place-items:center;background:none;border:0;border-radius:6px;color:#71829c;cursor:pointer}
+.toggle-password-btn:hover{background:#edf1f6;color:#344155}
+.btn-cumbe-submit{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:48px;margin:4px 0 0;padding:12px;border:1px solid #bd4d14;border-radius:10px;background:#bd4d14;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background-color 150ms}
+.btn-cumbe-submit:hover{background:#a6400a;border-color:#a6400a}
+.btn-cumbe-submit>.ui-icon{display:none}
+.login-assistance{font-size:11px;color:#61728b;line-height:1.7;margin:20px 0 0}
+.custom-alert{padding:12px;border-radius:8px;font-size:12px;line-height:1.6;margin-bottom:18px}
+.alert-error-custom{background:#fff0f1;color:#a82d35;border:1px solid #ebbbc1}.alert-success-custom{background:#eaf7ef;color:#146c48;border:1px solid #b9ddc8}.alert-info-custom{background:#edf4fa;color:#28506d;border:1px solid #c4d8e8}
+.login-evaluation{border-top:1px solid #e1e7ef;margin-top:22px;padding-top:6px}
+.login-evaluation summary{font-size:11px;color:#61728b;cursor:pointer;padding:10px 0}
+.login-evaluation>p{font-size:11px;color:#61728b;line-height:1.6}
+.roles-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.role-chip-btn{display:grid;gap:4px;padding:10px;border:1px solid #e1e7ef;border-radius:8px;background:white;text-align:left;color:#41516a;font-family:inherit;cursor:pointer}
+.role-chip-btn:hover,.role-chip-btn.active{background:#fff4eb;border-color:#cd966f}
+.role-chip-title{font-size:11px;font-weight:600}.role-chip-user{font-size:10px;color:#61728b}
+@media(max-width:1000px){.login-intro{padding:40px 32px}.login-intro h1{font-size:36px}.login-intro .login-legal{left:32px}.login-form-panel{padding:40px 28px}.login-logo-horizontal{width:210px}}
+@media(max-width:760px){.login-layout{grid-template-columns:minmax(0,1fr)}.login-intro{display:none}.login-form-panel{min-height:100dvh;padding:36px 22px;align-items:center}.login-form-content{max-width:400px}.login-logo-horizontal{margin:0 auto 22px;object-position:center}.form-heading{text-align:center}.form-heading h2{font-size:30px}}
+@media(max-width:390px){.login-form-panel{padding:28px 16px}.login-form-card{padding:26px 20px}.roles-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.login-page *{transition:none!important}}

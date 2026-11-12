@@ -1,0 +1,54 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+sismoc_cumbe_db.sqlite3
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.railway.example
+.codex/
+.agents/
+dump_data.json
+*.sql
+*.dump
+*.backup
+outputs/
+*.log
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+data/
+mobile/android/.kotlin/
+
+# Media & Uploads
+media/
+private_bancos/
+private_conductores/
+staticfiles/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+.docker/
+
+tmp/
+
+
+node_modules/
+versiones/
+desktop/dist/
+desktop/build/
+desktop/instaladores/
+*.zip

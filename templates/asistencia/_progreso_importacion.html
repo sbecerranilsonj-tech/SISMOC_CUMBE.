@@ -1,0 +1,9 @@
+<template id="plantilla-progreso-importacion">
+    <section class="zk-import-progress is-indeterminate" aria-labelledby="titulo-importacion" aria-busy="true">
+        <header class="zk-import-heading"><div class="zk-import-file"><span class="zk-import-icon"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg></span><div><h3 id="titulo-importacion">Importando asistencia</h3><p data-import-file></p></div></div><strong class="zk-import-percent" data-import-percent>Preparando</strong></header>
+        <div class="zk-import-track" role="progressbar" aria-label="Progreso de importación" aria-valuemin="0" aria-valuemax="100"><span data-import-bar></span></div>
+        <div class="zk-import-caption"><p data-import-status role="status" aria-live="polite">Enviando el archivo…</p><span data-import-count></span></div>
+        <ol class="zk-import-stages" aria-label="Etapas de importación"><li data-import-stage="validando"><span>1</span>Validar archivo</li><li data-import-stage="registrando"><span>2</span>Registrar marcas</li><li data-import-stage="guardando"><span>3</span>Guardar resultados</li></ol>
+        <div class="zk-import-result" data-import-result hidden></div>
+    </section>
+</template>

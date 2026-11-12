@@ -1,0 +1,160 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'detalle_jornada.css' %}?v=20261105-descanso-trabajado">
+{% include 'asistencia/_regla_dia.html' %}
+<section class="content-panel" id="detalle-jornada" aria-labelledby="titulo-detalle">
+    {% if sismoc_movil_habilitado %}{% include 'asistencia/_movil_pendientes.html' %}{% endif %}
+    <header class="day-review-header">
+        <div class="day-review-person"><span class="day-review-avatar" aria-hidden="true">{{ d.resumen.persona.nombre_corto|slice:":1"|upper }}</span><div>
+            <h3 class="panel-title-text" id="titulo-detalle">{{ d.resumen.persona.nombre_corto }}</h3>
+            <dl class="day-review-identity"><div><dt>DNI</dt><dd>{{ d.resumen.persona.dni }}</dd></div><div><dt>Área</dt><dd>{{ d.resumen.persona.area|default:"Por completar" }}</dd></div><div><dt>Sede</dt><dd>{{ d.resumen.persona.agencia_sede }}</dd></div></dl>
+        </div></div>
+        <div class="toolbar-actions">
+            {% if revision_trabajador and revision_trabajador.total_trabajadores > 1 %}
+            <div class="worker-nav-group" role="group" aria-label="Navegar entre trabajadores">
+                <span class="worker-nav-counter" title="Trabajador {{ revision_trabajador.posicion_indice }} de {{ revision_trabajador.total_trabajadores }}">
+                    Trab. {{ revision_trabajador.posicion_indice }}/{{ revision_trabajador.total_trabajadores }}
+                </span>
+                {% if revision_trabajador.anterior_dni %}
+                    <a class="btn-dark-outline btn-nav-trabajador" href="?{{ consulta_asistencia }}&amp;persona_dni={{ revision_trabajador.anterior_dni|urlencode }}" title="Trabajador anterior: {{ revision_trabajador.anterior_nombre }} (Alt + ←)" aria-label="Trabajador anterior: {{ revision_trabajador.anterior_nombre }}">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-left"></use></svg> <span>Ant. trab.</span>
+                    </a>
+                {% else %}
+                    <button type="button" class="btn-dark-outline btn-nav-trabajador is-disabled" disabled aria-disabled="true">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-left"></use></svg> <span>Ant. trab.</span>
+                    </button>
+                {% endif %}
+                {% if revision_trabajador.siguiente_dni %}
+                    <a class="btn-dark-outline btn-nav-trabajador" href="?{{ consulta_asistencia }}&amp;persona_dni={{ revision_trabajador.siguiente_dni|urlencode }}" title="Siguiente trabajador: {{ revision_trabajador.siguiente_nombre }} (Alt + →)" aria-label="Siguiente trabajador: {{ revision_trabajador.siguiente_nombre }}">
+                        <span>Sig. trab.</span> <svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+                    </a>
+                {% else %}
+                    <button type="button" class="btn-dark-outline btn-nav-trabajador is-disabled" disabled aria-disabled="true">
+                        <span>Sig. trab.</span> <svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+                    </button>
+                {% endif %}
+            </div>
+            {% endif %}
+            <a class="btn-dark-outline" href="?{{ consulta_asistencia }}{% if revision_trabajador %}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}{% endif %}">Cerrar detalle</a>
+        </div>
+    </header>
+    <div class="day-review-context">
+        {% if d.total_dias and d.total_dias > 1 %}
+        <div class="day-nav-group" role="group" aria-label="Navegación entre días del trabajador">
+            {% if d.anterior_pk %}
+                <a class="btn-dark-outline btn-nav-day" href="?{{ consulta_asistencia }}{% if revision_trabajador %}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}{% endif %}&amp;detalle={{ d.anterior_pk }}#detalle-jornada" title="Día anterior: {{ d.anterior_fecha|date:'d/m/Y' }}" aria-label="Día anterior: {{ d.anterior_fecha|date:'d/m/Y' }}">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-left"></use></svg> <span>Día anterior</span>
+                </a>
+            {% elif d.anterior_fecha and puede_gestionar %}
+                {% include 'asistencia/_navegar_dia_vacio.html' with fecha_destino=d.anterior_fecha texto_dia="Día anterior" es_anterior=True %}
+            {% else %}
+                <button type="button" class="btn-dark-outline btn-nav-day is-disabled" disabled aria-disabled="true" title="Primer día con jornada">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-left"></use></svg> <span>Día anterior</span>
+                </button>
+            {% endif %}
+            <span class="day-review-date calendar-day calendar-day--{{ d.calendario_dia.clase }}" title="{{ d.calendario_dia.feriado|default:d.calendario_dia.dia }}"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><span>{{ d.calendario_dia.dia }}, {{ d.resumen.fecha|date:'d/m/Y' }}</span>{% if d.calendario_dia.feriado %}<span class="calendar-day-holiday">Feriado</span>{% endif %}{% if d.cruza_medianoche %} → {{ d.fin_consulta|date:'d/m/Y' }}{% endif %} <small class="day-nav-index">({{ d.posicion_indice }} de {{ d.total_dias }})</small></span>
+            {% if d.siguiente_pk %}
+                <a class="btn-dark-outline btn-nav-day" href="?{{ consulta_asistencia }}{% if revision_trabajador %}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}{% endif %}&amp;detalle={{ d.siguiente_pk }}#detalle-jornada" title="Día siguiente: {{ d.siguiente_fecha|date:'d/m/Y' }}" aria-label="Día siguiente: {{ d.siguiente_fecha|date:'d/m/Y' }}">
+                    <span>Día siguiente</span> <svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+                </a>
+            {% elif d.siguiente_fecha and puede_gestionar %}
+                {% include 'asistencia/_navegar_dia_vacio.html' with fecha_destino=d.siguiente_fecha texto_dia="Día siguiente" es_anterior=False %}
+            {% else %}
+                <button type="button" class="btn-dark-outline btn-nav-day is-disabled" disabled aria-disabled="true" title="Último día con jornada">
+                    <span>Día siguiente</span> <svg class="ui-icon" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+                </button>
+            {% endif %}
+        </div>
+        {% else %}
+        <span class="day-review-date calendar-day calendar-day--{{ d.calendario_dia.clase }}" title="{{ d.calendario_dia.feriado|default:d.calendario_dia.dia }}"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><span>{{ d.calendario_dia.dia }}, {{ d.resumen.fecha|date:'d/m/Y' }}</span>{% if d.calendario_dia.feriado %}<span class="calendar-day-holiday">Feriado</span>{% endif %}{% if d.cruza_medianoche %} → {{ d.fin_consulta|date:'d/m/Y' }}{% endif %}</span>
+        {% endif %}
+        {% if d.situacion_dia.tipo == "CUMPLEANOS" %}{% include "asistencia/_etiqueta_cumpleanos.html" %}{% elif not d.control_por_jornada %}<span class="day-attendance">{{ d.estado_asistencia_visible }}</span>{% endif %}
+        <span class="status-pill {% if d.revision == 'APROBADO' %}pill-emerald{% elif d.revision == 'OBSERVADO' %}pill-rose{% else %}pill-orange{% endif %}">{{ d.revision|title }}</span>
+    </div>
+    {% if d.cerrada %}<p class="aviso">Esta jornada pertenece a un periodo cerrado. Solo está disponible para consulta.</p>{% endif %}
+    {% include 'asistencia/_observacion_dia.html' %}
+    {% include 'asistencia/_vacaciones_periodo.html' %}
+    {% if d.solo_situacion %}
+    <div style="margin:12px 0">{% include 'asistencia/_boton_observacion.html' %}</div>
+    {% include 'asistencia/_situacion_detalle.html' %}
+    {% else %}
+    {% include 'asistencia/cuadro_excel.html' %}
+    <div class="detalle-grid day-audit-grid">
+        <div class="day-audit-column">{% include 'asistencia/_procedencia_compacta.html' %}</div>
+        {% include 'asistencia/_tiempos_compactos.html' %}
+    </div>
+
+    <div class="panel-finalizar-revision" style="margin: 24px 0 16px; padding: 20px 24px; background: #ffffff; border: 1px solid #dde2e8; border-radius: 12px; box-shadow: 0 4px 16px rgba(23,33,47,0.04);">
+        {% if d.resumen.verificado_contabilidad %}
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: #eaf7ef; color: #146c48; border-radius: 50%;">
+                        <svg class="ui-icon" aria-hidden="true" style="width: 22px; height: 22px;"><use href="#icon-shield"></use></svg>
+                    </span>
+                    <div>
+                        <strong style="color: #146c48; font-size: 16px; display: block;">Jornada revisada y aprobada</strong>
+                        <p style="margin: 2px 0 0; font-size: 13px; color: #63758e;">
+                            {% if d.resumen.revisado_por %}Aprobado por <strong>{{ d.resumen.revisado_por.nombre_corto }}</strong> el {{ d.resumen.fecha_revision|date:'d/m/Y H:i' }}.{% else %}Listo y consolidado para nómina.{% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    {% if d.siguiente_pk %}
+                    <a class="btn-cumbe" href="?{{ consulta_asistencia }}{% if revision_trabajador %}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}&amp;detalle={{ d.siguiente_pk }}#detalle-jornada{% endif %}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; font-weight: 600;">
+                        <span>Siguiente día</span> <svg class="ui-icon" aria-hidden="true" style="width: 15px; height: 15px;"><use href="#icon-chevron-right"></use></svg>
+                    </a>
+                    {% endif %}
+                    <a class="btn-dark-outline" href="?{{ consulta_asistencia }}{% if revision_trabajador %}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}{% endif %}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; font-weight: 600;">
+                        Finalizar revisión y volver
+                    </a>
+                    {% if puede_gestionar and not d.cerrada %}
+                    <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" style="margin: 0;">
+                        {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+                        <input type="hidden" name="accion" value="reabrir">
+                        <button type="submit" class="btn-dark-outline" style="padding: 9px 16px;" onclick="return confirm('¿Está seguro de que desea reabrir esta jornada para modificarla?');">
+                            Reabrir jornada
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <strong style="font-size: 16px; color: #17212f; display: block;">Finalizar revisión de la jornada</strong>
+                    <p style="margin: 3px 0 0; font-size: 13px; color: #63758e;">Guarde y registre este día para que sus horas computen formalmente en la asistencia.</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <a class="btn-dark-outline" href="?{{ consulta_asistencia }}{% if revision_trabajador %}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}{% endif %}" style="text-decoration: none; padding: 9px 16px;">
+                        Volver sin guardar
+                    </a>
+                    {% if puede_gestionar and not d.cerrada %}
+                        {% if puede_aprobar %}
+                        <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" style="margin: 0;">
+                            {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+                            <input type="hidden" name="accion" value="APROBADO">
+                            <button type="submit" class="btn-cumbe" style="padding: 10px 20px; font-weight: 600;" {% if d.bloqueos %}disabled title="Hay inconsistencias en las marcaciones por resolver antes de aprobar"{% endif %}>
+                                Aprobar jornada y finalizar revisión
+                            </button>
+                        </form>
+                        {% else %}
+                        <button type="button" class="btn-cumbe" disabled style="padding: 10px 20px;" title="Solo Contabilidad o Gerencia pueden aprobar formalmente la jornada">
+                            Pendiente de aprobación contable
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% if d.bloqueos %}
+            <div style="margin-top: 14px; padding: 12px 16px; background: #fff0f1; border: 1px solid #ebbbc1; border-radius: 8px; font-size: 12px; color: #a82d35;">
+                <strong>Inconsistencias pendientes por resolver antes de aprobar:</strong>
+                <ul style="margin: 6px 0 0 18px; padding: 0;">
+                    {% for bloqueo in d.bloqueos %}<li>{{ bloqueo }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    {% endif %}
+    <details class="historial"><summary>Historial de cambios y revisiones</summary>{% for h in d.resumen.historial_revision.all %}<article class="registro-revision"><strong>{{ h.accion }}</strong><small>{{ h.fecha|date:'d/m/Y H:i:s' }} · {{ h.responsable.nombre_corto|default:'Proceso del sistema' }}</small><p>{{ h.detalle }}</p></article>{% empty %}<p class="ayuda">Todavía no hay revisiones registradas.</p>{% endfor %}</details>
+</section>

@@ -1,0 +1,16 @@
+<div class="content-panel">
+    <h3 class="panel-title-text">Operación y personal</h3>
+    <p class="ayuda">Indicadores disponibles en los registros del sistema para el periodo consultado.</p>
+    <div class="kpi-grid">
+        <div class="kpi-box"><div class="kpi-top-bar bar-cyan"><svg class="ui-icon" aria-hidden="true"><use href="#icon-bus"></use></svg></div><div class="kpi-title">Servicios registrados de conductores</div><div class="kpi-value">{{ total_vueltas }} <span class="unidad-kpi">vueltas</span></div><div class="kpi-sub">Acumulado del periodo · Incluye jornadas pendientes de revisión</div></div>
+        <div class="kpi-box"><div class="kpi-top-bar bar-purple"><svg class="ui-icon" aria-hidden="true"><use href="#icon-users"></use></svg></div><div class="kpi-title">Conductores activos registrados</div><div class="kpi-value">{{ total_conductores }}</div><div class="kpi-sub">Personal activo con rol de conductor</div></div>
+    </div>
+</div>
+<div class="content-panel">
+    <h3 class="panel-title-text">Indicadores de próximos sprints</h3>
+    <p class="ayuda">Cada módulo incorporará aquí su resumen cuando disponga de datos. Los módulos pendientes no se presentan con cifras en cero.</p>
+    <div class="modulos-dashboard">
+        <article class="modulo-dashboard"><span class="status-pill pill-orange">Pendiente de integración</span><h4>Flota y buses</h4><p>Disponibilidad de unidades, servicios y mantenimiento.</p><button class="btn-dark-outline" onclick="mostrarSeccion('flota')">Ver módulo de flota</button></article>
+        <article class="modulo-dashboard"><span class="status-pill pill-purple">Sprint 2 · Pendiente</span><h4>Conciliación bancaria</h4><p>Movimientos conciliados, diferencias y operaciones por revisar.</p><button class="btn-dark-outline" onclick="mostrarSeccion('bcp')">Ver módulo de conciliación</button></article>
+    </div>
+</div>

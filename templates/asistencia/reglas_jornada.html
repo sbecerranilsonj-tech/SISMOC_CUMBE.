@@ -1,0 +1,18 @@
+{% load static %}
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Jornadas y días especiales · SISMOC</title><link rel="stylesheet" href="{% static 'app.css' %}"><link rel="stylesheet" href="{% static 'horarios.css' %}?v=20261106-areas">{% include '_theme_head.html' %}</head>
+<body class="schedule-page{% if popup %} schedule-embedded{% endif %}"><main>
+{% if not popup %}<header class="schedule-heading"><div><a class="schedule-back" href="{% url 'dashboard' %}?vista=personal">Volver a Personal y jornadas</a><h1>{% if apartado_dias %}Días especiales{% else %}Jornadas{% endif %}</h1></div>{% include '_theme_toggle.html' %}</header>{% endif %}
+
+{% for message in messages %}<p class="schedule-notice" role="status">{{ message }}</p>{% endfor %}
+{% if not apartado_dias %}<div class="schedule-layout">
+<section class="schedule-editor"><h2>Configurar jornada</h2>
+
+<form method="post">{% csrf_token %}{{ form.as_p }}<button class="schedule-primary">Guardar regla</button></form>
+</section>
+<section class="schedule-list"><h2>Reglas registradas</h2><div class="schedule-table"><table><thead><tr><th>Alcance y vigencia</th><th>Jornada / refrigerio</th><th>Referencia</th></tr></thead><tbody>
+{% for r in reglas %}<tr><td><strong>{% if r.trabajador %}{{ r.trabajador.nombre_completo }}{% else %}{{ r.area|default:'General' }}{% endif %}</strong><span>{{ r.desde|date:'d/m/Y' }} — {{ r.hasta|date:'d/m/Y'|default:'Sin fecha final' }}</span></td><td><span>L–V: {{ r.minutos_diarios }} min</span><span>Sábado: {{ r.minutos_sabado }} min</span><span>Refrigerio: {{ r.minutos_refrigerio }} min</span>{% if r.exento_marcacion %}<strong>Exonerada de marcar</strong>{% endif %}</td><td>{{ r.motivo }}</td></tr>{% empty %}<tr><td colspan="3">No hay reglas registradas.</td></tr>{% endfor %}
+</tbody></table></div></section></div>
+{% else %}<div class="schedule-layout"><section class="schedule-editor"><h2>Registrar día especial</h2><form method="post">{% csrf_token %}<input type="hidden" name="accion" value="dia_especial">{{ especial.as_p }}<button class="schedule-primary">Guardar día especial</button></form>
+{% for dia in especiales %}<p>{{ dia.fecha|date:'d/m/Y' }} · {{ dia.nombre }} · {{ dia.get_tipo_display }}</p>{% endfor %}</section>
+<section class="schedule-list"><h2>Feriados nacionales {{ anio }}</h2><div class="schedule-table"><table><thead><tr><th>Fecha</th><th>Motivo</th></tr></thead><tbody>{% for fecha, nombre in feriados %}<tr><td>{{ fecha|date:'d/m/Y' }}</td><td>{{ nombre }}</td></tr>{% endfor %}</tbody></table></div><p><a href="https://www.gob.pe/feriados" target="_blank" rel="noopener noreferrer">Calendario oficial del Perú</a></p></section></div>
+{% endif %}<script src="{% static 'reglas_trabajador.js' %}?v=20261106-areas"></script></main></body></html>

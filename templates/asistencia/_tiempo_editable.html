@@ -1,0 +1,2 @@
+<span data-concepto-lectura>{{ valor }}</span>
+{% if puede_aprobar and not d.cerrada and not d.resumen.verificado_contabilidad and d.completa %}<input hidden disabled form="correcciones-diarias" class="concepto-tiempo" name="{{ campo }}" aria-label="{{ etiqueta }}" value="{{ valor }}" pattern="{% if campo == 'horas_extras_25' %}[-−]?{% endif %}[0-9]{1,2}:[0-5][0-9]:[0-5][0-9]" placeholder="HH:MM:SS" maxlength="9" {% if campo != "horas_nocturnas" or valor %}required{% endif %}>{% endif %}

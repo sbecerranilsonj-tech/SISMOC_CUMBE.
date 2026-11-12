@@ -1,0 +1,27 @@
+<dialog id="dialog-envio-asistencia" class="modal-envio-asistencia-dialog custom-modal-box" aria-labelledby="titulo-envio-asistencia" aria-describedby="descripcion-envio-asistencia">
+    <header class="attendance-send-header">
+        <span class="attendance-send-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-calendar"></use></svg></span>
+        <div><h3 id="titulo-envio-asistencia">Enviar a Asistencia</h3><p id="descripcion-envio-asistencia">Revisa el grupo y el periodo antes de continuar.</p></div>
+        <button type="button" class="attendance-send-close cancelar-envio-modal" aria-label="Cerrar ventana"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </header>
+    <form method="post" action="{% url 'enviar_a_asistencia' %}" class="attendance-send-form">
+        {% csrf_token %}
+        <input type="hidden" name="grupo_mes" value="{{ grupo_importacion.mes }}"><input type="hidden" name="grupo_carga" value="{{ grupo_importacion.carga_id }}">
+        <input type="hidden" name="sede_codigo" value="{{ filtros_codigos.sede_codigo }}"><input type="hidden" name="filtro_codigo" value="{{ filtros_codigos.filtro_codigo }}"><input type="hidden" name="nombre_codigo" value="{{ filtros_codigos.nombre_codigo }}">
+        <dl class="attendance-send-summary">
+            <div><dt>Trabajadores</dt><dd>{{ total_identificados_envio }} <span>identificado{{ total_identificados_envio|pluralize:'s' }}</span></dd></div>
+            <div><dt>Sede</dt><dd>{{ filtros_codigos.sede_codigo|default:'Todas las sedes' }}</dd></div>
+            <div><dt>Grupo</dt><dd>{% if grupo_importacion.todos %}Todos los registros{% elif grupo_importacion.inicio %}{{ grupo_importacion.inicio|date:'F Y'|capfirst }}{% else %}Periodo seleccionado{% endif %}</dd></div>
+        </dl>
+        {% if grupo_importacion.carga %}<p class="attendance-send-source"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg>{{ grupo_importacion.carga.nombre_archivo_original }}</p>{% endif %}
+        <fieldset class="attendance-send-period"><legend>Periodo a enviar</legend>
+            <div class="attendance-send-dates">
+                <label>Desde<input type="date" name="desde_envio" value="{{ desde_envio }}" {% if grupo_importacion.inicio %}min="{{ grupo_importacion.inicio|date:'Y-m-d' }}" max="{{ grupo_importacion.fin|date:'Y-m-d' }}"{% endif %} required></label>
+                <label>Hasta<input type="date" name="hasta_envio" value="{{ hasta_envio }}" {% if grupo_importacion.inicio %}min="{{ grupo_importacion.inicio|date:'Y-m-d' }}" max="{{ grupo_importacion.fin|date:'Y-m-d' }}"{% endif %} required></label>
+            </div>
+            <p>Solo se enviarán las marcas del intervalo seleccionado.</p>
+        </fieldset>
+        <label class="attendance-send-confirm"><input type="checkbox" name="confirmar_identificacion" value="si" required><span>He revisado los nombres, DNI y áreas de los trabajadores.</span></label>
+        <footer class="attendance-send-footer"><p>Las jornadas quedarán pendientes de revisión.</p><p class="attendance-send-working" data-envio-estado role="status" aria-live="polite" hidden><span aria-hidden="true"></span>Estamos preparando las jornadas del periodo…</p><div><button type="button" class="btn-dark-outline cancelar-envio-modal">Cancelar</button><button class="btn-cumbe" type="submit" {% if not total_identificados_envio or not desde_envio %}disabled{% endif %}><span data-envio-etiqueta>Validar y enviar</span> <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></button></div></footer>
+    </form>
+</dialog>

@@ -1,0 +1,16 @@
+{% extends 'conductores/base.html' %}
+{% block titulo %}Aplicativo de trabajadores{% endblock %}
+{% block descripcion %}Cuentas, zonas y revisión de las operaciones móviles.{% endblock %}
+{% block contenido %}<div class="movil-settings">
+{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+{% include 'movil/accesos.html' %}
+{% include 'movil/zonas.html' %}
+<section class="cd-card"><h2>Comisión de trabajo fuera de sede</h2><form method="post" class="cd-form cd-inline movil-form-grid">{% csrf_token %}<input type="hidden" name="accion" value="comision">{% include 'movil/perfil_picker.html' with picker_id='comision-trabajador' picker_scope='personal' %}<label>Desde <input type="datetime-local" name="desde" required></label><label>Hasta <input type="datetime-local" name="hasta" required></label><label>Motivo <input name="motivo" required></label><p class="cd-muted movil-wide">Durante la comisión autorizada puede marcar sin ubicación. Se conserva el registro de sus marcaciones.</p><button class="cd-button">Autorizar comisión</button></form></section>
+<section class="cd-card"><h2>Solicitudes pendientes</h2>{% for s in solicitudes %}<article><h3>{{ s.perfil.trabajador.nombre_completo|default:s.perfil.usuario.get_full_name }} · {{ s.tipo }}</h3><p>{{ s.desde }} — {{ s.hasta }} · {{ s.detalle }}</p><form method="post" class="cd-form cd-inline movil-form-grid movil-form-respuesta">{% csrf_token %}<input type="hidden" name="accion" value="revisar_solicitud"><input type="hidden" name="id" value="{{ s.pk }}"><label>Respuesta (opcional)<input name="respuesta"></label><button class="cd-button cd-secondary" name="decision" value="aprobar">Aprobar</button><button class="cd-button cd-secondary" name="decision" value="rechazar">Rechazar</button></form></article>{% empty %}<p>Sin solicitudes pendientes.</p>{% endfor %}</section>
+
+<section class="cd-card"><h2>Registrar pago realizado</h2><form method="post" class="cd-form cd-inline movil-form-grid">{% csrf_token %}<input type="hidden" name="accion" value="pago"><input type="hidden" name="id_pago" value="{{ id_pago }}">{% include 'movil/perfil_picker.html' with picker_id='pago-persona' picker_scope='perfiles' picker_label='Trabajador o conductor' %}<label>Desde <input name="desde" type="date" required></label><label>Hasta <input name="hasta" type="date" required></label><label>Importe S/ <input name="monto" type="number" step="0.01" min="0.01" required></label><button class="cd-button">Registrar pago</button></form></section>
+<section class="cd-card"><h2>Regla interna de descanso</h2><p>Esta configuración representa la política confirmada por la empresa. No acredita por sí sola cumplimiento normativo ante SUTRAN.</p><form method="post" class="cd-form cd-inline movil-form-grid">{% csrf_token %}<input type="hidden" name="accion" value="regla"><label>Horas continuas fuera del bus <input name="horas" type="number" min="1" max="24" value="{{ regla.horas|default:8 }}"></label><label><input name="confirmado" type="checkbox" {% if regla.activa %}checked{% endif %}> La empresa confirmó esta política: activar bloqueo</label><button class="cd-button">Guardar política</button></form></section>
+</div>{% endblock %}
+
+
+

@@ -1,0 +1,3 @@
+{% extends 'index.html' %}{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'bancos.css' %}?v=20261107-unificado"><link rel="stylesheet" href="{% static 'bancos_encabezado.css' %}?v=20261106-2">{% endblock %}
+{% block workspace %}<div id="bancos-workspace" class="content-panel bancos-workspace" data-seccion="{{ seccion }}">{% block contenido %}{% endblock %}</div><script src="{% static 'bancos.js' %}?v=20261107-unificado" defer></script>{% endblock %}

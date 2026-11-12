@@ -1,0 +1,26 @@
+{% for salida in celda.excluidas %}
+<section class="cd-day-trip cd-excluded-trip"><h3>{{ salida.estado_control }}</h3><p>{{ salida.fecha|date:'d/m/Y' }} · {{ salida.hora|time:'H:i' }} · {{ salida.origen }} → {{ salida.destino }} · Fila {{ salida.fila }}</p><p class="cd-muted">Asignación conservada. No suma trayectos, vueltas, HORA, X, XX ni pago.{% if salida.pendiente_salida %} Cero pasajes vendidos no confirma que el bus haya salido.{% endif %}</p>
+{% if not salida.anulado %}<form method="post" action="{% url 'conductores_resolver_salida' salida.pk %}" data-resolver-salida data-template="cell-{{ f.conductor.pk }}-{{ celda.fecha|date:'Ymd' }}">{% csrf_token %}<div class="cd-actions"><button class="cd-button" name="decision" value="REALIZADO">Confirmar que salió</button>{% if salida.estado_operativo != 'CANCELADO' %}<button class="cd-button cd-secondary" name="decision" value="CANCELADO">Marcar como cancelada</button>{% endif %}</div><p role="alert" data-resolver-errors hidden></p></form>{% endif %}</section>
+{% endfor %}
+{% for viaje in celda.viajes %}
+<section class="cd-day-trip">
+  <div class="cd-day-trip-heading"><h3>Trayecto {{ forloop.counter }}</h3><span>{{ viaje.hora|time:'H:i' }}</span></div>
+  <table class="cd-trip-detail-table" aria-label="Detalle del trayecto {{ forloop.counter }}">
+    <tbody>
+      <tr><th scope="row">Recorrido</th><td><strong>{{ viaje.origen }}</strong><span class="cd-route-arrow" aria-hidden="true"> → </span><strong>{{ viaje.destino }}</strong></td></tr>
+      <tr><th scope="row">Conductor N.º 1</th><td>{{ viaje.conductor_uno.nombre_apellidos }}</td></tr>
+      <tr><th scope="row">Conductor N.º 2</th><td>{{ viaje.conductor_dos.nombre_apellidos }}</td></tr>
+      <tr><th scope="row">Bus</th><td>{{ viaje.bus }}</td></tr>
+      <tr><th scope="row">Reporte de origen</th><td><a class="cd-link" href="{% url 'conductores_detalle' viaje.importacion_id %}">Consultar fila {{ viaje.fila }} →</a></td></tr>
+    </tbody>
+  </table>
+{% if viaje.pasajes_vendidos == 0 %}<p class="cd-notice">Salida confirmada como realizada, pese a tener cero ventas en el reporte.</p><form method="post" action="{% url 'conductores_resolver_salida' viaje.pk %}" data-resolver-salida data-template="cell-{{ f.conductor.pk }}-{{ celda.fecha|date:'Ymd' }}">{% csrf_token %}<button class="cd-button cd-secondary" name="decision" value="CANCELADO">Marcar como cancelada</button><p role="alert" data-resolver-errors hidden></p></form>{% endif %}
+</section>
+{% empty %}
+{% if celda.situacion %}<button type="button" class="cd-button cd-secondary" data-edit-day>Editar situación</button><div data-day-editor hidden>{% endif %}
+{% if not celda.situacion %}
+<p class="cd-notice">Puedes registrar descanso u otra situación para esta fecha o un rango de días.</p>
+{% endif %}
+<form method="post" action="{% url 'conductores_situacion_dia' %}" class="cd-form cd-day-situation" data-day-situation data-template="cell-{{ f.conductor.pk }}-{{ celda.fecha|date:'Ymd' }}">{% csrf_token %}<input type="hidden" name="conductor" value="{{ f.conductor.pk }}"><div class="cd-inline"><label>Desde<input type="date" name="inicio" value="{{ celda.fecha|date:'Y-m-d' }}" required></label><label>Hasta<input type="date" name="fin" value="{{ celda.fecha|date:'Y-m-d' }}" required></label></div>{% if celda.situacion %}<input type="hidden" name="situacion_id" value="{{ celda.situacion.pk }}">{% endif %}<label>Situación<select name="tipo" required><option value="">Selecciona una situación</option>{% for valor, etiqueta in situacion_tipos %}<option value="{{ valor }}" {% if celda.situacion.tipo == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}</select></label><p role="alert" data-day-errors hidden></p><div class="cd-actions"><button class="cd-button">Guardar situación</button>{% if celda.situacion %}<button type="button" class="cd-button cd-secondary" data-cancel-day>Cancelar</button>{% endif %}</div></form>
+{% if celda.situacion %}</div>{% endif %}
+{% endfor %}

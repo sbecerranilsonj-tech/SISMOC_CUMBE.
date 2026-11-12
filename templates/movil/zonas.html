@@ -1,0 +1,32 @@
+{% load static %}
+<section class="cd-card" id="zonas-trabajo">
+  <h2>Zonas de trabajo y pruebas</h2>
+  <p class="cd-muted">Separa la agencia y el taller usando «Sede y área». «Toda una sede» autoriza a todo el personal de esa sede. Para pruebas usa «Solo un trabajador».</p>
+  <details class="movil-ayuda"><summary>¿Cómo obtener las coordenadas de Google Maps?</summary><p>Busca el lugar, acerca el mapa y haz clic derecho sobre el punto donde se marcará. Copia los dos números que aparecen primero: latitud, longitud. Pégalos abajo. El radio debe cubrir el lugar de trabajo y el margen de precisión del GPS.</p></details>
+  <datalist id="zonas-areas">{% for area in areas %}<option value="{{ area }}">{% endfor %}</datalist>
+  <datalist id="zonas-sedes">{% for sede in sedes %}<option value="{{ sede }}">{% endfor %}</datalist>
+  <form method="post" class="cd-form movil-zona-grid" data-zona-form>
+    {% csrf_token %}<input type="hidden" name="accion" value="zona"><input type="hidden" name="zona" value="">
+    <label>Nombre<input name="nombre" placeholder="Ej. Agencia Chiclayo" required></label>
+    <label>Aplicar a<select name="alcance" data-zona-alcance><option value="area">Sede y área</option><option value="sede">Toda una sede</option><option value="trabajador">Solo un trabajador (prueba)</option></select></label>
+    <label data-zona-sede-label>Sede<input name="sede" list="zonas-sedes" required data-zona-sede placeholder="Igual que en la ficha"></label>
+    <label data-zona-area>Área<input name="area" list="zonas-areas" placeholder="Igual que en la ficha" required></label>
+    <div class="movil-wide" data-zona-persona hidden>{% include 'movil/perfil_picker.html' with picker_id='zona-trabajador' picker_scope='personal' %}</div>
+    <label>Coordenadas de Maps (opcional)<input data-maps-coordenadas placeholder="-6.7534241, -79.8234475"></label>
+    <label>Latitud<input name="latitud" type="number" min="-90" max="90" step="any" required data-zona-lat></label>
+    <label>Longitud<input name="longitud" type="number" min="-180" max="180" step="any" required data-zona-lon></label>
+    <label>Radio (metros)<input name="radio" type="number" min="20" max="2000" value="100" required></label>
+    <div class="movil-wide movil-actions"><button type="button" class="cd-button cd-secondary" data-usar-ubicacion>Usar mi ubicación actual</button><button class="cd-button" data-zona-guardar>Guardar zona</button><button type="button" class="cd-button cd-secondary" data-zona-cancelar hidden>Cancelar edición</button></div>
+    <p class="cd-muted movil-wide" role="status" data-zona-info>Para pruebas, copia la ubicación desde la app. Con 19 m de precisión, el radio debe cubrir la distancia al centro más esos 19 m.</p>
+  </form>
+  <div class="cd-table-wrap"><table class="cd-table"><thead><tr><th>Zona</th><th>Sede / alcance</th><th>Radio</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+  {% for z in zonas %}<tr><td>{{ z.nombre }}</td><td>{{ z.sede }} · {% if z.perfiles.exists %}{{ z.perfiles.first.trabajador.nombre_completo }}{% elif z.area %}{{ z.area }}{% else %}Toda la sede{% endif %}</td><td>{{ z.radio }} m</td><td>{% if z.activa %}Activa{% else %}Inactiva{% endif %}</td><td>
+    <div class="movil-actions movil-actions-small">
+      <button type="button" class="cd-button cd-secondary" data-zona-editar data-id="{{ z.pk }}" data-nombre="{{ z.nombre }}" data-sede="{{ z.sede }}" data-area="{{ z.area }}" data-lat="{{ z.latitud|stringformat:'.7f' }}" data-lon="{{ z.longitud|stringformat:'.7f' }}" data-radio="{{ z.radio }}" data-perfil="{{ z.perfiles.first.pk|default:'' }}" data-persona="{{ z.perfiles.first.trabajador.nombre_completo }}">Editar</button>
+      <form method="post">{% csrf_token %}<input type="hidden" name="accion" value="{% if z.activa %}desactivar_zona{% else %}activar_zona{% endif %}"><input type="hidden" name="zona" value="{{ z.pk }}"><button class="cd-button cd-secondary">{% if z.activa %}Desactivar{% else %}Activar{% endif %}</button></form>
+      <form method="post" onsubmit="return confirm('¿Eliminar esta zona? Si tiene marcaciones, solo podrá desactivarla.')">{% csrf_token %}<input type="hidden" name="accion" value="eliminar_zona"><input type="hidden" name="zona" value="{{ z.pk }}"><button class="cd-button cd-secondary">Eliminar</button></form>
+    </div>
+  </td></tr>{% empty %}<tr><td colspan="5">Todavía no hay zonas configuradas.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<script src="{% static 'movil_zonas.js' %}?v=20261112-3" defer></script>

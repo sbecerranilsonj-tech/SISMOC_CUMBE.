@@ -1,0 +1,22 @@
+<div class="content-panel">
+    <div class="panel-header-custom">
+        <div><h3 class="panel-title-text">Huellero · Registro en tiempo real</h3><p class="ayuda">Eventos biométricos recibidos por el sistema. Cada fila representa una marcación, no una persona ni una jornada completa.</p></div>
+        <div class="acciones-revision">
+            <button class="btn-dark-outline" type="button" id="btnActualizarHuellero" onclick="actualizarRegistrosHuellero()">Actualizar registros</button>
+            {% if puede_gestionar %}<button class="btn-cumbe" type="button" onclick="sincronizarZKTeco()" id="btnSync">Consultar conexión del equipo</button>{% endif %}
+        </div>
+    </div>
+    <div class="badge-huellero" id="estadoHuellero">ZKTeco {{ info_huellero.dispositivo_ip }}:{{ info_huellero.dispositivo_puerto }} · {{ info_huellero.estado_dispositivo }}</div>
+    <p class="ayuda" id="detalleHuellero">Última comprobación: {{ info_huellero.ultima_comprobacion }}. Última sincronización: {{ info_huellero.ultima_sincronizacion }}. {{ info_huellero.mensaje }}</p>
+    <p class="aviso">La lista se actualiza cada 10 segundos mientras este apartado esté visible. Consulta los registros ya recibidos; la descarga directa desde el equipo todavía requiere integración.</p>
+    <div class="panel-header-custom"><span id="conteoRegistrosHuellero">{{ registros_huellero.total }} marcaciones de hoy · Se muestran las últimas {{ registros_huellero.limite }} como máximo</span><span class="ayuda" id="actualizacionHuellero" role="status">Última lectura de registros: {{ registros_huellero.actualizado }}</span></div>
+    <p id="errorRegistrosHuellero" class="aviso aviso-error" role="alert" hidden></p>
+    <div class="table-responsive" id="registroHuellero" data-url="{% url 'registros_huellero' %}">
+        <table class="custom-dark-table" id="tablaZkLive">
+            <caption class="visually-hidden">Últimas marcaciones biométricas de hoy, de la más reciente a la más antigua.</caption>
+            <thead><tr><th>Fecha y hora</th><th>DNI</th><th>Colaborador</th><th>Evento</th><th>Sede asignada</th><th>Equipo</th><th>ID biométrico</th></tr></thead>
+            <tbody>{% for m in registros_huellero.registros %}<tr><td>{{ m.fecha_hora }}</td><td>{{ m.dni }}</td><td>{{ m.nombre }}</td><td>{{ m.evento }}</td><td>{{ m.sede }}</td><td>{{ m.equipo }}</td><td>{{ m.id_biometrico }}</td></tr>{% empty %}<tr><td colspan="7" class="estado-vacio">No hay marcaciones recibidas del huellero para hoy.</td></tr>{% endfor %}</tbody>
+        </table>
+    </div>
+</div>
+<div class="content-panel"><h3 class="panel-title-text">Registro manual por DNI</h3><p class="ayuda">Este registro tiene origen Kiosko/DNI. No se presenta como una lectura de huella y se consulta en Asistencia & HH.EE.</p><button class="btn-dark-outline" type="button" onclick="abrirModal()">Registrar marcación manual</button></div>

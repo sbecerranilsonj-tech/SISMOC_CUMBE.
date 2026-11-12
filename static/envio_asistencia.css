@@ -1,0 +1,41 @@
+#dialog-envio-asistencia{width:min(620px,calc(100vw - 32px));max-height:calc(100dvh - 40px);padding:0;border:0;border-radius:16px;background:#fff;color:#24334a;box-shadow:0 24px 64px #17212f33;box-sizing:border-box;overflow:auto}
+#dialog-envio-asistencia::backdrop{background:#17212f70}
+#dialog-envio-asistencia .attendance-send-header{display:grid;grid-template-columns:44px minmax(0,1fr) 32px;align-items:start;gap:14px;padding:26px 26px 22px;border-bottom:1px solid #e4e9f1}
+#dialog-envio-asistencia .attendance-send-header h3{margin:0 0 6px;font-size:22px;line-height:1.25;letter-spacing:-.025em;font-weight:700;color:#24334a}
+#dialog-envio-asistencia .attendance-send-header p{margin:0;font-size:13px;line-height:1.5;color:#536881}
+#dialog-envio-asistencia .attendance-send-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#fff0e5;color:#ad480e}
+#dialog-envio-asistencia .attendance-send-icon svg{width:23px;height:23px}
+#dialog-envio-asistencia .attendance-send-close{display:flex;align-items:center;justify-content:center;width:32px;height:32px;padding:6px;border:0;border-radius:8px;background:#f4f6f9;color:#536881;cursor:pointer}
+#dialog-envio-asistencia .attendance-send-close:hover{background:#e8edf4}
+#dialog-envio-asistencia .attendance-send-form{display:block;margin:0;padding:24px 26px 0}
+#dialog-envio-asistencia .attendance-send-summary{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:14px;margin:0 0 24px;padding:16px;background:#f8f9fc;border-radius:10px}
+#dialog-envio-asistencia .attendance-send-summary div{min-width:0}
+#dialog-envio-asistencia .attendance-send-summary dt{font-size:11px;font-weight:550;color:#536881;margin-bottom:7px}
+#dialog-envio-asistencia .attendance-send-summary dd{margin:0;font-size:14px;font-weight:650;line-height:1.5;color:#24334a;overflow-wrap:anywhere}
+#dialog-envio-asistencia .attendance-send-summary dd span{font-size:12px;font-weight:450}
+#dialog-envio-asistencia .attendance-send-source{display:flex;align-items:center;gap:8px;margin:-10px 0 22px;font-size:12px;color:#536881;overflow-wrap:anywhere}
+#dialog-envio-asistencia .attendance-send-source svg{width:16px;height:16px;flex-shrink:0}
+#dialog-envio-asistencia .attendance-send-period{margin:0 0 22px;padding:0;border:0;min-width:0}
+#dialog-envio-asistencia .attendance-send-period legend{font-size:14px;font-weight:650;padding:0;margin-bottom:14px}
+#dialog-envio-asistencia .attendance-send-dates{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#dialog-envio-asistencia .attendance-send-dates label{display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:550;color:#536881;min-width:0}
+#dialog-envio-asistencia .attendance-send-dates input{box-sizing:border-box;width:100%;min-width:0;min-height:46px;padding:10px 12px;border:1px solid #d3dce8;border-radius:8px;background:#fff;color:#24334a;font:450 14px/1.4 Geist,'Segoe UI',sans-serif;color-scheme:light}
+#dialog-envio-asistencia .attendance-send-period p{font-size:12px;line-height:1.5;color:#536881;margin:10px 0 0}
+#dialog-envio-asistencia .attendance-send-confirm{display:flex;align-items:flex-start;gap:10px;padding:14px;border:1px solid #e1e7ef;border-radius:10px;font-size:13px;line-height:1.6;color:#425570;cursor:pointer}
+#dialog-envio-asistencia .attendance-send-confirm input{flex-shrink:0;appearance:auto;width:18px;height:18px;min-height:0;padding:0;margin:2px 0 0;accent-color:#bd4d14}
+#dialog-envio-asistencia .attendance-send-footer{margin:24px -26px 0;padding:18px 26px;background:#fafbfd;border-top:1px solid #e4e9f1}
+#dialog-envio-asistencia .attendance-send-footer p{margin:0 0 14px;font-size:12px;color:#536881}
+#dialog-envio-asistencia .attendance-send-footer>div{display:flex;justify-content:flex-end;align-items:center;gap:10px}
+#dialog-envio-asistencia .attendance-send-footer button{display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:42px;padding:10px 16px;font-size:13px;border-radius:8px;white-space:nowrap}
+#dialog-envio-asistencia .attendance-send-footer svg{width:16px;height:16px}
+#dialog-envio-asistencia :is(button,input):focus-visible{outline:3px solid #bd4d14;outline-offset:3px}
+html[data-theme=dark] #dialog-envio-asistencia .attendance-send-header,html[data-theme=dark] #dialog-envio-asistencia .attendance-send-footer{border-color:var(--night-line)}
+html[data-theme=dark] #dialog-envio-asistencia :is(.attendance-send-summary,.attendance-send-footer,.attendance-send-close){background:var(--night-field)}
+html[data-theme=dark] #dialog-envio-asistencia :is(.attendance-send-summary dd,.attendance-send-period legend){color:var(--night-text)}
+html[data-theme=dark] #dialog-envio-asistencia :is(.attendance-send-header p,.attendance-send-summary dt,.attendance-send-source,.attendance-send-period p,.attendance-send-dates label,.attendance-send-confirm,.attendance-send-footer p,.attendance-send-close){color:var(--night-muted)}
+html[data-theme=dark] #dialog-envio-asistencia .attendance-send-icon{background:#493122;color:#ffba8a}
+html[data-theme=dark] #dialog-envio-asistencia .attendance-send-dates input{background:var(--night-field);color:var(--night-text);border-color:var(--night-line);color-scheme:dark}
+html[data-theme=dark] #dialog-envio-asistencia .attendance-send-confirm{border-color:var(--night-line)}
+@media(max-width:480px){#dialog-envio-asistencia{width:calc(100vw - 20px);max-height:calc(100dvh - 20px)}#dialog-envio-asistencia .attendance-send-header{grid-template-columns:minmax(0,1fr) 32px;padding:20px;gap:10px}#dialog-envio-asistencia .attendance-send-icon{display:none}#dialog-envio-asistencia .attendance-send-header h3{font-size:21px}#dialog-envio-asistencia .attendance-send-form{padding:20px 20px 0}#dialog-envio-asistencia .attendance-send-summary{grid-template-columns:1fr 1fr;gap:14px;padding:14px}#dialog-envio-asistencia .attendance-send-summary>div:last-child{grid-column:1/-1}#dialog-envio-asistencia .attendance-send-dates{gap:10px}#dialog-envio-asistencia .attendance-send-dates input{font-size:13px;padding:10px 8px}#dialog-envio-asistencia .attendance-send-footer{margin:20px -20px 0;padding:16px 20px}#dialog-envio-asistencia .attendance-send-footer>div{display:grid;grid-template-columns:1fr 1.4fr}}
+
+#dialog-envio-asistencia .attendance-send-working{display:flex;align-items:center;gap:9px;color:#a3400e;font-weight:550}#dialog-envio-asistencia .attendance-send-working[hidden]{display:none}#dialog-envio-asistencia .attendance-send-working>span{width:13px;height:13px;border:2px solid #edcfba;border-top-color:#b44b10;border-radius:50%;animation:envio-giro .8s linear infinite;flex-shrink:0}#dialog-envio-asistencia .attendance-send-footer button:disabled{opacity:.65;cursor:wait}html[data-theme=dark] #dialog-envio-asistencia .attendance-send-working{color:#ffc18d}@keyframes envio-giro{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#dialog-envio-asistencia .attendance-send-working>span{animation:none}}

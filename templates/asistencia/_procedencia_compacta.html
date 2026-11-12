@@ -1,0 +1,30 @@
+<section class="day-audit-panel" aria-labelledby="titulo-procedencia">
+    <header class="day-audit-heading">
+        <h4 id="titulo-procedencia">Marcaciones y procedencia</h4>
+        <span>{{ d.marcas|length }} registros</span>
+    </header>
+    <div class="provenance-list">
+        {% for m in d.marcas %}
+        <details class="provenance-entry">
+            <summary>
+                <span class="provenance-symbol" aria-hidden="true"><svg class="ui-icon"><use href="{% if m.origen == 'SISTEMA_MANUAL' %}#icon-clock{% elif m.origen == 'EXCEL_ZKTECO' %}#icon-file{% else %}#icon-shield{% endif %}"></use></svg></span>
+                <span class="provenance-time"><strong>{{ m.fecha_local|date:'H:i:s' }}</strong><span>{{ m.fecha_local|date:'d/m/Y' }}</span></span>
+                <span class="provenance-event">{% if m.evento_efectivo == 'ENTRADA' %}Entrada{% elif m.evento_efectivo == 'SALIDA' %}Salida{% elif m.evento_efectivo == 'SALIDA_REFRIGERIO' %}Inicio de refrigerio{% elif m.evento_efectivo == 'RETORNO_REFRIGERIO' %}Fin de refrigerio{% else %}Por clasificar{% endif %}<span class="provenance-source">{% if m.origen == 'SISTEMA_MANUAL' %}Registro manual{% elif m.origen == 'EXCEL_ZKTECO' %}Excel ZKTeco{% elif m.origen == 'ZKTECO_EN_LINEA' %}Huellero{% elif m.origen == 'APP_MOVIL_GPS' %}App móvil{% elif m.origen == 'KIOSKO_PIN' %}Kiosko{% else %}{{ m.get_origen_display }}{% endif %}{% if not m.es_valida %}<small>Invalidada</small>{% endif %}</span></span>
+                <span class="provenance-expand" aria-hidden="true">Ver origen <svg class="ui-icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+            </summary>
+            <dl class="provenance-facts">
+                <div><dt>Procedencia</dt><dd>{{ m.get_origen_display }}</dd></div>
+                {% if m.identidad_biometrica %}<div><dt>Equipo / código</dt><dd>{{ m.identidad_biometrica.equipo|default:'No reportado' }} / {{ m.identidad_biometrica.codigo }}</dd></div>{% else %}<div><dt>Equipo / ID</dt><dd>{{ m.dispositivo_ip|default:'No reportado' }} / {{ m.zkteco_user_id|default_if_none:'-' }}</dd></div>{% endif %}
+                {% if m.carga_origen %}<div><dt>Archivo</dt><dd>Lote #{{ m.carga_origen.pk }} · {{ m.carga_origen.nombre_archivo_original }}</dd></div><div><dt>Importado</dt><dd>{{ m.carga_origen.fecha_subida|date:'d/m/Y H:i:s' }}</dd></div>{% else %}<div><dt>Archivo</dt><dd>Sin lote de importación</dd></div>{% endif %}
+                <div><dt>Registro en sistema</dt><dd>{{ m.fecha_registro_sistema|date:'d/m/Y H:i:s' }}</dd></div>
+                <div><dt>Verificación original</dt><dd>{{ m.verificacion_reportada|default:'No reportada' }}</dd></div>
+                {% if m.origen == 'SISTEMA_MANUAL' %}<div><dt>Responsable</dt><dd>{{ m.registrada_por.nombre_corto|default:'No disponible' }}</dd></div><div><dt>Motivo</dt><dd>{{ m.motivo_manual }}</dd></div>{% endif %}
+                <div><dt>Evidencia</dt><dd>{% if m.foto_evidencia %}<a href="{{ m.foto_evidencia.url }}" target="_blank" rel="noopener">Ver fotografía</a>{% elif m.evidencia_manual_url %}<a href="{{ m.evidencia_manual_url }}" target="_blank" rel="noopener noreferrer">Ver referencia</a>{% else %}Sin evidencia adjunta{% endif %}</dd></div>
+            </dl>
+        </details>
+        {% empty %}
+        <p class="day-audit-empty">Sin registros de procedencia.</p>
+        {% endfor %}
+    </div>
+
+</section>

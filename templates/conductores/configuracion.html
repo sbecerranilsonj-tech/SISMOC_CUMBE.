@@ -1,0 +1,8 @@
+<div data-config-content {% if aviso or aviso_situacion %}data-actualizado="true"{% endif %}>
+<div class="cd-section-heading"><div><span class="cd-eyebrow">GESTIÓN DE CONDUCTORES</span><h2>Conductores</h2></div><div class="cd-heading-actions"><button type="button" class="cd-button" data-editor-open data-url="{% url 'conductores_ficha' %}">Registrar nuevo</button>{% if not completa or popup %}<button type="button" class="cd-close" data-close-config aria-label="Cerrar">×</button>{% endif %}</div></div>
+{% if aviso %}<p class="cd-notice" role="status">{{ aviso }}</p>{% endif %}
+{% if aviso_situacion %}<p class="cd-notice" role="status">{{ aviso_situacion }}</p>{% endif %}
+{% if form_nuevo.errors %}<div class="cd-notice cd-warning">{{ form_nuevo.errors }}</div>{% endif %}{% if situacion_form.errors %}<div class="cd-notice cd-warning">{{ situacion_form.errors }}</div>{% endif %}
+<form method="get" action="{{ config_url }}" class="cd-form cd-inline" data-config-form><label>Buscar conductor<input name="q" value="{{ q }}" placeholder="Nombre o apellido"></label><button class="cd-button">Buscar</button></form>
+<p class="cd-muted">{{ fichas|length }} conductores · Orden alfabético por apellidos.</p>
+<div class="cd-plain-list"><table class="cd-table"><thead><tr><th>Apellidos y nombres</th><th>Acciones</th></tr></thead><tbody>{% for f in fichas %}<tr><td>{{ f.conductor.nombre_apellidos }}</td><td><button type="button" class="cd-link" data-editor-open data-url="{% url 'conductores_ficha' %}?id={{ f.conductor.pk }}">Configurar</button></td></tr>{% empty %}<tr><td colspan="2" class="cd-empty">No hay conductores con este nombre.</td></tr>{% endfor %}</tbody></table></div></div>
