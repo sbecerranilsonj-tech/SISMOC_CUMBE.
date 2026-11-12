@@ -9,7 +9,10 @@ from django.urls import path, include, re_path
 from core.deployment import health, archivo_media
 from django.conf import settings
 from django.conf.urls.static import static
-from config.api import api
+if getattr(settings,'MOVIL_HABILITADO',True):
+    from config.api import api
+else:
+    api=None
 from core.views import dashboard_view, login_view, logout_view
 from asistencia import views as asistencia_views
 from asistencia import views_trabajadores
@@ -78,8 +81,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # API REST con Django Ninja (Documentacion interactiva en /api/docs)
-    path("api/", api.urls),
 ]
+if api is not None:
+    urlpatterns.append(path('api/',api.urls))
 
 # Servir archivos media en desarrollo (fotos de peajes, archivos Excel)
 if settings.DEBUG:
