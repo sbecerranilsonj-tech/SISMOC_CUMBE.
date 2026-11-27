@@ -21,7 +21,8 @@ def puede_gestionar(usuario):
 
 
 def puede_aprobar(usuario):
-    return puede_gestionar(usuario) and (usuario.is_superuser or usuario.rol in {"CONTADORA", "GERENTE_GENERAL"})
+    from core.permissions import solo_consulta
+    return not solo_consulta(usuario) and puede_gestionar(usuario) and (usuario.is_superuser or usuario.rol == "CONTADORA")
 
 
 def estado_revision(resumen):

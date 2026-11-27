@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Programar horarios · SISMOC</title><link rel="stylesheet" href="{% static 'app.css' %}"><link rel="stylesheet" href="{% static 'horarios.css' %}?v=20261105-dialogs">{% include '_theme_head.html' %}<link rel="stylesheet" href="{% static 'alineacion.css' %}?v=20261115-1"><link rel="stylesheet" href="{% static 'buscador_inteligente.css' %}?v=20261127-1"></head>
-<body class="schedule-page"><main>
+<body class="schedule-page{% if solo_consulta %} solo-consulta{% endif %}">{% include '_solo_consulta_head.html' %}<main>
     <header class="schedule-heading"><div><a class="schedule-back" href="{% url 'dashboard' %}?vista=personal&amp;desde={{ desde|date:'Y-m-d' }}&amp;hasta={{ hasta|date:'Y-m-d' }}">← Volver a Personal y jornadas</a><h1>Programar horarios</h1><p>Asigna el turno que corresponde a cada fecha.</p></div>{% include '_theme_toggle.html' %}<span class="schedule-brand">EL CUMBE <small>SISMOC</small></span></header>
     
     <div class="schedule-layout schedule-layout--saved">

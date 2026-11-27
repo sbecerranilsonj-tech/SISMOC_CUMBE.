@@ -5,6 +5,8 @@
 </section>
 {% if estado %}{% include 'bancos/_encabezado_estado.html' with sin_titulos=True %}{% endif %}
 {% if estado %}{% include 'bancos/_revision_estado.html' %}{% else %}<section><p class="ayuda">Sin estados de cuenta. Sube un PDF para comenzar.</p></section>{% endif %}
+{% if not solo_consulta %}
 <form method="post" action="{% url 'bancos_importar' %}" enctype="multipart/form-data" id="banco-upload-directo" class="banco-upload-directo">{% csrf_token %}<input type="file" name="pdf" id="banco-pdf-file" accept=".pdf,application/pdf" hidden required><button type="button" data-banco-upload aria-controls="banco-pdf-file"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg><span>Subir estado de cuenta</span></button><span role="status" aria-live="polite"></span></form>
+{% endif %}
 <link rel="stylesheet" href="{% static 'buscador_inteligente.css' %}?v=20261127-1"><script src="{% static 'buscador_inteligente.js' %}?v=20261127-1" defer></script>
 {% endblock %}

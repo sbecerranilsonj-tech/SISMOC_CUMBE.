@@ -19,6 +19,9 @@ import 'package:uuid/uuid.dart';
 
 
 import 'api.dart';
+import 'attendance_day_details.dart';
+import 'sales_trips.dart';
+import 'worker_dialogs.dart';
 
 import 'activation_dialog.dart';
 
@@ -65,7 +68,7 @@ class SismocApp extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         ),
 
-        title: 'SISMOC · El Cumbe',
+        title: 'El Cumbe',
 
         theme: ThemeData(
 
@@ -509,33 +512,9 @@ class _ShellState extends State<Shell> {
     final notices = (api.data['avisos'] ?? []) as List;
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Avisos'),
-        content: SizedBox(
-          width: 360,
-          height: 400,
-          child: ListView(children: [
-            for (final n in notices)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(n['leido'] == true
-                    ? Icons.notifications_none : Icons.notifications_active_outlined),
-                title: Text('${n['texto']}'),
-              ),
-            for (final n in approvals)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.verified_outlined, color: Color(0xff24744f)),
-                title: Text('Jornada ${n['fecha']} validada por Contabilidad'),
-              ),
-            if (notices.isEmpty && approvals.isEmpty)
-              const Text('Sin avisos.'),
-          ]),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar')),
-        ],
+      builder: (context) => NoticesDialog(
+        notices: notices.whereType<Map>().toList(),
+        approvals: approvals.whereType<Map>().toList(),
       ),
     );
     if (!mounted) return;
@@ -1761,7 +1740,6 @@ class _ShellState extends State<Shell> {
     final status = day?['revision_contable'] == 'APROBADO'
         ? 'Aprobado' : approvalLabel(j);
     final approved = status == 'Aprobado';
-    final values = day?['control_diario'] as Map?;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Material(
@@ -1787,25 +1765,8 @@ class _ShellState extends State<Shell> {
               onPressed: () => loadAttendanceDay(id),
               child: Text('${dailyErrors[id]} · Reintentar'),
             )
-          else if (values != null)
-            for (final item in [
-              ('Horas trabajadas', 'trabajo'),
-              ('Refrigerio', 'refrigerio'),
-              ('Saldo de jornada', 'saldo'),
-              ('Extras 25 %', 'he25'),
-              ('Extras 35 %', 'he35'),
-              ('Horas nocturnas', 'nocturnas'),
-            ])
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(children: [
-                  Expanded(child: Text(item.$1,
-                      style: const TextStyle(fontSize: 13))),
-                  Text('${values[item.$2] ?? '—'}',
-                      style: const TextStyle(fontSize: 13,
-                          fontWeight: FontWeight.w700)),
-                ]),
-              ),
+          else if (day != null)
+            AttendanceDayDetails(day: day),
         ],
       )),
     );
@@ -2460,12 +2421,95 @@ class _ShellState extends State<Shell> {
       Boarding(api: api, trip: viaje)));
   }
 
+  Future<void> viewSalesTrip(Map trip) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      builder: (sheet) => FractionallySizedBox(
+        heightFactor: .85,
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 12, 12),
+            child: Row(children: [
+              const Expanded(child: Text('Detalle del viaje',
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700,
+                      color: Color(0xff172b45)))),
+              TextButton(onPressed: () => Navigator.pop(sheet),
+                  child: const Text('Cerrar')),
+            ]),
+          ),
+          const Divider(height: 1),
+          Expanded(child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${trip['ruta']}', style: const TextStyle(
+                  color: Color(0xff172b45), fontSize: 22, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(salesDate(trip)),
+              Text('Bus: ${trip['bus']} · ${salesStatus(trip)}'),
+              const SizedBox(height: 20),
+              const Text('Conductores', style: TextStyle(fontWeight: FontWeight.w700)),
+              for (final key in ['conductor_1', 'conductor_2'])
+                Text('${trip[key] ?? ''}'.trim().isEmpty
+                    ? 'Sin asignar' : '${trip[key]}'),
+              const SizedBox(height: 16),
+              Text('Pasajeros reportados: ${trip['pasajeros'] ?? 'Sin información'}'),
+              if ((trip['puntos'] as List? ?? []).isNotEmpty)
+                Text('Puntos de embarque: ${(trip['puntos'] as List).join(', ')}'),
+              if (trip['embarque'] == true) ...[
+                const SizedBox(height: 12),
+                button('Ver croquis y pasajeros', () {
+                  Navigator.pop(sheet);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) =>
+                      ManifiestoEmbarque(
+                          api: api, viajeId: trip['id'], onCroquis: abrirCroquis)));
+                }, icon: Icons.airline_seat_recline_normal),
+              ],
+              if ((trip['incidencias'] as List? ?? []).isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const Text('Incidencias y gastos',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                for (final item in trip['incidencias'] as List)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('${item['tipo']} · ${item['estado']}'),
+                    subtitle: Text('${item['descripcion']}'),
+                    trailing: role == 'GERENTE_GENERAL' ? null : const Icon(Icons.chevron_right),
+                    onTap: role == 'GERENTE_GENERAL' ? null : () {
+                      Navigator.pop(sheet);
+                      run(() => send('resolver_incidencia', {
+                        'id': item['id'], 'estado': 'RESUELTO',
+                      }));
+                    },
+                  ),
+              ],
+            ]),
+          )),
+        ]),
+      ),
+    );
+  }
+
   List<Widget> trips() => [
         if (sales)
-          button('Abrir Panel de Abordaje', () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) =>
-              PanelAbordaje(api: api, onCroquis: abrirCroquis))),
-            icon: Icons.airline_seat_recline_normal),
+          SalesTripsView(
+            key: const ValueKey('sales-trips'),
+            trips: ((api.data['viajes'] ?? []) as List).whereType<Map>().toList(),
+            busy: busy,
+            canManage: role != 'GERENTE_GENERAL',
+            onImport: () => run(importTrips),
+            onBoarding: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) =>
+                    PanelAbordaje(api: api, onCroquis: abrirCroquis))),
+            onView: viewSalesTrip,
+            onAssign: (trip) => assign(trip),
+            onAssignBoarding: (trip) => assignBoarding(trip),
+            onPassengers: (trip) => run(() => importPassengers(trip)),
+            onIncident: (trip) => incident(trip),
+          ),
         if (driver) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -2541,28 +2585,7 @@ class _ShellState extends State<Shell> {
             ]),
           if (!routesLoading && routeData != null) ...groupedDriverTrips(),
         ],
-        if (sales)
-          box('Ventas', [
-
-            button(
-
-              'Subir Excel de itinerarios',
-
-              () => run(importTrips),
-
-              icon: Icons.upload_file,
-
-            ),
-
-            const Text(
-
-              'Se comparan las salidas. Los conflictos se conservan para revisión; no se reemplazan viajes en curso.',
-
-            ),
-
-          ]),
-
-        for (final v in driver ? <dynamic>[] : (api.data['viajes'] ?? []) as List)
+        for (final v in driver || sales ? <dynamic>[] : (api.data['viajes'] ?? []) as List)
             box('${v['fecha']} · ${v['hora']}', [
             if (driver) ...[
               Align(
@@ -2710,7 +2733,7 @@ class _ShellState extends State<Shell> {
 
           ]),
 
-        if (!driver && ((api.data['viajes'] ?? []) as List).isEmpty)
+        if (!driver && !sales && ((api.data['viajes'] ?? []) as List).isEmpty)
           box(driver ? 'Mis viajes' : sales ? 'Programación y ventas' : 'Embarques', [
             Text(driver ? 'No hay viajes asignados para este período.'
                 : sales ? 'No hay salidas publicadas para este período.'
@@ -3640,215 +3663,13 @@ class _ShellState extends State<Shell> {
 
 
   Future<void> newRequest() async {
-
-    var tipo = 'PERMISO';
-
-    int? requestedShift;
-
-    var emergency = false;
-
-    var from = DateTime.now().add(const Duration(days: 1));
-
-    var until = from;
-
-    final detail = TextEditingController();
-
     final result = await showDialog<Map<String, dynamic>>(
-
       context: context,
-
-      builder: (ctx) => StatefulBuilder(
-
-        builder: (ctx, change) => AlertDialog(
-
-          title: const Text('Nueva solicitud'),
-
-          content: SingleChildScrollView(
-
-            child: Column(
-
-              mainAxisSize: MainAxisSize.min,
-
-              children: [
-
-                DropdownButtonFormField<String>(
-
-                  initialValue: tipo,
-
-                  items:
-
-                      ['PERMISO', 'VACACIONES', 'CAMBIO_HORARIO', 'CORRECCION']
-
-                          .map(
-
-                            (t) => DropdownMenuItem(
-
-                              value: t,
-
-                              child: Text(t.replaceAll('_', ' ')),
-
-                            ),
-
-                          )
-
-                          .toList(),
-
-                  onChanged: (s) => change(() => tipo = s!),
-
-                ),
-
-                if (tipo == 'CAMBIO_HORARIO')
-
-                  DropdownButtonFormField<int>(
-
-                    initialValue: requestedShift,
-
-                    decoration:
-
-                        const InputDecoration(labelText: 'Turno solicitado'),
-
-                    items: [
-
-                      for (final t in (api.data['turnos'] ?? []) as List)
-
-                        DropdownMenuItem<int>(
-
-                            value: t['id'], child: Text(t['nombre']))
-
-                    ],
-
-                    onChanged: (v) => change(() => requestedShift = v),
-
-                  ),
-
-                ListTile(
-
-                  title: Text('Desde: ${from.toString().substring(0, 10)}'),
-
-                  onTap: () async {
-
-                    final d = await showDatePicker(
-
-                      context: ctx,
-
-                      firstDate: DateTime(2020),
-
-                      lastDate: DateTime(2035),
-
-                      initialDate: from,
-
-                    );
-
-                    if (d != null) change(() => from = d);
-
-                  },
-
-                ),
-
-                ListTile(
-
-                  title: Text('Hasta: ${until.toString().substring(0, 10)}'),
-
-                  onTap: () async {
-
-                    final d = await showDatePicker(
-
-                      context: ctx,
-
-                      firstDate: DateTime(2020),
-
-                      lastDate: DateTime(2035),
-
-                      initialDate: until,
-
-                    );
-
-                    if (d != null) change(() => until = d);
-
-                  },
-
-                ),
-
-                TextField(
-
-                  controller: detail,
-
-                  maxLines: 3,
-
-                  decoration: const InputDecoration(
-
-                    labelText: 'Detalle / motivo',
-
-                  ),
-
-                ),
-
-                CheckboxListTile(
-
-                  value: emergency,
-
-                  onChanged: (v) => change(() => emergency = v!),
-
-                  title: const Text('Es una emergencia'),
-
-                ),
-
-              ],
-
-            ),
-
-          ),
-
-          actions: [
-
-            TextButton(
-
-              onPressed: () => Navigator.pop(ctx),
-
-              child: const Text('Cancelar'),
-
-            ),
-
-            FilledButton(
-
-              onPressed: tipo == 'CAMBIO_HORARIO' && requestedShift == null
-
-                  ? null
-
-                  : () => Navigator.pop(ctx, {
-
-                        'tipo': tipo,
-
-                        'datos': {
-
-                          if (tipo == 'CAMBIO_HORARIO') 'turno': requestedShift
-
-                        },
-
-                        'desde': from.toString().substring(0, 10),
-
-                        'hasta': until.toString().substring(0, 10),
-
-                        'detalle': detail.text,
-
-                        'emergencia': emergency,
-
-                      }),
-
-              child: const Text('Enviar'),
-
-            ),
-
-          ],
-
-        ),
-
+      builder: (ctx) => NewRequestDialog(
+        shifts: ((api.data['turnos'] ?? []) as List).whereType<Map>().toList(),
       ),
-
     );
-
     if (result != null) await run(() => send('solicitud', result));
-
   }
 
 

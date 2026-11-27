@@ -623,8 +623,9 @@
     <link rel="stylesheet" href="{% static 'ediciones.css' %}">
     {% block extra_head %}{% endblock %}
     <link rel="stylesheet" href="{% static 'alineacion.css' %}?v=20261115-1">
+    {% if solo_consulta %}<link rel="stylesheet" href="{% static 'solo_consulta.css' %}?v=20261127-1">{% endif %}
 </head>
-<body class="compact-tables">
+<body class="compact-tables{% if solo_consulta %} solo-consulta{% endif %}">
     {% include "_icons.html" %}
     <button type="button" class="sidebar-scrim" id="cerrar-navegacion" aria-label="Cerrar navegación" tabindex="-1"></button>
 
@@ -743,6 +744,7 @@
                 <nav class="workspace-breadcrumb" aria-label="Ubicación"><span>SISMOC</span><svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg><strong id="workspace-location">Inicio</strong></nav>
             </div>
             <div class="header-account">
+                {% if solo_consulta %}<span class="solo-consulta-badge">Solo consulta</span>{% endif %}
                 {% include '_theme_toggle.html' %}
                 {% if puede_ver_notificaciones %}
                 <details class="top-notificaciones">
@@ -1157,6 +1159,7 @@
     </script>
     <script src="{% static 'importacion_progreso.js' %}?v=20261024-1" defer></script>
     <script src="{% static 'interfaz.js' %}?v=20261127-menu-centro-aplicativo" defer></script>
+    {% if solo_consulta %}<script src="{% static 'solo_consulta.js' %}?v=20261127-1" defer></script>{% endif %}
     <script src="{% static 'resumen_contable_popup.js' %}?v=20261106-1" defer></script>
 <script src="{% static 'vendor/flatpickr/flatpickr.min.js' %}" defer></script>
 <script src="{% static 'vendor/flatpickr/es.js' %}" defer></script>

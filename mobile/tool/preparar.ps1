@@ -18,7 +18,7 @@ try {
             $manifest.manifest.AppendChild($node) | Out-Null
         }
     }
-    $manifest.manifest.application.SetAttribute('label',$androidNs,'SISMOC - El Cumbe') | Out-Null
+    $manifest.manifest.application.SetAttribute('label',$androidNs,'El Cumbe') | Out-Null
     $manifest.manifest.application.SetAttribute('allowBackup',$androidNs,'false') | Out-Null
     $manifest.Save($manifestPath)
     $debugPath = Join-Path $appPath 'android/app/src/debug/AndroidManifest.xml'

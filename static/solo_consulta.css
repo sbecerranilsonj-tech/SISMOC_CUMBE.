@@ -1,0 +1,29 @@
+.solo-consulta-badge {
+    display: inline-flex;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color, #dce3ed);
+    border-radius: 999px;
+    color: var(--text-muted, #64748b);
+    font-size: .75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.solo-consulta [data-solo-edicion],
+.solo-consulta form[method="post" i] button:not([type]),
+.solo-consulta form[method="post" i] button[type="submit" i],
+.solo-consulta form[method="post" i] input[type="submit" i],
+.solo-consulta form[method="post" i] input[type="file" i],
+.solo-consulta [data-upload-directo],
+.solo-consulta [data-banco-upload],
+.solo-consulta [data-pasajeros-select],
+.solo-consulta [data-editar-abrir],
+.solo-consulta [data-editar-manual] { display: none !important; }
+.solo-consulta [data-open-schedule="asignar-horario-dialog"],
+.solo-consulta [data-open-schedule="registrar-horario-dialog"],
+.solo-consulta [data-programar-abrir],
+.solo-consulta [data-embarcador-abrir] { display: none !important; }
+.solo-consulta form[data-consulta-bloqueado] :is(input, select, textarea) {
+    opacity: 1;
+    color: var(--text-main, #24364b);
+    cursor: default;
+}

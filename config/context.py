@@ -27,8 +27,11 @@ def edicion(request):
     from asistencia.services.revision import puede_gestionar
     usuario = getattr(request, 'user', None)
     mostrar_personal = bool(usuario and usuario.is_authenticated and puede_gestionar(usuario))
+    from core.permissions import solo_consulta
     escritorio=getattr(settings,'ESCRITORIO',False)
     return {'sismoc_escritorio':escritorio,
+            'solo_consulta': solo_consulta(usuario),
+            'puede_editar': mostrar_personal and not solo_consulta(usuario),
             'sismoc_mostrar_personal': mostrar_personal,
             'sismoc_movil_habilitado':getattr(settings,'MOVIL_HABILITADO',True),
             'sismoc_edicion':'Gestión de la empresa'}

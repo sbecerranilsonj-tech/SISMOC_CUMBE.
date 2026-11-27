@@ -91,6 +91,26 @@ class AppTests(TestCase):
         self.assertEqual(data['resumen']['horas_trabajadas'],'8.28')
         self.assertEqual(data['resumen']['horas_extras_25'],'-0.22')
         self.assertEqual(data['jornadas'][0]['revision_contable'],'APROBADO')
+    def test_dia_no_laborado_informa_motivo_para_ocultar_horas(self):
+        from asistencia.models import ResumenAsistenciaDiaria, IncidenciaAsistencia
+        for indice, (tipo, estado, etiqueta) in enumerate([
+            ('DESCANSO_SEMANAL', 'DIA_LIBRE', 'Descanso semanal'),
+            ('FERIADO_NO_LABORADO', 'FERIADO', 'Feriado no laborado'),
+            ('PERMISO', 'PERMISO', 'Permiso'),
+        ]):
+            with self.subTest(tipo=tipo):
+                resumen = ResumenAsistenciaDiaria.objects.create(
+                    trabajador=self.worker, fecha=self.now.date()-timedelta(days=indice),
+                    estado=estado, horas_trabajadas=0)
+                IncidenciaAsistencia.objects.create(
+                    resumen=resumen, tipo=tipo, motivo='Situación registrada',
+                    aprobado_por=self.user, aprobado_el=timezone.now())
+                respuesta = self.post('asistencia_dia', {'jornada': resumen.pk})
+                self.assertEqual(respuesta.status_code, 200)
+                self.assertTrue(respuesta.json()['solo_motivo'])
+                self.assertEqual(respuesta.json()['motivo_dia'], etiqueta)
+                self.assertEqual(respuesta.json()['detalle_motivo'], 'Situación registrada')
+
     def test_control_diario_restringido_al_trabajador_autenticado(self):
         from asistencia.models import ResumenAsistenciaDiaria
         own=ResumenAsistenciaDiaria.objects.create(
@@ -105,6 +125,7 @@ class AppTests(TestCase):
         self.assertEqual(result.status_code,200)
         self.assertEqual(result.json()['revision_contable'],'APROBADO')
         self.assertIn('trabajo',result.json()['control_diario'])
+        self.assertFalse(result.json()['solo_motivo'])
         from asistencia.services.revision import detalle_jornada
         self.assertEqual(result.json()['control_diario']['trabajo'],
                          detalle_jornada(own,incluir_formulario=False)['cuadro_excel']['totales']['trabajo'])

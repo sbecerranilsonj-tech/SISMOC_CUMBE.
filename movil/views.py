@@ -495,6 +495,11 @@ def api(request, accion):
         return JsonResponse({'ok': False, 'error': 'Registro no encontrado.'}, status=404)
 
 def ejecutar(accion, p, d, sesion):
+    from core.permissions import solo_consulta, MENSAJE_SOLO_CONSULTA
+    if solo_consulta(p.usuario):
+        exigir(accion in {'inicio', 'rutas_periodo', 'asistencia_dia',
+                          'asistencia_periodo', 'logout'},
+               MENSAJE_SOLO_CONSULTA, 403)
     if accion == 'inicio': return snapshot(p)
     if accion == 'rutas_periodo':
         mes = d.get('mes')
@@ -514,8 +519,18 @@ def ejecutar(accion, p, d, sesion):
             'trabajador__usuario__turno', 'turno_aplicado'
         ).get(pk=int(d['jornada']), trabajador_id=p.trabajador_id)
         detalle = detalle_jornada(resumen, incluir_formulario=False)
+        situacion = detalle.get('situacion_dia')
+        no_laborado = resumen.horas_trabajadas == 0 and resumen.estado in {
+            'DIA_LIBRE', 'FERIADO', 'PERMISO', 'DESCANSO_MEDICO',
+            'DESCANSO_SUTRAN', 'VACACIONES', 'NO_LABORO',
+        } and not detalle['tramos']
+        solo_motivo = bool(situacion) or no_laborado
+        motivo = str(situacion.get_tipo_display() if situacion else
+                     resumen.get_estado_display()) if solo_motivo else ''
         return {'jornada': resumen.pk, 'fecha': str(resumen.fecha),
                 'revision_contable': detalle['revision'],
+                'solo_motivo': solo_motivo, 'motivo_dia': motivo,
+                'detalle_motivo': situacion.motivo if situacion else '',
                 'control_diario': {**detalle['cuadro_excel']['totales'],
                                   'refrigerio': detalle['cuadro_excel']['refrigerio']}}
     if accion == 'asistencia_periodo':

@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Jornadas y días especiales · SISMOC</title><link rel="stylesheet" href="{% static 'app.css' %}"><link rel="stylesheet" href="{% static 'horarios.css' %}?v=20261106-areas">{% include '_theme_head.html' %}<link rel="stylesheet" href="{% static 'alineacion.css' %}?v=20261115-1"></head>
-<body class="schedule-page{% if popup %} schedule-embedded{% endif %}"><main>
+<body class="schedule-page{% if popup %} schedule-embedded{% endif %}{% if solo_consulta %} solo-consulta{% endif %}">{% include '_solo_consulta_head.html' %}<main>
 {% if not popup %}<header class="schedule-heading"><div><a class="schedule-back" href="{% url 'dashboard' %}?vista=personal">Volver a Personal y jornadas</a><h1>{% if apartado_dias %}Días especiales{% else %}Jornadas{% endif %}</h1></div>{% include '_theme_toggle.html' %}</header>{% endif %}
 
 

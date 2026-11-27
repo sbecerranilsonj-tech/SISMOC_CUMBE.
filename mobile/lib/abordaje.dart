@@ -91,8 +91,14 @@ class _PanelAbordajeState extends State<PanelAbordaje> {
   String hoy = '', operario = '', busqueda = '', filtro = 'TODOS', error = '', mes = '';
   bool cargando = true;
   int grupo = 0;
+  final buscadorViajes = TextEditingController();
   @override
   void initState() { super.initState(); cargar(); }
+  @override
+  void dispose() {
+    buscadorViajes.dispose();
+    super.dispose();
+  }
   Future<void> cargar() async {
     try {
       final r = await widget.api.panelAbordaje(
@@ -117,8 +123,8 @@ class _PanelAbordajeState extends State<PanelAbordaje> {
   List<DatosAbordaje> get visibles => viajes.where((v) =>
     (grupo == 2 || v['fecha'] == (grupo == 0 ? hoy : manana)) &&
     (filtro == 'TODOS' || v['estado'] == filtro) &&
-    '${v['id']} ${v['bus']} ${v['origen']} ${v['destino']}'
-      .toLowerCase().contains(busqueda.toLowerCase())).toList();
+    (grupo != 2 || '${v['id']} ${v['bus']} ${v['origen']} ${v['destino']}'
+      .toLowerCase().contains(busqueda.toLowerCase()))).toList();
   Future<void> abrir(DatosAbordaje v) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) =>
       ManifiestoEmbarque(api: widget.api, viajeId: v['id'],
@@ -208,9 +214,13 @@ class _PanelAbordajeState extends State<PanelAbordaje> {
         const SizedBox(height: 12),
         const SizedBox(height: 16),
         Row(children: [
-          Expanded(child: TextField(onChanged: (s) => setState(() => busqueda = s),
+          if (grupo == 2) ...[
+          Expanded(child: TextField(controller: buscadorViajes,
+            onChanged: (s) => setState(() => busqueda = s),
             decoration: const InputDecoration(hintText: 'Buscar...', prefixIcon: Icon(Icons.search)))),
           const SizedBox(width: 8),
+          ] else
+            const Spacer(),
           OutlinedButton.icon(onPressed: filtros, icon: const Icon(Icons.filter_list),
             label: Text(filtro == 'TODOS' ? 'Filtros' : _estado(filtro))),
         ]),

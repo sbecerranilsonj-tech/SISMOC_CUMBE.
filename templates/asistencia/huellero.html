@@ -3,7 +3,7 @@
         <div><h3 class="panel-title-text">Huellero · Registro en tiempo real</h3><p class="ayuda">Una fila por marcación recibida.</p></div>
         <div class="acciones-revision">
             <button class="btn-dark-outline" type="button" id="btnActualizarHuellero" onclick="actualizarRegistrosHuellero()">Actualizar registros</button>
-            {% if puede_gestionar %}<button class="btn-dark-outline" type="button" onclick="abrirConfigHuellero()">Configurar conexión</button>
+            {% if puede_gestionar and not solo_consulta %}<button class="btn-dark-outline" type="button" onclick="abrirConfigHuellero()">Configurar conexión</button>
             <button class="btn-cumbe" type="button" onclick="sincronizarZKTeco()" id="btnSync">Consultar conexión del equipo</button>{% endif %}
         </div>
     </div>
@@ -38,9 +38,9 @@
         </table>
     </div>
 </div>
-<div class="content-panel"><h3 class="panel-title-text">Registro manual por DNI</h3><p class="ayuda">Marcación manual por DNI; se revisa en Asistencia. Se conserva como respaldo cuando el agente no esté disponible.</p><button class="btn-dark-outline" type="button" onclick="abrirModal()">Registrar marcación manual</button></div>
+{% if not solo_consulta %}<div class="content-panel"><h3 class="panel-title-text">Registro manual por DNI</h3><p class="ayuda">Marcación manual por DNI; se revisa en Asistencia. Se conserva como respaldo cuando el agente no esté disponible.</p><button class="btn-dark-outline" type="button" onclick="abrirModal()">Registrar marcación manual</button></div>{% endif %}
 
-{% if puede_gestionar %}
+{% if puede_gestionar and not solo_consulta %}
 <style>
 .cfg-huellero{--cfg-naranja:#f26522;background:#fff!important;color:#17212f!important;border:1px solid #e2e8f0!important;border-radius:20px;width:min(560px,94vw);max-height:90vh;overflow:auto;padding:0;box-shadow:0 30px 70px rgba(15,27,48,.28)}
 .cfg-huellero .cfg-head{padding:24px 26px 20px;border-bottom:1px solid #f1e6dc!important;display:flex;gap:16px;align-items:center;background:linear-gradient(120deg,#fff1e8 0%,#fff 75%)!important}

@@ -67,6 +67,11 @@ class AuthBearer(HttpBearer):
         except Usuario.DoesNotExist:
             return None
 
+        from core.permissions import solo_consulta, MENSAJE_SOLO_CONSULTA
+        if solo_consulta(usuario) and request.method not in {'GET', 'HEAD', 'OPTIONS'}:
+            from ninja.errors import HttpError
+            raise HttpError(403, MENSAJE_SOLO_CONSULTA)
+
         # Si se especificaron roles permitidos, verificar que el usuario tenga uno de ellos
         if self.roles_permitidos:
             if usuario.rol not in self.roles_permitidos and not usuario.is_superuser:

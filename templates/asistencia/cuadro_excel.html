@@ -1,4 +1,5 @@
 {% load static %}
+{% with puede_gestionar=puede_editar %}
 <div class="cuadro-control-excel">
     <div class="day-control-toolbar">
         <div class="day-control-title-actions">
@@ -90,3 +91,4 @@
     <script src="{% static 'conceptos_diarios.js' %}?v=20261105-restaurar-feriado" defer></script>
 
 </div>
+{% endwith %}

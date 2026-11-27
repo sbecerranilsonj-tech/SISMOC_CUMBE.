@@ -53,6 +53,31 @@ class ApiAbordajePrueba extends SismocApi {
 }
 
 void main() {
+  testWidgets('Buscar solo aparece en Todos y no filtra Hoy ni Mañana',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: PanelAbordaje(api: ApiAbordajePrueba())));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.text('Mañana 0'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.text('Todos 1'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'sin coincidencias');
+    await tester.pumpAndSettle();
+    expect(find.text('Mostrando 0 viajes'), findsOneWidget);
+    await tester.tap(find.text('Hoy 1'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Mostrando 1 viaje'), findsOneWidget);
+    await tester.tap(find.text('Todos 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('sin coincidencias'), findsOneWidget);
+    expect(find.text('Mostrando 0 viajes'), findsOneWidget);
+  });
+
   testWidgets('Panel usa viajes reales y abre la lista sin crear viajes locales', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

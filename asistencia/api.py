@@ -152,6 +152,9 @@ def consultar_asistencia_tiempo_real(request):
     su hora de ingreso, rol, agencia y estado de asistencia.
     """
     client = ZKTecoLiveClient()
+    from core.permissions import solo_consulta
+    if solo_consulta(request.auth):
+        return client.consultar_registros_locales()
     return client.sincronizar_marcaciones_en_vivo()
 
 
