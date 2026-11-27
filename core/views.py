@@ -81,12 +81,16 @@ def logout_view(request):
 @login_required(login_url='login')
 def dashboard_view(request):
     """Vista web principal para monitoreo en vivo de SISMOC-CUMBE."""
-    if getattr(settings,'MOVIL_HABILITADO',True) and request.user.rol == 'BOLETERIA' and request.GET.get('vista','dashboard')=='dashboard':
+    if getattr(settings,'MOVIL_HABILITADO',True) and request.GET.get('vista')=='flota':
+        return redirect('movil_buses')
+    if getattr(settings,'MOVIL_HABILITADO',True) and request.user.rol == 'BOLETERIA' and request.GET.get('vista','dashboard')!='flota':
         return redirect('movil_ventas')
     # Consultar registros guardados; abrir la página no crea ni sincroniza marcas.
     client = ZKTecoLiveClient()
     vista = request.GET.get('vista', 'dashboard')
     info_huellero = client.consultar_registros_locales() if vista in {'dashboard', 'huellero'} else {'colaboradores_presentes': [], 'total_presentes_hoy': 0}
+    if 'config_agente' in info_huellero:
+        info_huellero['config_agente']['api_url'] = request.build_absolute_uri('/').rstrip('/')
     if not puede_gestionar(request.user):
         info_huellero['colaboradores_presentes'] = [c for c in info_huellero['colaboradores_presentes'] if c['dni'] == request.user.dni]
         info_huellero['total_presentes_hoy'] = len(info_huellero['colaboradores_presentes'])
@@ -97,6 +101,20 @@ def dashboard_view(request):
     if not puede_gestionar(request.user):
         conductores = conductores.filter(pk=request.user.pk)
     total_conductores = conductores.count()
+    # Series reales para los indicadores; no se generan tendencias ficticias.
+    from collections import Counter
+    horas_hoy = [0] * 6
+    for persona in info_huellero['colaboradores_presentes']:
+        try:
+            horas_hoy[int(persona['primera_marcacion'].split(':')[0]) // 4] += 1
+        except (ValueError, KeyError, IndexError):
+            continue
+    activos = Usuario.objects.filter(esta_activo=True)
+    if not puede_gestionar(request.user):
+        activos = activos.filter(pk=request.user.pk)
+    sedes_activas = Counter(sede or 'Sin sede' for sede in activos.values_list('agencia_sede', flat=True))
+    personal_series = [{'nombre': sede, 'valor': cantidad} for sede, cantidad in sorted(sedes_activas.items(), key=lambda par: (-par[1], par[0]))]
+
     resumenes_recientes = ResumenAsistenciaDiaria.objects.select_related('usuario').order_by('-fecha')[:25]
     if not puede_gestionar(request.user):
         resumenes_recientes = ResumenAsistenciaDiaria.objects.filter(usuario=request.user).order_by('-fecha')[:25]
@@ -107,6 +125,8 @@ def dashboard_view(request):
         'empresa_ruc': '20480397731',
         'info_huellero': info_huellero,
         'total_usuarios': total_usuarios,
+        'marcaciones_horas': [{'nombre': f'{i*4:02d}–{(i+1)*4:02d} h', 'valor': cantidad} for i, cantidad in enumerate(horas_hoy)],
+        'personal_series': personal_series,
         'total_conductores': total_conductores,
         'resumenes_recientes': resumenes_recientes,
         'turnos': turnos,

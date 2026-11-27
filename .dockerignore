@@ -36,3 +36,6 @@ docs
 *.key
 *.jks
 *.keystore
+
+# Copias independientes de trabajo
+PROYECTOS/

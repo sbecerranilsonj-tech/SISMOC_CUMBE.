@@ -5,11 +5,23 @@ DIAS = list(enumerate(['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado
 
 
 class ProgramarHorarioForm(forms.Form):
-    trabajador = forms.ModelChoiceField(queryset=Trabajador.objects.all(), label='Trabajador')
+    trabajador = forms.ModelChoiceField(
+        queryset=Trabajador.objects.all(), label='Trabajador',
+        widget=forms.Select(attrs={
+            'data-buscador-inteligente': 'true',
+            'data-buscador-placeholder': 'Escribe nombre, DNI o código',
+            'data-buscador-incluir-vacio': 'false',
+        }))
     desde = forms.DateField(widget=forms.DateInput(attrs={'type':'date'}, format='%Y-%m-%d'))
     hasta = forms.DateField(widget=forms.DateInput(attrs={'type':'date'}, format='%Y-%m-%d'))
     dias = forms.TypedMultipleChoiceField(choices=DIAS, coerce=int, widget=forms.CheckboxSelectMultiple, initial=list(range(7)), label='Días a programar')
-    turno = forms.ModelChoiceField(queryset=TurnoHorario.objects.filter(activo=True), label='Horario confirmado')
+    turno = forms.ModelChoiceField(
+        queryset=TurnoHorario.objects.filter(activo=True), label='Horario confirmado',
+        widget=forms.Select(attrs={
+            'data-buscador-inteligente': 'true',
+            'data-buscador-placeholder': 'Escribe el nombre del horario',
+            'data-buscador-incluir-vacio': 'false',
+        }))
     motivo = forms.CharField(max_length=500, required=False, label='Referencia de la programación (opcional)', widget=forms.TextInput(attrs={'placeholder':'Ej.: cambio temporal o reemplazo de compañero'}))
     confirmado = forms.BooleanField(label='Confirmo que este horario corresponde a las fechas seleccionadas.')
 

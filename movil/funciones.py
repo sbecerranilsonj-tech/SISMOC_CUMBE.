@@ -14,8 +14,5 @@ def funcion_por_area(area='', conductor=False):
 
 
 def sincronizar_funcion(perfil):
-    usuario = perfil.usuario
-    funcion = funcion_por_area(perfil.trabajador.area if perfil.trabajador_id else '', bool(perfil.conductor_id))
-    if funcion and usuario.rol in ('ADMINISTRATIVO', 'BOLETERIA', 'OPERADOR_EMBARQUE', 'CONDUCTOR') and not usuario.is_staff and not usuario.is_superuser and usuario.rol != funcion:
-        usuario.rol = funcion
-        usuario.save(update_fields=['rol'])
+    """Consultar el perfil no modifica la función autorizada."""
+    return None

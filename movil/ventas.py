@@ -13,7 +13,7 @@ from .gestion import gestionar
 
 @login_required
 def ventas(request):
-    if request.user.rol not in VENTAS:
+    if request.user.rol not in VENTAS or request.user.rol == 'CONTADORA':
         return HttpResponseForbidden('Esta sección corresponde a Ventas / Boletería.')
     if request.method=='POST':
         try:
@@ -21,10 +21,34 @@ def ventas(request):
                 perfil,_=Perfil.objects.get_or_create(usuario=request.user)
                 accion=request.POST.get('accion')
                 datos=dict(request.POST.items())
-                if accion=='importar_itinerario':
+                if accion=='descartar_comparacion':
+                    from .revision_itinerario import descartar
+                    descartar(request.session)
+                    return redirect('/movil/ventas/')
+                elif accion=='validar_comparacion':
+                    from .revision_itinerario import validar
+                    actualizadas,nuevas=validar(request.session,request.POST,request.user)
+                    messages.success(request,f'{actualizadas} salidas actualizadas; {nuevas} nuevas. Revisión validada.')
+                    return redirect('/movil/ventas/')
+                elif accion=='importar_itinerario':
+                    request.session.pop('comparacion_itinerario',None)
+                    from .revision_itinerario import descartar
+                    descartar(request.session)
                     archivo=request.FILES.get('archivo')
                     if not archivo or archivo.size>6_000_000:raise Problema('Seleccione un Excel de hasta 6 MB.')
-                    datos={'nombre':archivo.name,'contenido':base64.b64encode(archivo.read()).decode()}
+                    contenido=archivo.read()
+                    from django.core.files.base import ContentFile
+                    from conductores.parser import extraer
+                    from .comparacion_itinerarios import comparar_filas
+                    filas,errores=extraer(ContentFile(contenido,name=archivo.name))
+                    if errores or not filas:raise Problema('Reporte inválido: '+'; '.join(map(str,errores[:5])))
+                    if len(filas)>10000:raise Problema('Máximo 10000 filas por archivo.')
+                    comparacion=comparar_filas(filas)
+                    if any(c['estado'] in ('CAMBIO','CONFLICTO','PENDIENTE') for c in comparacion):
+                        from .revision_itinerario import preparar
+                        preparar(request.session,archivo.name,filas,comparacion,contenido)
+                        return redirect('/movil/ventas/')
+                    datos={'nombre':archivo.name,'contenido':base64.b64encode(contenido).decode()}
                 elif accion=='importar_pasajeros':
                     archivo=request.FILES.get('archivo')
                     if not archivo or archivo.size>1_000_000:raise Problema('Seleccione un CSV de hasta 1 MB.')
@@ -40,16 +64,23 @@ def ventas(request):
                 resultado=gestionar(accion,perfil,datos)
                 messages.success(request,resultado['mensaje'])
         except (Problema,ValidationError,ValueError,KeyError,ObjectDoesNotExist) as e:
+            if request.POST.get('accion')=='validar_comparacion' and request.session.get('revision_itinerario'):
+                revision=request.session['revision_itinerario']
+                for cambio in revision['cambios']:
+                    for diferencia in cambio['diferencias']:
+                        if diferencia.get('codigo'):
+                            nombre=f"c_{cambio['fila']}_{diferencia['codigo']}"
+                            diferencia['valor']=request.POST.get(nombre,diferencia['valor'])[:180]
+                request.session['revision_itinerario']=revision
             messages.error(request,getattr(e,'mensaje',str(e)))
         url='/movil/ventas/'
         if request.POST.get('viaje','').isdigit():url+='?viaje='+request.POST['viaje']
         return redirect(url)
-    try:
-        desde=date.fromisoformat(request.GET.get('desde',''))
-        hasta=date.fromisoformat(request.GET.get('hasta',''))
-    except ValueError:
-        desde=timezone.localdate().replace(day=1);hasta=desde+timedelta(days=60)
-    operaciones=Operacion.objects.filter(salida__fecha__range=(desde,hasta)).select_related('salida__conductor_uno','salida__conductor_dos').order_by('salida__fecha','salida__hora')[:200]
-    seleccionada=Operacion.objects.select_related('salida__conductor_uno','salida__conductor_dos').filter(pk=request.GET.get('viaje')).first() if request.GET.get('viaje','').isdigit() else None
-    from .models import Incidencia
-    return render(request,'movil/ventas.html',{'operaciones':operaciones,'seleccionada':seleccionada,'desde':desde,'hasta':hasta,'incidencias':Incidencia.objects.filter(operacion=seleccionada) if seleccionada else []})
+    from .registro_ventas import contexto_registro
+    import time
+    if request.session.get('revision_itinerario',{}).get('vence',float('inf'))<time.time():
+        from .revision_itinerario import descartar
+        descartar(request.session)
+    context=contexto_registro(request)
+    context.update({'revision_itinerario':request.session.get('revision_itinerario')})
+    return render(request,'movil/ventas.html',context)

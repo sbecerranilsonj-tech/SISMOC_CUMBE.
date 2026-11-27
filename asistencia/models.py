@@ -164,6 +164,8 @@ class MarcacionBiometrica(models.Model):
     )
     huella_importacion = models.CharField(max_length=64, null=True, blank=True, unique=True)
     estado_reportado = models.CharField(max_length=60, blank=True)
+    sede = models.CharField(max_length=120, blank=True, db_index=True,
+                            verbose_name="Sede del equipo que registró la marca")
     verificacion_reportada = models.CharField(max_length=40, blank=True)
     registrada_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="marcaciones_manuales")
     motivo_manual = models.TextField(blank=True)

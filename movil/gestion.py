@@ -33,12 +33,26 @@ def gestionar(accion, p, d):
         contenido = base64.b64decode(d['contenido'], validate=True)
         huella = hashlib.sha256(contenido).hexdigest()
         existente = Importacion.objects.filter(huella=huella).first()
-        if existente: return {'mensaje': 'El archivo ya se había importado.', 'repetido': True}
+        if existente:
+            exigir(existente.estado=='VALIDADO','El archivo ya existe y está pendiente de validación.',409)
+            for salida in existente.salidas.all():
+                Operacion.objects.get_or_create(salida=salida,defaults={'estado':'CANCELADO' if salida.anulado or salida.estado_operativo=='CANCELADO' else 'PROGRAMADO'})
+            return {'mensaje':'El archivo ya existe; sus viajes están vinculados sin duplicarlos.','repetido':True}
         archivo = ContentFile(contenido, name=str(d['nombre'])[:200])
         exigir(archivo.name.lower().endswith(('.xls', '.xlsx')), 'Seleccione un archivo Excel.')
         filas, errores = extraer(archivo)
         exigir(filas and not errores, 'Reporte inválido: ' + '; '.join(map(str, errores[:5])))
         exigir(len(filas) <= 10000, 'Máximo 10000 filas por archivo.')
+        from .comparacion_itinerarios import comparar_filas
+        comparacion = comparar_filas(filas)
+        conflictos = [c for c in comparacion if c['estado'] in ('CAMBIO','CONFLICTO','PENDIENTE')]
+        exigir(not conflictos, 'El reporte contiene cambios, coincidencias ambiguas o salidas pendientes de validar. Revise la comparación antes de importar.', 409)
+        if all(c['estado']=='EXISTENTE' for c in comparacion):
+            for salida in Salida.objects.filter(pk__in=[c['salida_id'] for c in comparacion]):
+                Operacion.objects.get_or_create(salida=salida,defaults={'estado':'CANCELADO' if salida.anulado or salida.estado_operativo=='CANCELADO' else 'PROGRAMADO'})
+            Auditoria.objects.create(actor=p.usuario,accion=accion,detalle={'nuevas':0,'repetidas':len(comparacion)})
+            return {'mensaje':f'{len(comparacion)} viajes existentes vinculados; sin cambios ni duplicados.','repetido':True}
+
         reconocidos = {}
         for f in filas:
             if not f['anulado']:
@@ -46,7 +60,7 @@ def gestionar(accion, p, d):
                     reconocidos[f[campo]] = buscar_conductor(f[campo])
                     exigir(reconocidos[f[campo]], f'Conductor no identificado: {f[campo]}. Vincule su ficha en SISMOC.')
                 exigir(reconocidos[f['nombre_uno']] != reconocidos[f['nombre_dos']], 'El mismo conductor figura en ambos puestos.')
-        lote = Importacion.objects.create(nombre=archivo.name, huella=huella, inicio=min(f['fecha'] for f in filas), fin=max(f['fecha'] for f in filas), creado_por=p.usuario, estado='VALIDADO', validado_por=p.usuario, validado=timezone.now())
+        lote = existente or Importacion.objects.create(nombre=archivo.name, huella=huella, inicio=min(f['fecha'] for f in filas), fin=max(f['fecha'] for f in filas), creado_por=p.usuario, estado='VALIDADO', validado_por=p.usuario, validado=timezone.now())
         nuevas = repetidas = 0
         claves = set()
         for f in filas:
@@ -54,8 +68,9 @@ def gestionar(accion, p, d):
             claves.add(f['clave'])
             # Un cambio de hora o bus no se presume un viaje nuevo: se devuelve conflicto
             # si coincide la fecha, ruta y pareja pero no existe ID externo estable.
-            previa = Salida.objects.filter(clave_confirmada=f['clave']).first()
+            previa = Salida.objects.filter(clave=f['clave'], importacion__estado='VALIDADO').first()
             if previa:
+                Operacion.objects.get_or_create(salida=previa, defaults={'estado':'CANCELADO' if previa.anulado or previa.estado_operativo=='CANCELADO' else 'PROGRAMADO'})
                 repetidas += 1
                 continue
             c1, c2 = reconocidos.get(f['nombre_uno']), reconocidos.get(f['nombre_dos'])
@@ -66,7 +81,8 @@ def gestionar(accion, p, d):
             nuevas += 1
             if not s.anulado:
                 aviso_operacion(Operacion.objects.get(salida=s), f'Viaje asignado: {s.fecha} {s.hora:%H:%M}, {s.origen} → {s.destino}.')
-        archivo.seek(0); lote.archivo.save(huella+'.'+archivo.name.rsplit('.',1)[-1], archivo)
+        if not existente:
+            archivo.seek(0); lote.archivo.save(huella+'.'+archivo.name.rsplit('.',1)[-1], archivo)
         Auditoria.objects.create(actor=p.usuario, accion=accion, detalle={'lote': lote.pk, 'nuevas': nuevas, 'repetidas': repetidas})
         return {'mensaje': f'{nuevas} salidas incorporadas; {repetidas} ya existentes conservadas.'}
     if accion == 'asignar':
@@ -79,9 +95,10 @@ def gestionar(accion, p, d):
         inicio = timezone.make_aware(datetime.combine(s.fecha,s.hora), timezone.get_default_timezone())
         fin = instante(d['fin_previsto'])
         exigir(inicio < fin <= inicio+timedelta(days=2), 'Indique una llegada prevista válida para comprobar cruces.')
+        from .descanso_publicacion import evaluar_descanso
         for candidato in (a,b):
-            disponible = disponibilidad(candidato, inicio)
-            exigir(disponible['permitido'], disponible['mensaje'], 409)
+            permitido, motivo = evaluar_descanso(op, candidato, inicio)
+            exigir(permitido, motivo, 409)
             for otra in Operacion.objects.exclude(pk=op.pk).exclude(estado='CANCELADO').filter(Q(salida__conductor_uno_id=candidato.conductor_id) | Q(salida__conductor_dos_id=candidato.conductor_id)).select_related('salida'):
                 otro_inicio = timezone.make_aware(datetime.combine(otra.salida.fecha, otra.salida.hora), timezone.get_default_timezone())
                 if otra.estado == 'EN_CURSO' or (otro_inicio < fin and (otra.fin_previsto or otro_inicio+timedelta(hours=12)) > inicio):

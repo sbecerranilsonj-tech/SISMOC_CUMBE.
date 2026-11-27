@@ -20,11 +20,14 @@ class AjustesInterfazTests(TestCase):
     def test_exportacion_codigo_y_columnas_solicitadas(self):
         ResumenAsistenciaDiaria.objects.create(trabajador=self.trabajador, fecha=date(2026,8,1))
         response = self.client.get(reverse('exportar_asistencia'), {'desde':'2026-08-01','hasta':'2026-08-01'})
-        rows = list(csv.reader(io.StringIO(response.content.decode('utf-8-sig')), delimiter=';'))
-        self.assertEqual(rows[0], ['Desde','Hasta','Código','Trabajador','Sede','Jornadas','Horas efectivas','Extras 25 %','Extras 35 %','Nocturnas','Descanso/feriado','Tiempo faltante (HH:MM:SS)','Aprobadas','Pendientes'])
-        self.assertEqual(rows[1][2], '0013')
-        self.assertNotIn(self.trabajador.dni, rows[1])
-        self.assertEqual(len(rows[0]), len(rows[1]))
+        from openpyxl import load_workbook
+        wb = load_workbook(io.BytesIO(response.content))
+        ws = wb['Resumen de asistencia']
+        self.assertEqual(ws['A9'].value, 'Código importado')
+        self.assertEqual(ws['A10'].value, '0013')
+        self.assertEqual(ws['A10'].data_type, 's')
+        self.assertNotIn(self.trabajador.dni, [cell.value for row in ws for cell in row])
+        self.assertEqual(wb.sheetnames, ['Resumen de asistencia', 'Detalle diario'])
 
     def test_importador_carga_datos_al_entrar_y_navegacion_consulta_servidor(self):
         response = self.client.get(reverse('dashboard'), {'vista':'excel-zk'})

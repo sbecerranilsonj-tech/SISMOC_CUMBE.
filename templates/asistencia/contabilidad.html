@@ -1,14 +1,14 @@
-<div class="content-panel">
+{% load static %}<link rel="stylesheet" href="{% static 'buscador_inteligente.css' %}?v=20261127-1"><script src="{% static 'buscador_inteligente.js' %}?v=20261127-1" defer></script><div class="content-panel">
     <div class="panel-header-custom">
-        <div><h3 class="panel-title-text">Resumen para Contabilidad</h3><p class="ayuda">Horas y ajustes por trabajador para el periodo consultado.</p></div>
-        <a class="btn-dark-outline" href="{% url 'exportar_asistencia' %}?{{ consulta_asistencia }}">Exportar resumen CSV</a>
+        <div><h3 class="panel-title-text">Resumen para Contabilidad</h3></div>
+        <a class="btn-dark-outline" href="{% url 'exportar_asistencia' %}?{{ consulta_asistencia }}">Descargar Excel</a>
     </div>
     <form method="get" class="filtros-asistencia">
         <input type="hidden" name="vista" value="asistencia"><input type="hidden" name="resumen_contable" value="1">
         <input type="hidden" name="area" value="{{ filtros.area }}"><input type="hidden" name="revision" value="{{ filtros.revision }}">
         <label>Desde<input type="date" name="desde" value="{{ filtros.desde }}" required></label>
         <label>Hasta<input type="date" name="hasta" value="{{ filtros.hasta }}" required></label>
-        <label>Sede<select name="sede"><option value="">Todas las sedes</option>{% for sede in sedes_asistencia %}<option {% if sede == filtros.sede %}selected{% endif %}>{{ sede }}</option>{% endfor %}</select></label>
+        <label>Sede<select name="sede" data-buscador-inteligente="true" data-buscador-placeholder="Escribe la sede"><option value="">Todas las sedes</option>{% for sede in sedes_asistencia %}<option {% if sede == filtros.sede %}selected{% endif %}>{{ sede }}</option>{% endfor %}</select></label>
         <label>Trabajador<input name="trabajador" value="{{ filtros.trabajador }}" placeholder="Nombre o DNI"></label>
         <button class="btn-cumbe" type="submit">Consultar</button>
         <a class="btn-dark-outline" href="?vista=asistencia&amp;resumen_contable=1">Limpiar</a>

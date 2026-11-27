@@ -29,10 +29,10 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({});
     await tester.pumpWidget(const SismocApp());
     await tester.pumpAndSettle();
-    expect(find.text('Ingresar'), findsNothing);
+    expect(find.text('INGRESAR'), findsNothing);
     expect(find.text('Activar mi cuenta'), findsOneWidget);
     expect(find.text('Primera activación'), findsNothing);
-    expect(find.text('Servidor de pruebas'), findsOneWidget);
+    expect(find.text('CONFIGURAR SERVIDOR'), findsOneWidget);
   });
   testWidgets('Activar cuenta abre popup con un solo código temporal',
       (tester) async {

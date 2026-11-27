@@ -1,0 +1,12 @@
+{
+  "api_url": "http://192.168.18.75:8000",
+  "token": "PEGAR_AQUI_EL_TOKEN_DEL_POPUP",
+  "agente_id": "CHICLAYO",
+  "sede": "Chiclayo",
+  "ip": "192.168.10.202",
+  "puerto": 4370,
+  "numero_equipo": 1,
+  "clave_comunicacion": 0,
+  "timeout": 5,
+  "intervalo": 60
+}

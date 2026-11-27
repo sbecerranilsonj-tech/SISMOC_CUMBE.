@@ -17,9 +17,14 @@ async function actualizarRegistrosHuellero() {
     clearTimeout(temporizadorHuellero);
     const boton = document.getElementById('btnActualizarHuellero');
     const error = document.getElementById('errorRegistrosHuellero');
+    const desde = document.getElementById('fechaDesdeHuellero')?.value || '';
+    const hasta = document.getElementById('fechaHastaHuellero')?.value || '';
     boton.disabled = true;
     try {
-        const respuesta = await fetch(contenedor.dataset.url, {cache: 'no-store'});
+        const url = new URL(contenedor.dataset.url, location.href);
+        if (desde) url.searchParams.set('desde', desde);
+        if (hasta) url.searchParams.set('hasta', hasta);
+        const respuesta = await fetch(url, {cache: 'no-store'});
         if (respuesta.redirected || respuesta.status === 401 || respuesta.status === 403) {
             huelleroActivo = false;
             throw new Error('La sesión no permite consultar los registros. Ingrese nuevamente al sistema.');
@@ -42,12 +47,18 @@ async function actualizarRegistrosHuellero() {
             const celda = document.createElement('td');
             celda.colSpan = 7;
             celda.className = 'estado-vacio';
-            celda.textContent = 'No hay marcaciones recibidas del huellero para hoy.';
+            celda.textContent = datos.es_hoy
+                ? 'No hay marcaciones recibidas del huellero para hoy.'
+                : 'No hay marcaciones recibidas en el rango consultado.';
             fila.appendChild(celda);
             filas.appendChild(fila);
         }
         cuerpo.replaceChildren(filas);
-        document.getElementById('conteoRegistrosHuellero').textContent = datos.total + ' marcaciones de hoy · Mostrando ' + datos.registros.length + ' de ' + datos.total;
+        const formato = valor => (valor || '').split('-').reverse().join('/');
+        const dia = datos.es_hoy ? 'de hoy'
+            : datos.desde === datos.hasta ? 'del ' + formato(datos.desde)
+            : 'del ' + formato(datos.desde) + ' al ' + formato(datos.hasta);
+        document.getElementById('conteoRegistrosHuellero').textContent = datos.total + ' marcaciones ' + dia + ' · Mostrando ' + datos.registros.length + ' de ' + datos.total;
         document.getElementById('actualizacionHuellero').textContent = 'Última lectura de registros: ' + datos.actualizado;
         error.hidden = true;
     } catch (fallo) {

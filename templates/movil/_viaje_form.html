@@ -1,0 +1,53 @@
+{% load static %}
+<dialog class="bus-layout-dialog bus-programar-dialog" id="{{ dialog_id }}" aria-labelledby="{{ prefijo }}-titulo" data-sugerencias-url="{% url 'movil_sugerencias_programacion' %}">
+  <header class="bus-popup-header">
+    <div><span class="cd-muted">{% if es_edicion %}PROGRAMACIÓN MANUAL · DATOS ACTUALES DEL VIAJE{% else %}PROGRAMACIÓN MANUAL · SIN CAMBIAR EL EXCEL ORIGINAL{% endif %}</span><h2 id="{{ prefijo }}-titulo">{{ titulo }}</h2></div>
+    <button type="button" class="cd-button cd-secondary" data-programar-cerrar>Cerrar</button>
+  </header>
+  <p class="cd-muted">{{ nota }}</p>
+  <form method="post" class="cd-form bus-programar-form">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="{{ accion }}">
+    {% if es_edicion %}<input type="hidden" name="salida" value="{{ salida_edit.pk }}">{% endif %}
+    <div class="bus-programar-fecha">
+      <label>Fecha de salida<input type="date" name="fecha" min="{% now 'Y-m-d' %}" value="{% if es_edicion %}{{ salida_edit.fecha|date:'Y-m-d' }}{% endif %}" required></label>
+      <label>Hora de salida<input type="time" name="hora" value="{% if es_edicion %}{{ salida_edit.hora|time:'H:i' }}{% endif %}" required></label>
+    </div>
+    <div class="bus-programar-picker" data-programar-picker data-tipo="sede">
+      <label for="{{ prefijo }}-origen">Origen · sede registrada</label>
+      <input id="{{ prefijo }}-origen" type="search" data-programar-input autocomplete="off" placeholder="Escribe la sede de salida" value="{% if es_edicion %}{{ salida_edit.origen }}{% endif %}" role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded="false" spellcheck="false" aria-controls="{{ prefijo }}-origen-lista" required>
+      <input type="hidden" name="origen" data-programar-valor value="{% if es_edicion %}{{ salida_edit.origen }}{% endif %}">
+      <div id="{{ prefijo }}-origen-lista" class="bus-programar-opciones" data-programar-opciones role="listbox" hidden></div>
+      <small data-programar-estado aria-live="polite"></small>
+    </div>
+    <div class="bus-programar-picker" data-programar-picker data-tipo="sede">
+      <label for="{{ prefijo }}-destino">Destino · sede registrada</label>
+      <input id="{{ prefijo }}-destino" type="search" data-programar-input autocomplete="off" placeholder="Escribe la sede de llegada" value="{% if es_edicion %}{{ salida_edit.destino }}{% endif %}" role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded="false" spellcheck="false" aria-controls="{{ prefijo }}-destino-lista" required>
+      <input type="hidden" name="destino" data-programar-valor value="{% if es_edicion %}{{ salida_edit.destino }}{% endif %}">
+      <div id="{{ prefijo }}-destino-lista" class="bus-programar-opciones" data-programar-opciones role="listbox" hidden></div>
+      <small data-programar-estado aria-live="polite"></small>
+    </div>
+    <div class="bus-programar-picker" data-programar-picker data-tipo="placa">
+      <label for="{{ prefijo }}-placa">Placa · itinerarios validados</label>
+      <input id="{{ prefijo }}-placa" type="search" data-programar-input autocomplete="off" placeholder="Escribe la placa del bus" value="{% if es_edicion %}{{ salida_edit.bus }}{% endif %}" role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded="false" spellcheck="false" aria-controls="{{ prefijo }}-placa-lista" required>
+      <input type="hidden" name="bus" data-programar-valor value="{% if es_edicion %}{{ salida_edit.bus }}{% endif %}">
+      <div id="{{ prefijo }}-placa-lista" class="bus-programar-opciones" data-programar-opciones role="listbox" hidden></div>
+      <small data-programar-estado aria-live="polite"></small>
+    </div>
+    <div class="bus-programar-picker" data-programar-picker data-tipo="conductor">
+      <label for="{{ prefijo }}-conductor-uno">Conductor 1 · ficha registrada</label>
+      <input id="{{ prefijo }}-conductor-uno" type="search" data-programar-input autocomplete="off" placeholder="Busca por nombre o apellido" value="{% if es_edicion %}{{ salida_edit.conductor_uno.nombre_apellidos }}{% endif %}" role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded="false" spellcheck="false" aria-controls="{{ prefijo }}-conductor-uno-lista" required>
+      <input type="hidden" name="conductor_uno" data-programar-valor value="{% if es_edicion %}{{ salida_edit.conductor_uno_id }}{% endif %}">
+      <div id="{{ prefijo }}-conductor-uno-lista" class="bus-programar-opciones" data-programar-opciones role="listbox" hidden></div>
+      <small data-programar-estado aria-live="polite"></small>
+    </div>
+    <div class="bus-programar-picker" data-programar-picker data-tipo="conductor">
+      <label for="{{ prefijo }}-conductor-dos">Conductor 2 · ficha registrada</label>
+      <input id="{{ prefijo }}-conductor-dos" type="search" data-programar-input autocomplete="off" placeholder="Busca por nombre o apellido" value="{% if es_edicion %}{{ salida_edit.conductor_dos.nombre_apellidos }}{% endif %}" role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded="false" spellcheck="false" aria-controls="{{ prefijo }}-conductor-dos-lista" required>
+      <input type="hidden" name="conductor_dos" data-programar-valor value="{% if es_edicion %}{{ salida_edit.conductor_dos_id }}{% endif %}">
+      <div id="{{ prefijo }}-conductor-dos-lista" class="bus-programar-opciones" data-programar-opciones role="listbox" hidden></div>
+      <small data-programar-estado aria-live="polite"></small>
+    </div>
+    <button class="cd-button bus-programar-enviar">{% if es_edicion %}Guardar cambios{% else %}Guardar programación{% endif %}</button>
+  </form>
+</dialog>

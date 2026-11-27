@@ -52,3 +52,20 @@ desktop/dist/
 desktop/build/
 desktop/instaladores/
 *.zip
+
+# Copias independientes de trabajo
+PROYECTOS/
+
+# Respaldos y recuperación locales (conservar fuera del repositorio)
+*.bak
+*.bak-*
+recuperado_demo/
+diff_actual.txt
+diff_out.txt
+*.apk
+*.aab
+
+# Estado y configuración privada del agente biométrico
+herramientas/agente_huellero/config.json
+herramientas/agente_huellero/ultimo_envio.json
+movil/_inspeccionar_*.py

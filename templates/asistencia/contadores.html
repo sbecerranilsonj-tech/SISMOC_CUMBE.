@@ -1,0 +1,6 @@
+<nav class="attendance-summary" aria-label="Filtrar jornadas por estado">
+<a class="summary-state {% if mostrar_jornadas and not filtros.revision %}selected{% endif %}" href="{% querystring vista='asistencia' revision=None listado='jornadas' pagina=None persona_dni=None detalle=None %}">{{ total_resumen }} jornadas</a>
+<a class="summary-state {% if filtros.revision == 'APROBADO' %}selected{% endif %}" href="{% querystring vista='asistencia' revision='APROBADO' listado='jornadas' pagina=None persona_dni=None detalle=None %}"><i class="state-dot approved" aria-hidden="true"></i>{{ conteos_resumen.APROBADO }} aprobadas</a>
+<a class="summary-state {% if filtros.revision == 'PENDIENTE' %}selected{% endif %}" href="{% querystring vista='asistencia' revision='PENDIENTE' listado='jornadas' pagina=None persona_dni=None detalle=None %}"><i class="state-dot pending" aria-hidden="true"></i>{{ conteos_resumen.PENDIENTE }} pendientes</a>
+<a class="summary-state {% if filtros.revision == 'OBSERVADO' %}selected{% endif %}" href="{% querystring vista='asistencia' revision='OBSERVADO' listado='jornadas' pagina=None persona_dni=None detalle=None %}"><i class="state-dot observed" aria-hidden="true"></i>{{ conteos_resumen.OBSERVADO }} observadas</a>
+</nav>

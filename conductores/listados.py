@@ -9,7 +9,8 @@ from .services import problemas
 
 
 def listado_importaciones(request, pendientes=False):
-    base = Salida.objects.all()
+    # Este historial corresponde a archivos subidos, no a programación manual.
+    base = Salida.objects.exclude(importacion__archivo='').filter(importacion__archivo__isnull=False)
     if pendientes:
         base = base.filter(importacion__estado='PENDIENTE')
     meses = list(base.annotate(mes=TruncMonth('fecha')).values('mes').annotate(total=Count('pk')).order_by('-mes'))

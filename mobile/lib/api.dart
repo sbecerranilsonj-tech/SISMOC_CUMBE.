@@ -16,7 +16,7 @@ class ApiError implements Exception {
 
 class SismocApi {
   final storage = const FlutterSecureStorage();
-  String base = 'http://10.0.2.2:8000';
+  String base = 'http://192.168.18.75:8000';
   String token = '';
   String device = '';
   String workerCode = '';
@@ -128,6 +128,14 @@ class SismocApi {
   }
 
   Future<void> refresh() async => save(await post('inicio', {}));
+  Future<Map<String, dynamic>> attendanceMonth(String month) =>
+      post('asistencia_periodo', {'mes': month});
+  Future<Map<String, dynamic>> routesMonth(String month) =>
+      post('rutas_periodo', {'mes': month});
+  Future<Map<String, dynamic>> panelAbordaje([String? mes]) =>
+      post('panel_abordaje', {if (mes != null) 'mes': mes});
+  Future<Map<String, dynamic>> attendanceDay(int journey) =>
+      post('asistencia_dia', {'jornada': journey});
   Future<void> queue(String action, Map<String, dynamic> body) async {
     pending.add({
       'action': action,

@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sismoc-cumbe-db
+    restart: always
+    environment:
+      POSTGRES_DB: sismoc_cumbe_db
+      POSTGRES_USER: sismoc_admin
+      POSTGRES_PASSWORD: ElCumbe2026!
+    ports:
+      - "5432:5432"
+    volumes:
+      - sismoc_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sismoc_admin -d sismoc_cumbe_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: sismoc-cumbe-web
+    restart: always
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - SECRET_KEY=django-insecure-sismoc-cumbe-prod-key-2026-transportes-el-cumbe
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web,*
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=sismoc_cumbe_db
+      - DB_USER=sismoc_admin
+      - DB_PASSWORD=ElCumbe2026!
+      - DB_HOST=db
+      - DB_PORT=5432
+      - ZKTECO_IP=192.168.1.201
+      - ZKTECO_PORT=4370
+    depends_on:
+      db:
+        condition: service_healthy
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sismoc-cumbe-pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5051:80"
+    depends_on:
+      - db
+
+volumes:
+  sismoc_pgdata:

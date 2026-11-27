@@ -4,6 +4,7 @@
 # Empresa de Transportes El Cumbe S.A.C. — RUC: 20480397731
 # ==============================================================================
 
+import json
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -22,6 +23,10 @@ DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver,*").split(",")
 ESCRITORIO = os.getenv('SISMOC_EDITION', 'demostracion') == 'escritorio'
 MOVIL_HABILITADO = not ESCRITORIO
+SISMOC_DESCANSO_PUBLICACION_HABILITADA = (
+    os.getenv('SISMOC_DESCANSO_PUBLICACION_HABILITADA', 'False').lower()
+    in ('true', '1', 'yes')
+)
 if not DEBUG and not ESCRITORIO:
     SECRET_KEY = os.getenv('SECRET_KEY', '')
     if len(SECRET_KEY) < 50 or SECRET_KEY.startswith('django-insecure-'):
@@ -105,6 +110,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "config.context.edicion",
+                "config.context.solicitudes_notificacion",
             ],
         },
     },
@@ -198,9 +204,32 @@ CORS_ALLOWED_ORIGINS = [
 # CONFIGURACIÓN DEL HUELLERO ZKTECO
 # ==============================================================================
 ZKTECO_CONFIG = {
-    "IP": os.getenv("ZKTECO_IP", "192.168.1.201"),
+    "IP": os.getenv("HUELLERO_IP") or os.getenv("ZKTECO_IP", "192.168.10.202"),
     "PORT": int(os.getenv("ZKTECO_PORT", "4370")),
     "TIMEOUT": 5,  # Segundos de espera para conexión
+    "DEVICE_NUMBER": int(os.getenv("ZKTECO_DEVICE_NUMBER", "1")),
+    "COMM_KEY": int(os.getenv("ZKTECO_COMM_KEY", "0")),
+    "SERIE": os.getenv("ZKTECO_SERIE", "AEWD195060148"),
+    "MODELO": "MB360",
+}
+
+# Token compartido con el agente que corre en la PC de la sede. Sin él, el
+# agente no puede subir marcaciones ni consultar órdenes.
+HUELLERO_AGENT_TOKEN = os.getenv("HUELLERO_AGENT_TOKEN", "")
+HUELLERO_AGENT_INTERVALO = int(os.getenv("HUELLERO_AGENT_INTERVALO", "30"))
+
+try:
+    HUELLERO_AGENTES = json.loads(os.getenv("HUELLERO_AGENTES", "{}") or "{}")
+except (ValueError, TypeError):
+    HUELLERO_AGENTES = {}
+if not isinstance(HUELLERO_AGENTES, dict):
+    HUELLERO_AGENTES = {}
+
+# Ventanas de refrigerio del aviso interno. Las marcas fuera de estas ventanas
+# se conservan y se marcan como observación; nunca se descuentan automáticamente.
+HUELLERO_REFRIGERIO = {
+    "manana": ("07:15", "08:00"),
+    "tarde": ("18:00", "18:45"),
 }
 
 

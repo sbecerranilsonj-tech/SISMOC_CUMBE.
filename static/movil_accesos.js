@@ -1,6 +1,56 @@
 (() => {
   const panel = document.getElementById('movil-accesos');
   if (!panel) return;
+  const dialog = panel.querySelector('[data-activated-dialog]');
+  const activatedBody = panel.querySelector('[data-activated-body]');
+  function filterPending() {
+    let pending = 0;
+    for (const row of panel.querySelectorAll('tr[data-perfil]')) {
+      const isPending = row.querySelector('[data-access-status]')?.textContent.trim() === 'Pendiente';
+      row.hidden = !isPending;
+      if (isPending) pending++;
+    }
+    const empty = panel.querySelector('[data-pending-empty]');
+    if (empty) empty.hidden = pending !== 0;
+  }
+  filterPending();
+  function renderActivated() {
+    activatedBody.replaceChildren();
+    let count = 0;
+    for (const row of panel.querySelectorAll('tr[data-perfil]')) {
+      if (row.querySelector('[data-access-status]')?.textContent.trim() !== 'Activado') continue;
+      const copy = document.createElement('tr');
+      for (const indice of [0, 1, 2, 3, 6]) {
+        const cell = row.cells[indice];
+        if (!cell) continue;
+        const td = document.createElement('td');
+        td.textContent = cell.textContent.trim();
+        copy.append(td);
+      }
+      activatedBody.append(copy);
+      count++;
+    }
+    panel.querySelector('[data-activated-count]').textContent = `${count} cuenta${count === 1 ? '' : 's'} activada${count === 1 ? '' : 's'}`;
+    if (!count) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 5;
+      cell.textContent = 'No hay cuentas activadas en este listado.';
+      row.append(cell); activatedBody.append(row);
+    }
+  }
+  panel.querySelector('[data-open-activated]')?.addEventListener('click', () => {
+    renderActivated();
+    dialog.showModal();
+    refresh();
+  });
+  panel.querySelector('[data-close-activated]')?.addEventListener('click', () => dialog.close());
+  dialog?.addEventListener('click', event => {
+    if (event.target !== dialog) return;
+    const box = dialog.getBoundingClientRect();
+    if (event.clientX < box.left || event.clientX > box.right ||
+        event.clientY < box.top || event.clientY > box.bottom) dialog.close();
+  });
   panel.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-copy-activation]');
     if (!button) return;
@@ -34,6 +84,8 @@
           cell.textContent = perfil.estado === 'Activado' ? 'Código utilizado' : perfil.estado;
         }
       }
+      filterPending();
+      if (dialog?.open) renderActivated();
     } catch (_) {
       // Conserva el estado mostrado si no hay conexión; reintenta en la próxima consulta.
     } finally { loading = false; }

@@ -48,8 +48,12 @@ class TransferenciaAsistenciaTests(TestCase):
         self.assertContains(respuesta, self.ficha.nombre_completo)
         self.assertContains(respuesta, 'Guardar todas las correcciones')
         exportado = self.client.get(reverse('exportar_asistencia'), filtros)
-        self.assertContains(exportado, self.identidad.codigo)
-        self.assertNotContains(exportado, self.ficha.dni)
+        from io import BytesIO
+        from openpyxl import load_workbook
+        libro = load_workbook(BytesIO(exportado.content))
+        valores = [cell.value for ws in libro for row in ws for cell in row]
+        self.assertIn(self.identidad.codigo, valores)
+        self.assertNotIn(self.ficha.dni, valores)
         from core.security import create_access_token
         token = create_access_token(self.gestor)
         respuesta = self.client.get('/api/asistencia/resumen', {'fecha_inicio': str(self.dia), 'fecha_fin': str(self.dia), 'dni': self.ficha.dni}, HTTP_AUTHORIZATION=f'Bearer {token}')

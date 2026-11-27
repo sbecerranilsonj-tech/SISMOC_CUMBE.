@@ -1,16 +1,78 @@
 {% extends 'conductores/base.html' %}
 {% block titulo %}Aplicativo de trabajadores{% endblock %}
-{% block descripcion %}Cuentas, zonas y revisión de las operaciones móviles.{% endblock %}
+{% block descripcion %}{% endblock %}
 {% block contenido %}<div class="movil-settings">
-{% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'movil_busqueda.css' %}?v=20261119-15">
+{% if messages %}{% for message in messages %}<p role="status" class="movil-mensaje">{{ message }}</p>{% endfor %}{% endif %}
+<div class="movil-access-heading movil-panel-actions">
+ <h2>Configuración</h2>
+ <div class="movil-actions">
+  <button type="button" class="cd-button cd-secondary" data-open-regla>Regla de descanso</button>
+  <button type="button" class="cd-button cd-secondary" data-open-cuentas>Cuentas de Boletería por sede</button>
+ </div>
+</div>
+<dialog class="movil-activated-dialog" aria-labelledby="solicitudes-title" data-solicitudes-dialog>
+ <div class="movil-access-heading"><h2 id="solicitudes-title">Solicitudes pendientes</h2><button type="button" class="cd-button cd-secondary" data-close-solicitudes>Cerrar</button></div>
+ {% for s in solicitudes %}
+ <article class="movil-solicitud">
+  <h3>{{ s.perfil.trabajador.nombre_completo|default:s.perfil.usuario.get_full_name }} · {{ s.tipo }}</h3>
+  <p>{{ s.desde }} — {{ s.hasta }} · {{ s.detalle }}</p>
+  <form method="post" class="cd-form cd-inline movil-form-grid movil-form-respuesta">{% csrf_token %}<input type="hidden" name="accion" value="revisar_solicitud"><input type="hidden" name="id" value="{{ s.pk }}"><label>Respuesta (opcional)<input name="respuesta"></label><button class="cd-button cd-secondary" name="decision" value="aprobar">Aprobar</button><button class="cd-button cd-secondary" name="decision" value="rechazar">Rechazar</button></form>
+ </article>
+ {% empty %}<p>Sin solicitudes pendientes.</p>{% endfor %}
+</dialog>
+<dialog class="movil-activated-dialog" aria-labelledby="comisiones-title" data-comisiones-dialog>
+ <div class="movil-access-heading"><h2 id="comisiones-title">Comisiones registradas</h2><button type="button" class="cd-button cd-secondary" data-close-comisiones>Cerrar</button></div>
+ <p class="cd-muted">Autorizaciones para marcar fuera de sede. Se muestran las últimas 100 por fecha.</p>
+ <div class="cd-table-wrap"><table class="cd-table"><thead><tr><th>Trabajador</th><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Autorizada por</th></tr></thead><tbody>
+ {% for c in comisiones %}<tr><td>{{ c.perfil.trabajador.nombre_completo|default:c.perfil.usuario.get_full_name }}</td><td>{{ c.desde|date:'d/m/Y' }}</td><td>{{ c.hasta|date:'d/m/Y' }}</td><td>{{ c.motivo }}</td><td>{{ c.autorizada_por.get_full_name|default:c.autorizada_por.username }}</td></tr>
+ {% empty %}<tr><td colspan="5">No hay comisiones registradas.</td></tr>{% endfor %}
+ </tbody></table></div>
+</dialog>
+<dialog class="movil-activated-dialog" aria-labelledby="regla-title" data-regla-dialog>
+ <div class="movil-access-heading"><h2 id="regla-title">Regla interna de descanso</h2><button type="button" class="cd-button cd-secondary" data-close-regla>Cerrar</button></div>
+ <p class="cd-muted">Política confirmada por la empresa. No acredita por sí sola cumplimiento normativo ante SUTRAN.</p>
+ <form method="post" class="cd-form movil-form-grid movil-rest-form">{% csrf_token %}<input type="hidden" name="accion" value="regla"><label>Horas continuas fuera del bus <input name="horas" type="number" min="1" max="24" value="{{ regla.horas|default:8 }}"></label><label><input name="confirmado" type="checkbox" {% if regla.activa %}checked{% endif %}> La empresa confirmó esta política: activar bloqueo</label><button class="cd-button">Guardar política</button></form>
+</dialog>
+<dialog class="movil-activated-dialog" aria-labelledby="cuentas-title" data-cuentas-dialog>
+ <div class="movil-access-heading"><h2 id="cuentas-title">Cuentas de Boletería por sede</h2><button type="button" class="cd-button cd-secondary" data-close-cuentas>Cerrar</button></div>
+ {% if cuentas_sede %}<div class="cd-table-wrap"><table class="cd-table"><thead><tr><th>Sede</th><th>Usuario</th><th>Estado</th></tr></thead><tbody>{% for cuenta in cuentas_sede %}<tr><td>{{ cuenta.agencia_sede }}</td><td>{{ cuenta.username }}</td><td>{% if cuenta.is_active and cuenta.esta_activo %}Activa{% else %}Inactiva{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+ <form method="post" class="cd-form movil-form-grid">{% csrf_token %}<input type="hidden" name="accion" value="cuenta_sede"><label>Sede<input name="sede" list="zonas-sedes" required maxlength="100"></label><label>Usuario de la sede<input name="username" required autocomplete="off"></label><label>Contraseña<input type="password" name="password" required autocomplete="new-password"></label><button class="cd-button">Crear cuenta de sede</button></form>
+</dialog>
+
 {% include 'movil/accesos.html' %}
 {% include 'movil/zonas.html' %}
-<section class="cd-card"><h2>Comisión de trabajo fuera de sede</h2><form method="post" class="cd-form cd-inline movil-form-grid">{% csrf_token %}<input type="hidden" name="accion" value="comision">{% include 'movil/perfil_picker.html' with picker_id='comision-trabajador' picker_scope='personal' %}<label>Desde <input type="datetime-local" name="desde" required></label><label>Hasta <input type="datetime-local" name="hasta" required></label><label>Motivo <input name="motivo" required></label><p class="cd-muted movil-wide">Durante la comisión autorizada puede marcar sin ubicación. Se conserva el registro de sus marcaciones.</p><button class="cd-button">Autorizar comisión</button></form></section>
-<section class="cd-card"><h2>Solicitudes pendientes</h2>{% for s in solicitudes %}<article><h3>{{ s.perfil.trabajador.nombre_completo|default:s.perfil.usuario.get_full_name }} · {{ s.tipo }}</h3><p>{{ s.desde }} — {{ s.hasta }} · {{ s.detalle }}</p><form method="post" class="cd-form cd-inline movil-form-grid movil-form-respuesta">{% csrf_token %}<input type="hidden" name="accion" value="revisar_solicitud"><input type="hidden" name="id" value="{{ s.pk }}"><label>Respuesta (opcional)<input name="respuesta"></label><button class="cd-button cd-secondary" name="decision" value="aprobar">Aprobar</button><button class="cd-button cd-secondary" name="decision" value="rechazar">Rechazar</button></form></article>{% empty %}<p>Sin solicitudes pendientes.</p>{% endfor %}</section>
 
-<section class="cd-card"><h2>Registrar pago realizado</h2><form method="post" class="cd-form cd-inline movil-form-grid">{% csrf_token %}<input type="hidden" name="accion" value="pago"><input type="hidden" name="id_pago" value="{{ id_pago }}">{% include 'movil/perfil_picker.html' with picker_id='pago-persona' picker_scope='perfiles' picker_label='Trabajador o conductor' %}<label>Desde <input name="desde" type="date" required></label><label>Hasta <input name="hasta" type="date" required></label><label>Importe S/ <input name="monto" type="number" step="0.01" min="0.01" required></label><button class="cd-button">Registrar pago</button></form></section>
-<section class="cd-card"><h2>Regla interna de descanso</h2><p>Esta configuración representa la política confirmada por la empresa. No acredita por sí sola cumplimiento normativo ante SUTRAN.</p><form method="post" class="cd-form cd-inline movil-form-grid">{% csrf_token %}<input type="hidden" name="accion" value="regla"><label>Horas continuas fuera del bus <input name="horas" type="number" min="1" max="24" value="{{ regla.horas|default:8 }}"></label><label><input name="confirmado" type="checkbox" {% if regla.activa %}checked{% endif %}> La empresa confirmó esta política: activar bloqueo</label><button class="cd-button">Guardar política</button></form></section>
+<style>
+.movil-settings .movil-comision-form{display:grid!important;grid-template-columns:minmax(240px,1.5fr) repeat(3,minmax(140px,1fr)) auto!important;gap:12px!important;align-items:start!important}
+.movil-settings .movil-comision-form>.cd-button{grid-column:auto!important;justify-self:auto!important;align-self:start!important;margin:27px 0 0!important;height:42px!important;min-height:42px!important;white-space:nowrap}
+.movil-settings .movil-comision-form>.movil-persona-picker{min-width:0}
+body:not(.login-page) .movil-settings [data-persona-form]>.movil-persona-picker,
+body:not(.login-page) .movil-settings [data-persona-form]>[data-funcion-label]{align-self:start!important;margin-top:0!important}
+body:not(.login-page) .movil-settings [data-persona-form]>button{margin-top:27px!important;height:44px!important;min-height:44px!important;align-self:start!important;grid-column:3!important;grid-row:1!important}
+@media(max-width:1100px){.movil-settings .movil-comision-form{grid-template-columns:repeat(2,minmax(0,1fr))!important}.movil-settings .movil-comision-form>.cd-button{margin:0!important;grid-column:1/-1!important;justify-self:end!important}}
+@media(max-width:650px){.movil-settings .movil-comision-form{grid-template-columns:minmax(0,1fr)!important}.movil-settings .movil-comision-form>.cd-button{grid-column:1!important;justify-self:stretch!important}}
+</style>
+
+<section class="cd-card"><div class="movil-access-heading"><h2>Comisión de trabajo fuera de sede</h2><button type="button" class="cd-button cd-secondary" data-open-comisiones>Comisiones registradas</button></div><form method="post" class="cd-form cd-inline movil-form-grid movil-comision-form">{% csrf_token %}<input type="hidden" name="accion" value="comision">{% include 'movil/perfil_picker.html' with picker_id='comision-trabajador' picker_scope='personal' %}<label>Desde <input type="date" name="desde" required></label><label>Hasta <input type="date" name="hasta" required></label><label>Motivo <input name="motivo" required></label><button class="cd-button">Autorizar comisión</button></form></section>
+<script>
+(function(){
+ function bind(openSel,closeSel,dialogSel){
+  var open=document.querySelector(openSel),close=document.querySelector(closeSel),dialog=document.querySelector(dialogSel);
+  if(!open||!dialog)return;
+  open.addEventListener('click',function(){dialog.showModal()});
+  close?.addEventListener('click',function(){dialog.close()});
+  dialog.addEventListener('click',function(e){if(e.target!==dialog)return;var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close()});
+ }
+ bind('[data-open-solicitudes]','[data-close-solicitudes]','[data-solicitudes-dialog]');
+ bind('[data-open-comisiones]','[data-close-comisiones]','[data-comisiones-dialog]');
+ bind('[data-open-regla]','[data-close-regla]','[data-regla-dialog]');
+ bind('[data-open-cuentas]','[data-close-cuentas]','[data-cuentas-dialog]');
+ if (new URLSearchParams(location.search).has('solicitud')) {
+  var dialogo = document.querySelector('[data-solicitudes-dialog]');
+  if (dialogo) dialogo.showModal();
+ }
+})();
+</script>
 </div>{% endblock %}
-
-
-

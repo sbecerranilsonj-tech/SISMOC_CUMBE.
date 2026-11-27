@@ -3,7 +3,7 @@ import uuid
 from decimal import Decimal
 from datetime import timedelta
 from unittest.mock import patch
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
@@ -34,6 +34,84 @@ class AppTests(TestCase):
         return Operacion.objects.create(salida=s),p
     def mark(self):
         return {'id':str(uuid.uuid4()),'tipo':'ENTRADA','capturada':self.now.isoformat(),'gps_fecha':self.now.isoformat(),'latitud':-6.77,'longitud':-79.84,'precision':5}
+    def test_asistencia_periodo_autenticada_y_acotada(self):
+        mes=self.now.date().replace(day=1)
+        anterior=(mes-timedelta(days=1)).replace(day=1)
+        r=self.post('asistencia_periodo',{'mes':anterior.strftime('%Y-%m')})
+        self.assertEqual(r.status_code,200)
+        self.assertEqual(r.json()['mes'],anterior.strftime('%Y-%m'))
+        self.assertEqual(r.json()['resumen']['jornadas'],0)
+        self.assertEqual(self.post('asistencia_periodo',{'mes':anterior.strftime('%Y-%m')},False).status_code,401)
+        for invalid in ['2026-13','2026-1','bad', '2099-01','2000-01']:
+            self.assertEqual(self.post('asistencia_periodo',{'mes':invalid}).status_code,422)
+        self.assertEqual(self.post('asistencia_periodo',{'mes':mes.strftime('%Y-%m')}).json()['marcaciones'],
+                         self.post('inicio').json()['marcaciones'])
+    def test_rutas_periodo_solo_del_conductor_del_mes(self):
+        own, other=self.trip()
+        from conductores.models import Salida
+        another=Conductor.objects.create(nombre='TERCERO PRUEBA')
+        salida=Salida.objects.create(
+            importacion=own.salida.importacion,fila=99,fecha=self.now.date(),
+            hora=self.now.time(),bus='BUS OTRO',origen='Chiclayo',
+            destino='Cajamarca',conductor_uno=another,
+            clave='c'*64,clave_confirmada='c'*64)
+        Operacion.objects.create(salida=salida)
+        mes=self.now.date().strftime('%Y-%m')
+        result=self.post('rutas_periodo',{'mes':mes})
+        self.assertEqual(result.status_code,200)
+        self.assertEqual([v['id'] for v in result.json()['viajes']],[own.pk])
+        self.assertEqual(result.json()['hoy'],str(self.now.date()))
+        self.assertTrue(result.json()['viajes'][0]['reporte_validado'])
+        self.assertEqual(result.json()['viajes'][0]['estado_salida'],
+                         own.salida.estado_operativo)
+        anterior=(self.now.date().replace(day=1)-timedelta(days=1)).strftime('%Y-%m')
+        self.assertEqual(self.post('rutas_periodo',{'mes':anterior}).json()['viajes'],[])
+        self.assertEqual(self.post('rutas_periodo',{'mes':mes},False).status_code,401)
+        self.assertEqual(self.post('rutas_periodo',{'mes':'2026-13'}).status_code,422)
+    def test_no_inicia_viaje_de_fecha_anterior(self):
+        op,_=self.trip()
+        op.salida.fecha=self.now.date()-timedelta(days=1)
+        op.salida.save(update_fields=['fecha'])
+        response=self.post('evento',{
+            'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'INICIAR'})
+        self.assertEqual(response.status_code,409)
+        self.assertIn('fecha pasada',response.json()['error'])
+        op.refresh_from_db()
+        self.assertEqual(op.estado,'PROGRAMADO')
+    def test_asistencia_periodo_usa_recuento_y_valores_contables(self):
+        from asistencia.models import ResumenAsistenciaDiaria
+        dia=self.now.date()
+        ResumenAsistenciaDiaria.objects.create(
+            trabajador=self.worker,fecha=dia,estado='POR_REVISAR',
+            horas_trabajadas=Decimal('8.28'),horas_extras_25=Decimal('-0.22'),
+            verificado_contabilidad=True,estado_revision='APROBADO')
+        data=self.post('asistencia_periodo',{'mes':dia.strftime('%Y-%m')}).json()
+        self.assertEqual(data['resumen']['aprobadas'],1)
+        self.assertEqual(data['resumen']['pendientes'],0)
+        self.assertEqual(data['resumen']['horas_trabajadas'],'8.28')
+        self.assertEqual(data['resumen']['horas_extras_25'],'-0.22')
+        self.assertEqual(data['jornadas'][0]['revision_contable'],'APROBADO')
+    def test_control_diario_restringido_al_trabajador_autenticado(self):
+        from asistencia.models import ResumenAsistenciaDiaria
+        own=ResumenAsistenciaDiaria.objects.create(
+            trabajador=self.worker,fecha=self.now.date(),verificado_contabilidad=True,
+            estado_revision='APROBADO')
+        other=get_user_model().objects.create_user(
+            email='otro@example.invalid',username='otro',password='Prueba2026!',
+            dni='87654321',rol='ADMINISTRATIVO')
+        foreign=ResumenAsistenciaDiaria.objects.create(
+            trabajador=Trabajador.objects.get(usuario=other),fecha=self.now.date())
+        result=self.post('asistencia_dia',{'jornada':own.pk})
+        self.assertEqual(result.status_code,200)
+        self.assertEqual(result.json()['revision_contable'],'APROBADO')
+        self.assertIn('trabajo',result.json()['control_diario'])
+        from asistencia.services.revision import detalle_jornada
+        self.assertEqual(result.json()['control_diario']['trabajo'],
+                         detalle_jornada(own,incluir_formulario=False)['cuadro_excel']['totales']['trabajo'])
+        self.assertEqual(self.post('asistencia_dia',{'jornada':foreign.pk}).status_code,404)
+        self.assertEqual(self.post('asistencia_dia',{'jornada':own.pk},False).status_code,401)
+        avisos=self.post('inicio').json()['avisos_validacion']
+        self.assertEqual([item['id'] for item in avisos],[own.pk])
     def test_auth_required_and_foreign_role_denied(self):
         self.assertEqual(self.post('inicio',auth=False).status_code,401)
         self.assertEqual(self.post('importar_itinerario').status_code,403)
@@ -99,22 +177,72 @@ class AppTests(TestCase):
         self.assertEqual(r.status_code,200,r.content)
         self.assertEqual(PeriodoVacaciones.objects.count(),1)
     def test_trip_shared_start_arrival_and_separate_rest(self):
-        op,other=self.trip()
-        def event(tipo):return self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':tipo})
-        self.assertEqual(event('INICIAR').status_code,200)
-        self.assertEqual(event('INICIAR').status_code,409)
-        self.assertEqual(event('LLEGADA').status_code,200)
-        self.assertEqual(event('DESCANSO').status_code,200)
-        self.assertFalse(Descanso.objects.filter(perfil=other).exists())
-        self.assertEqual(self.post('inicio').json()['resumen']['trayectos_realizados'],1)
-    def test_rest_rule_blocks_without_evidence(self):
-        op,_=self.trip();ReglaDescanso.objects.create(activa=True,horas=8)
-        r=self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'INICIAR'})
-        self.assertEqual(r.status_code,409)
+        op, other = self.trip()
+        def event(tipo):
+            return self.post('evento', {'id': str(uuid.uuid4()),
+                                        'viaje': op.pk, 'tipo': tipo})
+        self.assertEqual(event('INICIAR').status_code, 200)
+        self.assertEqual(event('INICIAR').status_code, 409)
+        op.refresh_from_db()
+        op.salida_real = timezone.now() - timedelta(hours=8)
+        op.save(update_fields=['salida_real'])
+        self.assertEqual(event('LLEGADA').status_code, 200)
+        self.assertEqual(event('LLEGADA').status_code, 409)
+        self.assertEqual(event('DESCANSO').status_code, 409)
+        self.assertTrue(Descanso.objects.filter(perfil=self.p).exists())
+        self.assertTrue(Descanso.objects.filter(perfil=other).exists())
+        self.assertEqual(self.post('inicio').json()['resumen']['trayectos_realizados'], 1)
+
+    def test_horas_app_no_validan_salida_programada(self):
+        from conductores.services import calendario
+        op, other = self.trip()
+        op.salida.estado_operativo = 'PROGRAMADO'
+        op.salida.save(update_fields=['estado_operativo'])
+        def event(tipo):
+            return self.post('evento', {'id': str(uuid.uuid4()),
+                                        'viaje': op.pk, 'tipo': tipo})
+        self.assertEqual(event('INICIAR').status_code, 200)
+        op.refresh_from_db()
+        op.salida_real = timezone.now() - timedelta(hours=8)
+        op.save(update_fields=['salida_real'])
+        self.assertEqual(event('LLEGADA').status_code, 200)
+        op.refresh_from_db()
+        op.salida.refresh_from_db()
+        self.assertIsNotNone(op.salida_real)
+        self.assertIsNotNone(op.llegada_real)
+        self.assertEqual(op.salida.estado_operativo, 'PROGRAMADO')
+        self.assertEqual(op.estado, 'FINALIZADO')
+        viaje_api = self.post('inicio').json()['viajes'][0]
+        self.assertIsNotNone(viaje_api['salida_real'])
+        self.assertIsNotNone(viaje_api['llegada_real'])
+        filas = calendario(op.salida.fecha, op.salida.fecha)[1]
+        self.assertEqual(filas[0]['celdas'][0]['viajes'], [])
+        salida_web = filas[0]['celdas'][0]['excluidas'][0]
+        self.assertEqual(salida_web.inicio_app, op.salida_real)
+        self.assertEqual(salida_web.llegada_app, op.llegada_real)
+    @override_settings(SISMOC_DESCANSO_PUBLICACION_HABILITADA=True)
+    def test_rest_rule_sin_viaje_el_dia_anterior_y_con_uno_sin_llegada(self):
+        from datetime import datetime
+        from .descanso_publicacion import evaluar_descanso
+        ReglaDescanso.objects.create(activa=True,horas=8)
+        op,_=self.trip()
+        inicio=timezone.make_aware(datetime.combine(
+            op.salida.fecha,op.salida.hora),timezone.get_default_timezone())
+        permitido,motivo=evaluar_descanso(op,self.p,inicio)
+        self.assertTrue(permitido,motivo)
+        previa=Salida.objects.create(importacion=op.salida.importacion,fila=4,
+            fecha=self.now.date()-timedelta(days=1),hora=self.now.time(),
+            bus='BUS PREVIO',origen='Chiclayo',destino='Cajamarca',
+            conductor_uno=self.driver,conductor_dos=op.salida.conductor_dos,
+            clave='c'*64,clave_confirmada='c'*64)
+        Operacion.objects.create(salida=previa)
+        permitido,motivo=evaluar_descanso(op,self.p,inicio)
+        self.assertFalse(permitido)
+        self.assertIn('Sin llegada real',motivo)
     def test_boarding_permission_compare_and_swap(self):
         op,_=self.trip()
         pasajero=Pasajero.objects.create(operacion=op,referencia='R1',nombre='Pasajero Prueba',documento='123',piso=1,asiento=1,origen='Chiclayo',destino='Cajamarca',punto='Terminal')
-        self.assertEqual(self.post('pasajeros',{'viaje':op.pk}).status_code,403)
+        self.assertEqual(self.post('pasajeros',{'viaje':op.pk}).status_code,200)
         op.permite_embarque_conductor=True;op.save()
         d={'id':str(uuid.uuid4()),'viaje':op.pk,'pasajero':pasajero.pk,'anterior':'PENDIENTE','estado':'EMBARCADO','identidad_verificada':True}
         self.assertEqual(self.post('embarcar',d).status_code,200)
@@ -162,16 +290,20 @@ class AppTests(TestCase):
             self.assertEqual(row['pago_vueltas'],0)
             self.assertEqual(row['celdas'][0]['etiqueta'],'PR')
 
-    def test_handover_requires_other_driver_confirmation(self):
+    def test_una_salida_y_una_llegada_son_compartidas(self):
         op,other=self.trip()
         self.assertEqual(self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'INICIAR'}).status_code,200)
-        self.assertEqual(self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'SOLICITAR_RELEVO','relevo':other.pk}).status_code,200)
-        op.refresh_from_db();self.assertEqual(op.conduciendo_id,self.p.pk)
-        self.assertEqual(self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'ACEPTAR_RELEVO'}).status_code,409)
-        Sesion.objects.create(perfil=other,token_hash=hash_token('other-token'),vence=self.now+timedelta(days=1))
-        self.auth={'HTTP_AUTHORIZATION':'Bearer other-token'}
-        self.assertEqual(self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'ACEPTAR_RELEVO'}).status_code,200)
-        op.refresh_from_db();self.assertEqual(op.conduciendo_id,other.pk)
+        self.assertEqual(self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'INICIAR'}).status_code,409)
+        op.refresh_from_db()
+        self.assertEqual(op.estado,'EN_CURSO')
+        self.assertIsNotNone(op.salida_real)
+        op.refresh_from_db()
+        op.salida_real = timezone.now() - timedelta(hours=8)
+        op.save(update_fields=['salida_real'])
+        self.assertEqual(self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'LLEGADA'}).status_code,200)
+        self.assertEqual(self.post('evento',{'id':str(uuid.uuid4()),'viaje':op.pk,'tipo':'LLEGADA'}).status_code,409)
+        op.refresh_from_db();self.assertEqual(op.estado,'FINALIZADO')
+        self.assertIsNotNone(op.llegada_real)
 
     def test_existing_file_is_not_reimported(self):
         import base64,hashlib
@@ -190,13 +322,13 @@ class AppTests(TestCase):
         self.assertEqual(self.client.get('/movil/').status_code,403)
         self.user.rol='CONTADORA';self.user.save()
         response=self.client.get('/movil/')
-        self.assertContains(response,'Zonas de trabajo y pruebas')
+        self.assertContains(response,'Zonas de trabajo')
         self.assertContains(response,'Solicitudes pendientes')
         self.assertContains(response,'csrfmiddlewaretoken')
 
     def test_web_activation_revokes_old_sessions(self):
         self.user.rol='CONTADORA';self.user.save();self.client.force_login(self.user)
-        response=self.client.post('/movil/',{'accion':'habilitar','trabajador':self.worker.pk})
+        response=self.client.post('/movil/',{'accion':'habilitar','trabajador':self.worker.pk,'confirmar_restablecimiento':'1'},follow=True)
         self.assertContains(response,'Activación:')
         self.p.refresh_from_db();self.assertFalse(self.p.activado)
         self.assertFalse(Sesion.objects.get(token_hash=hash_token('token')).activa)
@@ -306,7 +438,8 @@ class AppTests(TestCase):
 
     def test_access_table_shows_area_and_temporary_code_inside_table(self):
         self.user.rol='CONTADORA';self.user.save();self.client.force_login(self.user)
-        response=self.client.post('/movil/',{'accion':'habilitar','trabajador':self.worker.pk})
+        self.p.activado=False;self.p.save()
+        response=self.client.post('/movil/',{'accion':'habilitar','trabajador':self.worker.pk},follow=True)
         self.assertContains(response,'<th>Área</th>',html=True)
         self.assertNotContains(response,'<th>Rol</th>',html=True)
         self.assertContains(response,'Conductores')
@@ -315,7 +448,16 @@ class AppTests(TestCase):
         self.assertLess(body.index('<table'),body.index(code))
         self.assertGreater(body.index('</table>',body.index(code)),body.index(code))
         self.assertNotContains(self.client.get('/movil/'),code)
+        self.assertEqual(self.client.post('/movil/',{'accion':'habilitar','trabajador':self.worker.pk}).status_code,302)
         self.assertIn('no-store',response.headers['Cache-Control'])
+
+    def test_rehabilitar_cuenta_activada_exige_confirmacion(self):
+        self.user.rol='CONTADORA';self.user.save();self.client.force_login(self.user)
+        self.p.activado=True;self.p.save()
+        response=self.client.post('/movil/',{'accion':'habilitar','trabajador':self.worker.pk})
+        self.assertEqual(response.status_code,200)
+        self.assertContains(response,' ya está activada')
+        self.p.refresh_from_db();self.assertTrue(self.p.activado)
 
     def test_access_status_changes_only_after_creating_password(self):
         gestor=get_user_model().objects.create_user(username='gestor_estados',email='g@example.invalid',dni='55555555',rol='CONTADORA')
@@ -352,11 +494,43 @@ class AppTests(TestCase):
         for n in range(12):Conductor.objects.create(nombre=f'PEREZ CONDUCTOR {n}')
         self.assertLessEqual(len(self.client.get('/movil/personas/sugerencias/',{'q':'p'}).json()['resultados']),8)
 
+    def test_search_suggests_people_from_first_letter_without_changing_accounts(self):
+        self.user.rol='CONTADORA';self.user.save()
+        self.client.force_login(self.user)
+        persona=Trabajador.objects.create(
+            nombre_completo='SANCHES SILVIO', dni='66778899',
+            area='OPERACIONES', sede='CHICLAYO',
+        )
+        before=Perfil.objects.count()
+        response=self.client.get('/movil/personas/sugerencias/',{'q':'s'})
+        self.assertEqual(response.status_code,200)
+        self.assertIn(
+            f'trabajador:{persona.pk}',
+            [item['id'] for item in response.json()['resultados']],
+        )
+        self.assertEqual(Perfil.objects.count(),before)
+
+    def test_search_handles_conductor_with_optional_identity_missing(self):
+        self.user.rol='CONTADORA';self.user.save()
+        self.client.force_login(self.user)
+        usuario=get_user_model().objects.create_user(
+            username='conductor_sin_dni', email='sin-dni@example.invalid',
+            password='prueba', dni=None, rol='CONDUCTOR',
+        )
+        conductor=Conductor.objects.create(nombre='SANCHES SILVIO')
+        Perfil.objects.create(usuario=usuario,conductor=conductor)
+        response=self.client.get('/movil/personas/sugerencias/',{'q':'sa'})
+        self.assertEqual(response.status_code,200)
+        self.assertIn(
+            f'conductor:{conductor.pk}',
+            [item['id'] for item in response.json()['resultados']],
+        )
+
     def test_driver_activation_stays_out_of_personal_catalog(self):
         self.user.rol='CONTADORA';self.user.save();self.client.force_login(self.user)
         driver=Conductor.objects.create(nombre='CONDUCTOR NUEVO PRUEBA')
         count=Trabajador.objects.count()
-        response=self.client.post('/movil/',{'accion':'habilitar','persona':f'conductor:{driver.pk}','dni_conductor':'77777777','sede_conductor':'CAJAMARCA'})
+        response=self.client.post('/movil/',{'accion':'habilitar','persona':f'conductor:{driver.pk}','dni_conductor':'77777777','sede_conductor':'CAJAMARCA'},follow=True)
         self.assertContains(response,'Activación:')
         p=Perfil.objects.get(conductor=driver)
         self.assertIsNone(p.trabajador_id)
@@ -378,7 +552,7 @@ class AppTests(TestCase):
         count=Trabajador.objects.count()
         for i in range(2):
             driver=Conductor.objects.create(nombre=f'CONDUCTOR SIN DOCUMENTO {i}')
-            response=self.client.post('/movil/',{'accion':'habilitar','persona':f'conductor:{driver.pk}'})
+            response=self.client.post('/movil/',{'accion':'habilitar','persona':f'conductor:{driver.pk}'},follow=True)
             self.assertContains(response,'Activación:')
             p=Perfil.objects.get(conductor=driver)
             self.assertIsNone(p.usuario.dni)
@@ -399,11 +573,12 @@ class AppTests(TestCase):
         u=get_user_model().objects.create_user(username='embarcador',email='e@example.invalid',dni='88888888',rol='OPERADOR_EMBARQUE')
         perfil=Perfil.objects.create(usuario=u,trabajador=Trabajador.objects.get(usuario=u),activado=True)
         self.user.rol='BOLETERIA';self.user.save();self.client.force_login(self.user)
-        self.assertContains(self.client.get('/movil/ventas/',{'viaje':op.pk}),'Responsable de embarque')
+        self.assertContains(self.client.get('/movil/ventas/',{'viaje':op.pk}),'Gestionar viaje y responsable de embarque')
         r=self.post('asignar_embarque',{'viaje':op.pk,'perfil':perfil.pk,'conductores':True})
         self.assertEqual(r.status_code,200,r.content)
         self.assertTrue(op.embarcadores.filter(pk=perfil.pk).exists())
-        op.refresh_from_db();self.assertTrue(op.permite_embarque_conductor)
+        op.refresh_from_db()
+        self.assertTrue(op.permite_embarque_conductor)
         self.user.rol='ADMINISTRATIVO';self.user.save()
         self.assertEqual(self.post('asignar_embarque',{'viaje':op.pk,'perfil':perfil.pk}).status_code,403)
 

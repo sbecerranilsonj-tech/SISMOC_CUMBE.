@@ -1,0 +1,8 @@
+.bank-history-action{display:flex;justify-content:flex-end;margin-top:20px}
+.bank-history-dialog{width:min(900px,calc(100vw - 32px));max-height:80dvh;padding:0;border:1px solid var(--ds-line,#dce6e5);border-radius:18px;background:var(--ds-surface,#fff);color:var(--ds-ink,#20343b);box-shadow:0 24px 70px #15223830;overflow:auto}
+.bank-history-dialog::backdrop{background:#14282166;backdrop-filter:blur(3px)}
+.bank-history-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid var(--ds-line,#dce6e5);position:sticky;top:0;z-index:1;background:var(--ds-surface,#fff)}
+.bank-history-heading h2{margin:0;font-size:21px;line-height:1.3}
+.bank-history-content{padding:4px 24px 20px}.bank-history-content details{padding:16px 0;border-bottom:1px solid var(--ds-line,#dce6e5)}
+.bank-history-content details:last-child{border:0}.bank-history-content summary{cursor:pointer;color:var(--ds-brand,#b94b16);font-size:13px;line-height:1.7}.bank-history-content p{font-size:14px;line-height:1.65;margin:12px 0 0}
+@media(max-width:540px){.bank-history-heading{padding:16px}.bank-history-heading h2{font-size:18px}.bank-history-content{padding:4px 16px 16px}}

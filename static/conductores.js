@@ -3,13 +3,18 @@
   if (!area) return;
   const nombres = {importar: 'Importar itinerarios', validacion: 'Validar itinerarios', control: 'Control de conductores', catalogo: 'Conductores'};
   document.querySelectorAll('.menu-link').forEach(link => {
-    const activo = link.dataset.conductores === area.dataset.seccion;
+    const href = link.getAttribute('href');
+    const activo = link.dataset.conductores
+      ? link.dataset.conductores === area.dataset.seccion
+      : Boolean(href && new URL(href, window.location.href).pathname === window.location.pathname);
     link.classList.toggle('active', activo);
     if (activo) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
   const titulo = document.getElementById('workspace-location');
-  if (titulo) titulo.textContent = nombres[area.dataset.seccion];
+  if (titulo) titulo.textContent = nombres[area.dataset.seccion]
+    || document.querySelector('.menu-link.active')?.textContent.trim()
+    || area.querySelector('h1')?.textContent.trim();
   const home = document.querySelector('.account-popover a[href="?vista=dashboard"]');
   if (home) home.href = '/?vista=dashboard';
   let origen;
@@ -36,7 +41,15 @@
       const respuesta = await fetch(window.location.href, {credentials: 'same-origin'});
       if (!respuesta.ok) return;
       const pagina = new DOMParser().parseFromString(await respuesta.text(), 'text/html');
-      for (const selector of ['.cd-calendar-scroll', '.cd-stats', '#resumen-conductores', '#salidas-por-confirmar']) {
+      const calendario = document.querySelector('.cd-calendar-scroll');
+      const calendarioNuevo = pagina.querySelector('.cd-calendar-scroll');
+      if (calendario && calendarioNuevo) {
+        const x = calendario.scrollLeft, y = calendario.scrollTop;
+        calendario.replaceChildren(...document.importNode(calendarioNuevo, true).childNodes);
+        calendario.scrollLeft = x;
+        calendario.scrollTop = y;
+      }
+      for (const selector of ['.cd-stats', '#resumen-conductores', '#salidas-por-confirmar']) {
         const actual = area.querySelector(selector), nuevo = pagina.querySelector(selector);
         if (actual && nuevo) actual.replaceWith(document.importNode(nuevo, true));
       }
@@ -108,6 +121,10 @@
   });
   configDialog?.addEventListener('close', () => {if (configCambio) window.location.reload();});
   document.getElementById('detalle-dia-dialog')?.addEventListener('click', event => {
+    const verViaje = event.target.closest('[data-trip-open]');
+    if (verViaje) verViaje.nextElementSibling?.showModal();
+    const cerrarViaje = event.target.closest('[data-close-trip]');
+    if (cerrarViaje) cerrarViaje.closest('dialog')?.close();
     const contenido = document.getElementById('detalle-dia-content');
     const editor = contenido.querySelector('[data-day-editor]');
     const editar = contenido.querySelector('[data-edit-day]');
@@ -121,7 +138,10 @@
     const boton = form.querySelector('button');
     const errores = form.querySelector('[data-day-errors]');
     const datos = new FormData(form);
-    const templateId = form.dataset.template;
+    const celdaId = form.dataset.template?.replace(/^cell-/, '');
+    const calendario = document.querySelector('.cd-calendar-scroll');
+    const x = calendario?.scrollLeft, y = calendario?.scrollTop;
+    const paginaY = window.scrollY;
     boton.disabled = true;
     errores.hidden = true;
     try {
@@ -129,10 +149,20 @@
       const resultado = await respuesta.json();
       if (!respuesta.ok || !resultado.ok) throw new Error((resultado.errores || ['No se pudo guardar la situación.']).join(' '));
       await refrescarCalendario();
-      const template = document.getElementById(templateId);
-      const contenido = document.getElementById('detalle-dia-content');
-      if (template) contenido.replaceChildren(template.content.cloneNode(true));
-      const mensaje = document.createElement('p'); mensaje.className = 'cd-notice'; mensaje.setAttribute('role', 'status'); mensaje.textContent = 'Situación guardada. El calendario y el resumen están actualizados.'; contenido.prepend(mensaje);
+      // El detalle actualizado se muestra al volver a seleccionar el día.
+      document.getElementById('detalle-dia-dialog').close();
+      requestAnimationFrame(() => {
+        if (calendario) {
+          calendario.scrollLeft = x;
+          calendario.scrollTop = y;
+        }
+        window.scrollTo({top: paginaY, behavior: 'instant'});
+        if (celdaId) {
+          const celda = [...document.querySelectorAll('[data-cell]')]
+            .find(item => item.dataset.cell === celdaId);
+          celda?.focus({preventScroll: true});
+        }
+      });
     } catch (error) {
       errores.textContent = error.message;
       errores.hidden = false;
@@ -153,6 +183,7 @@
       if (!respuesta.ok || !resultado.ok) throw new Error((resultado.errores || ['No se pudo confirmar la salida.']).join(' '));
       await refrescarCalendario();
       const template = document.getElementById(form.dataset.template);
+      form.closest('.cd-trip-popup')?.close();
       if (template) document.getElementById('detalle-dia-content').replaceChildren(template.content.cloneNode(true));
     } catch (error) {
       errores.textContent = error.message;
@@ -161,6 +192,108 @@
     }
   });
   const calendarioAmpliado = document.getElementById('calendario-ampliado');
+  if (area.dataset.seccion === 'control') {
+    const accionesCalendario = document.createElement('div');
+    accionesCalendario.className = 'cd-actions';
+    accionesCalendario.style.justifyContent = 'flex-end';
+    area.querySelector('.cd-calendar-scroll')?.closest('section')?.append(accionesCalendario);
+    const revisar = document.createElement('button');
+    revisar.type = 'button';
+    revisar.className = 'cd-button';
+    revisar.textContent = 'Validar todos los días';
+    accionesCalendario.append(revisar);
+    const dialogo = document.createElement('dialog');
+    dialogo.className = 'cd-dialog';
+    dialogo.setAttribute('aria-label', 'Revisión del período');
+    area.append(dialogo);
+    const endpoint = '/conductores/control/revision/';
+    revisar.addEventListener('click', async () => {
+      const periodo = area.querySelector('form[method="get"]');
+      const campos = new FormData(periodo);
+      const fechas = new URLSearchParams({
+        desde: campos.get('desde') || '',
+        hasta: campos.get('hasta') || '',
+      });
+      revisar.disabled = true;
+      try {
+        const respuesta = await fetch(`${endpoint}?${fechas}`, {credentials: 'same-origin'});
+        const datos = await respuesta.json();
+        if (!respuesta.ok || !datos.ok) throw new Error(datos.error || 'No se pudo revisar el período.');
+        dialogo.replaceChildren();
+        const titulo = document.createElement('h2');
+        titulo.textContent = 'Revisión de todos los conductores';
+        dialogo.append(titulo);
+        const resumen = document.createElement('p');
+        resumen.textContent = `Período ${campos.get('desde')} a ${campos.get('hasta')} · ${datos.conductores} conductores con actividad.`;
+        dialogo.append(resumen);
+        if (datos.faltantes.length) {
+          const aviso = document.createElement('p');
+          aviso.textContent = `Faltan ${datos.faltantes.length} días por clasificar. No se canceló ninguna salida.`;
+          dialogo.append(aviso);
+          const lista = document.createElement('ul');
+          lista.style.cssText = 'max-height:45vh;overflow:auto;padding-left:24px';
+          for (const falta of datos.faltantes) {
+            const item = document.createElement('li');
+            item.textContent = `${falta.conductor} · ${falta.fecha}`;
+            lista.append(item);
+          }
+          dialogo.append(lista);
+        } else if (datos.pendientes) {
+          const aviso = document.createElement('p');
+          aviso.textContent = `${datos.pendientes} salidas sin ventas por confirmar se marcarán como CANCELADAS. Se conservarán los reportes originales y se registrará auditoría.`;
+          dialogo.append(aviso);
+          const confirmar = document.createElement('button');
+          confirmar.className = 'cd-button';
+          confirmar.textContent = `Confirmar cancelación de ${datos.pendientes} salidas`;
+          confirmar.addEventListener('click', async () => {
+            if (!window.confirm(`¿Confirmas cancelar ${datos.pendientes} salidas sin ventas? Esta acción modifica su estado operativo.`)) return;
+            confirmar.disabled = true;
+            try {
+              const cuerpo = new URLSearchParams({...Object.fromEntries(fechas), comprobante: datos.comprobante});
+              const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+              const resultado = await fetch(endpoint, {method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf || ''},
+                body: cuerpo});
+              const respuesta = await resultado.json();
+              if (!resultado.ok || !respuesta.ok) throw new Error(respuesta.error || 'No se pudieron cancelar las salidas.');
+              await refrescarCalendario();
+              dialogo.close();
+              const notificacion = document.createElement('p');
+              notificacion.className = 'cd-notice';
+              notificacion.setAttribute('role', 'status');
+              notificacion.textContent = `${respuesta.canceladas} salidas canceladas. Resumen actualizado.`;
+              revisar.after(notificacion);
+            } catch (error) {
+              const aviso = document.createElement('p');
+              aviso.setAttribute('role', 'alert');
+              aviso.textContent = error.message;
+              dialogo.append(aviso);
+              confirmar.disabled = false;
+            }
+          });
+          dialogo.append(confirmar);
+        } else {
+          const completo = document.createElement('p');
+          completo.textContent = 'No faltan días por clasificar ni salidas sin ventas por confirmar.';
+          dialogo.append(completo);
+        }
+        const cerrar = document.createElement('button');
+        cerrar.type = 'button';
+        cerrar.className = 'cd-button cd-secondary';
+        cerrar.textContent = 'Cerrar';
+        cerrar.addEventListener('click', () => dialogo.close());
+        dialogo.append(cerrar);
+        dialogo.showModal();
+      } catch (error) {
+        const aviso = document.createElement('p');
+        aviso.setAttribute('role', 'alert');
+        aviso.textContent = error.message;
+        revisar.after(aviso);
+      } finally {
+        revisar.disabled = false;
+      }
+    });
+  }
   let anclaCalendario;
   document.querySelector('[data-expand-calendar]')?.addEventListener('click', event => {
     const calendario = area.querySelector('.cd-calendar-scroll');

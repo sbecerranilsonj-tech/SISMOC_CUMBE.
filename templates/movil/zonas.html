@@ -1,8 +1,28 @@
 {% load static %}
 <section class="cd-card" id="zonas-trabajo">
-  <h2>Zonas de trabajo y pruebas</h2>
-  <p class="cd-muted">Separa la agencia y el taller usando «Sede y área». «Toda una sede» autoriza a todo el personal de esa sede. Para pruebas usa «Solo un trabajador».</p>
-  <details class="movil-ayuda"><summary>¿Cómo obtener las coordenadas de Google Maps?</summary><p>Busca el lugar, acerca el mapa y haz clic derecho sobre el punto donde se marcará. Copia los dos números que aparecen primero: latitud, longitud. Pégalos abajo. El radio debe cubrir el lugar de trabajo y el margen de precisión del GPS.</p></details>
+  <div class="movil-zone-heading"><h2>Zonas de trabajo</h2><button type="button" class="cd-button cd-secondary" data-zona-nueva>Nueva zona</button></div>
+  <div class="movil-zone-buttons" role="group" aria-label="Zonas de trabajo">
+    {% for z in zonas %}<button type="button" class="movil-zone-button" data-zone-open="zona-detalle-{{ z.pk }}" data-active="{% if z.activa %}1{% endif %}" data-inactive="{% if not z.activa %}1{% endif %}"><span class="movil-zone-name"><strong>{{ z.nombre }}</strong><span class="movil-zone-count" data-zona-count>{{ z.personas|length }}</span></span></button>{% empty %}<p>No hay zonas creadas.</p>{% endfor %}
+  </div>
+  {% for z in zonas %}
+  <template id="zona-detalle-{{ z.pk }}">
+    <p class="cd-muted">{{ z.sede }} · {% if z.perfiles.all %}Asignación individual{% elif z.area %}{{ z.area }}{% else %}Toda la sede{% endif %} · {{ z.radio }} m{% if not z.activa %} · Inactiva{% endif %}</p>
+    <div class="movil-actions movil-actions-small">
+      <button type="button" class="cd-button cd-secondary" data-zona-editar data-id="{{ z.pk }}" data-nombre="{{ z.nombre }}" data-sede="{{ z.sede }}" data-area="{{ z.area }}" data-lat="{{ z.latitud|stringformat:'.7f' }}" data-lon="{{ z.longitud|stringformat:'.7f' }}" data-radio="{{ z.radio }}" data-perfil="{{ z.perfiles.first.pk|default:'' }}" data-persona="{{ z.perfiles.first.trabajador.nombre_completo }}">Editar</button>
+      <form method="post">{% csrf_token %}<input type="hidden" name="accion" value="{% if z.activa %}desactivar_zona{% else %}activar_zona{% endif %}"><input type="hidden" name="zona" value="{{ z.pk }}"><button class="cd-button cd-secondary">{% if z.activa %}Desactivar{% else %}Activar{% endif %}</button></form>
+      <form method="post" onsubmit="return confirm('¿Eliminar esta zona? Si tiene marcaciones, solo podrá desactivarla.')">{% csrf_token %}<input type="hidden" name="accion" value="eliminar_zona"><input type="hidden" name="zona" value="{{ z.pk }}"><button class="cd-button cd-secondary">Eliminar</button></form>
+    </div>
+    <div class="cd-table-wrap"><table class="cd-table"><thead><tr><th>Código</th><th>Trabajador</th><th>Área</th><th>Estado de acceso</th></tr></thead><tbody>
+    {% for p in z.personas %}<tr><td>{{ p.codigo }}</td><td>{{ p.trabajador.nombre_completo|default:p.usuario.get_full_name }}</td><td>{{ p.trabajador.area|default:'—' }}</td><td>{{ p.estado_acceso }}</td></tr>{% empty %}<tr><td colspan="4">No hay personas con acceso a la app incluidas en esta zona.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </template>
+  {% endfor %}
+  <dialog class="movil-activated-dialog" data-zona-personas-dialog aria-labelledby="zona-personas-title">
+   <div class="movil-access-heading"><h2 id="zona-personas-title">Personas en la zona</h2><button type="button" class="cd-button cd-secondary" data-zona-personas-cerrar>Cerrar</button></div>
+   <div data-zona-personas-contenido></div>
+  </dialog>
+  <dialog class="movil-zone-editor movil-activated-dialog" data-zona-editor aria-labelledby="zona-editor-title">
+  <div class="movil-access-heading"><h2 id="zona-editor-title">Nueva zona</h2><button type="button" class="cd-button cd-secondary" data-zona-cerrar>Cerrar</button></div>
   <datalist id="zonas-areas">{% for area in areas %}<option value="{{ area }}">{% endfor %}</datalist>
   <datalist id="zonas-sedes">{% for sede in sedes %}<option value="{{ sede }}">{% endfor %}</datalist>
   <form method="post" class="cd-form movil-zona-grid" data-zona-form>
@@ -17,16 +37,8 @@
     <label>Longitud<input name="longitud" type="number" min="-180" max="180" step="any" required data-zona-lon></label>
     <label>Radio (metros)<input name="radio" type="number" min="20" max="2000" value="100" required></label>
     <div class="movil-wide movil-actions"><button type="button" class="cd-button cd-secondary" data-usar-ubicacion>Usar mi ubicación actual</button><button class="cd-button" data-zona-guardar>Guardar zona</button><button type="button" class="cd-button cd-secondary" data-zona-cancelar hidden>Cancelar edición</button></div>
-    <p class="cd-muted movil-wide" role="status" data-zona-info>Para pruebas, copia la ubicación desde la app. Con 19 m de precisión, el radio debe cubrir la distancia al centro más esos 19 m.</p>
+    <p class="cd-muted movil-wide" role="status" data-zona-info></p>
   </form>
-  <div class="cd-table-wrap"><table class="cd-table"><thead><tr><th>Zona</th><th>Sede / alcance</th><th>Radio</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
-  {% for z in zonas %}<tr><td>{{ z.nombre }}</td><td>{{ z.sede }} · {% if z.perfiles.exists %}{{ z.perfiles.first.trabajador.nombre_completo }}{% elif z.area %}{{ z.area }}{% else %}Toda la sede{% endif %}</td><td>{{ z.radio }} m</td><td>{% if z.activa %}Activa{% else %}Inactiva{% endif %}</td><td>
-    <div class="movil-actions movil-actions-small">
-      <button type="button" class="cd-button cd-secondary" data-zona-editar data-id="{{ z.pk }}" data-nombre="{{ z.nombre }}" data-sede="{{ z.sede }}" data-area="{{ z.area }}" data-lat="{{ z.latitud|stringformat:'.7f' }}" data-lon="{{ z.longitud|stringformat:'.7f' }}" data-radio="{{ z.radio }}" data-perfil="{{ z.perfiles.first.pk|default:'' }}" data-persona="{{ z.perfiles.first.trabajador.nombre_completo }}">Editar</button>
-      <form method="post">{% csrf_token %}<input type="hidden" name="accion" value="{% if z.activa %}desactivar_zona{% else %}activar_zona{% endif %}"><input type="hidden" name="zona" value="{{ z.pk }}"><button class="cd-button cd-secondary">{% if z.activa %}Desactivar{% else %}Activar{% endif %}</button></form>
-      <form method="post" onsubmit="return confirm('¿Eliminar esta zona? Si tiene marcaciones, solo podrá desactivarla.')">{% csrf_token %}<input type="hidden" name="accion" value="eliminar_zona"><input type="hidden" name="zona" value="{{ z.pk }}"><button class="cd-button cd-secondary">Eliminar</button></form>
-    </div>
-  </td></tr>{% empty %}<tr><td colspan="5">Todavía no hay zonas configuradas.</td></tr>{% endfor %}
-  </tbody></table></div>
+  </dialog>
 </section>
-<script src="{% static 'movil_zonas.js' %}?v=20261112-3" defer></script>
+<script src="{% static 'movil_zonas.js' %}?v=20261119-11" defer></script>

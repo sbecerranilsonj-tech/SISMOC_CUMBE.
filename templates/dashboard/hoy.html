@@ -1,0 +1,5 @@
+<section class="content-panel today-banner" aria-labelledby="hoy-titulo">
+    <div class="today-heading"><span class="today-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-calendar"></use></svg></span><div><h3 id="hoy-titulo">Hoy</h3><time datetime="{% now 'Y-m-d' %}">{% now 'd/m/Y' %}</time></div></div>
+    <div class="today-total"><strong>{{ info_huellero.total_presentes_hoy }}</strong><span>personas con marcación hoy</span></div>
+    <button type="button" class="btn-dark-outline today-action" onclick="mostrarSeccion('huellero')"><span>Ver marcaciones</span><svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></button>
+</section>

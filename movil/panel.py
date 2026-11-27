@@ -1,4 +1,5 @@
 import secrets
+from django.contrib.auth import get_user_model
 from datetime import timedelta
 from decimal import Decimal
 from decimal import InvalidOperation
@@ -25,9 +26,12 @@ from .gestion import gestionar
 def panel(request):
     if request.user.rol not in GESTION:
         return HttpResponseForbidden('Solo administración y contabilidad pueden gestionar la aplicación.')
-    activacion=None
-    activacion_perfil=None
-    activacion_codigo=None
+    # Codigo de activacion de un solo uso visual: se consume en la primera respuesta GET.
+    visible = request.session.pop('movil_activacion', None) or {}
+    activacion_perfil = visible.get('perfil')
+    activacion_codigo = visible.get('codigo')
+    activacion = None
+    habilitado_ok = False
     if request.method=='POST':
         try:
             with transaction.atomic():
@@ -46,9 +50,12 @@ def panel(request):
                     else:
                         t=cuenta_para_ficha(pk,request.user)
                         usuario,conductor=t.usuario,Conductor.objects.filter(trabajador=t).first()
+                    anterior=Perfil.objects.filter(usuario=usuario).first()
+                    if anterior and anterior.activado and request.POST.get('confirmar_restablecimiento')!='1':
+                        raise Problema('Esta cuenta ya está activada. Marque "Confirmar restablecimiento" para generar otro código; se cerrarán sus sesiones.')
                     from .funciones import funcion_por_area
                     inferida=funcion_por_area(t.area if t else '',bool(conductor))
-                    funcion=inferida or request.POST.get('funcion_app','')
+                    funcion='CONDUCTOR' if conductor else request.POST.get('funcion_app','')
                     if funcion and usuario.rol not in GESTION and not usuario.is_staff and not usuario.is_superuser:
                         exigir(funcion in ['CONDUCTOR','ADMINISTRATIVO','BOLETERIA','OPERADOR_EMBARQUE'],'Función de app inválida.')
                         exigir(not conductor or funcion=='CONDUCTOR','El conductor conserva su función.')
@@ -66,6 +73,7 @@ def panel(request):
                     activacion_perfil=p.pk
                     activacion_codigo=codigo
                     Auditoria.objects.create(actor=request.user,accion='habilitar_app',detalle={'perfil':p.pk})
+                    habilitado_ok=True
                 elif accion in ('zona','editar_zona'):
                     personal=None
                     if request.POST.get('alcance')=='trabajador':
@@ -89,7 +97,7 @@ def panel(request):
                     exigir(not z.registro_set.exists(),'Esta zona tiene marcaciones: desactívela para conservar su historial.')
                     z.delete()
                 elif accion=='comision':
-                    c=Comision(perfil_id=int(request.POST['perfil']),motivo=request.POST['motivo'],desde=instante(request.POST['desde']+'-05:00'),hasta=instante(request.POST['hasta']+'-05:00'),autorizada_por=request.user,sin_rostro=True)
+                    c=Comision(perfil_id=int(request.POST['perfil']),motivo=request.POST['motivo'],desde=instante(request.POST['desde']+'T00:00:00-05:00'),hasta=instante(request.POST['hasta']+'T23:59:59-05:00'),autorizada_por=request.user,sin_rostro=True)
                     exigir(c.desde<c.hasta and bool(c.motivo.strip()),'Indique motivo y período válido.');c.full_clean();c.save()
                 elif accion=='pago':
                     referencia=request.POST.get('id_pago') or request.POST.get('referencia') or secrets.token_hex(16)
@@ -98,6 +106,10 @@ def panel(request):
                     pago.full_clean();exigir(str(pago.desde)<=str(pago.hasta) and pago.monto>0,'Revise período e importe.');pago.save()
                 elif accion=='embarque':
                     raise Problema('Asigne el responsable desde Ventas y embarque.')
+                elif accion=='cuenta_sede':
+                    from core.cuentas_sede import crear_cuenta_sede
+                    cuenta=crear_cuenta_sede(request.POST.get('sede',''),request.POST.get('username',''),request.POST.get('password',''))
+                    messages.success(request,'Cuenta de sede creada: '+cuenta.username)
                 elif accion=='regla':
                     regla,_=ReglaDescanso.objects.get_or_create(pk=1)
                     regla.horas=int(request.POST['horas']);exigir(1<=regla.horas<=24,'Horas entre 1 y 24.')
@@ -111,8 +123,12 @@ def panel(request):
                 messages.success(request,'Configuración guardada.')
         except (Problema,ValidationError,ValueError,KeyError,ObjectDoesNotExist,InvalidOperation,ProtectedError) as e:
             messages.error(request,getattr(e,'mensaje',str(e)))
+        if habilitado_ok:
+            request.session['movil_activacion']={'perfil':activacion_perfil,'codigo':activacion_codigo}
+            return redirect('movil_panel')
     from asistencia.models import TurnoHorario
-    return render(request,'movil/panel.html',{'areas':Trabajador.objects.exclude(area='').order_by('area').values_list('area',flat=True).distinct(),'sedes':Trabajador.objects.exclude(sede='').order_by('sede').values_list('sede',flat=True).distinct(),'id_pago':secrets.token_hex(16),'trabajador_seleccionado': int(request.POST['trabajador']) if request.method=='POST' and str(request.POST.get('trabajador','')).isdigit() else None,'activacion':activacion,'activacion_perfil':activacion_perfil,'activacion_codigo':activacion_codigo,'perfiles':Perfil.objects.filter(Q(trabajador__isnull=False)|Q(conductor__isnull=False)).exclude(Q(usuario__rol__in=GESTION)&(Q(trabajador__area='')|Q(trabajador__isnull=True))).select_related('trabajador','usuario','conductor'),'trabajadores':Trabajador.objects.select_related('usuario').all(),'zonas':Zona.objects.all(),'solicitudes':Solicitud.objects.filter(estado='PENDIENTE').select_related('perfil'),'registros':Registro.objects.filter(estado='POR_REVISAR').select_related('perfil'),'operaciones':Operacion.objects.filter(estado='PROGRAMADO').select_related('salida')[:100],'turnos':TurnoHorario.objects.all(),'regla':ReglaDescanso.objects.first()})
+    from .zonas_panel import agrupar_zonas
+    return render(request,'movil/panel.html',{'areas':Trabajador.objects.exclude(area='').order_by('area').values_list('area',flat=True).distinct(),'sedes':Trabajador.objects.exclude(sede='').order_by('sede').values_list('sede',flat=True).distinct(),'id_pago':secrets.token_hex(16),'trabajador_seleccionado': int(request.POST['trabajador']) if request.method=='POST' and str(request.POST.get('trabajador','')).isdigit() else None,'activacion':activacion,'activacion_perfil':activacion_perfil,'activacion_codigo':activacion_codigo,'perfiles':Perfil.objects.filter(Q(trabajador__isnull=False)|Q(conductor__isnull=False)).exclude(Q(usuario__rol__in=GESTION)&(Q(trabajador__area='')|Q(trabajador__isnull=True))).select_related('trabajador','usuario','conductor'),'trabajadores':Trabajador.objects.select_related('usuario').all(),'cuentas_sede':get_user_model().objects.filter(groups__name='Boletería por sede').order_by('agencia_sede'),'zonas':agrupar_zonas(),'comisiones':Comision.objects.select_related('perfil__trabajador','perfil__usuario','autorizada_por').order_by('-desde')[:100],'solicitudes':Solicitud.objects.filter(estado='PENDIENTE').select_related('perfil'),'registros':Registro.objects.filter(estado='POR_REVISAR').select_related('perfil'),'operaciones':Operacion.objects.filter(estado='PROGRAMADO').select_related('salida')[:100],'turnos':TurnoHorario.objects.all(),'regla':ReglaDescanso.objects.first()})
 
 @login_required
 @require_GET

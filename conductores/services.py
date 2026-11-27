@@ -140,6 +140,17 @@ def confirmar(pk, usuario):
     lote.validado_por = usuario
     lote.validado = timezone.now()
     lote.save(update_fields=['estado', 'validado_por', 'validado'])
+    # La validación publica el reporte en Control; vincular una operación no
+    # autoriza todavía a publicarla en la app si el descanso está pendiente.
+    from django.conf import settings
+    if settings.SISMOC_DESCANSO_PUBLICACION_HABILITADA:
+        from movil.models import Operacion
+        for salida in lote.salidas.all():
+            Operacion.objects.get_or_create(
+                salida=salida,
+                defaults={'estado': 'CANCELADO' if salida.anulado or
+                          salida.estado_operativo == 'CANCELADO' else 'PROGRAMADO'},
+            )
     Auditoria.objects.create(responsable=usuario, importacion=lote, mensaje='Se validó el reporte y se incorporaron sus salidas al control de conductores.')
     return lote
 
@@ -189,9 +200,33 @@ def calendario(inicio, fin, busqueda=''):
         nombre = c.nombre_apellidos.replace('Ñ', 'N~')
         return (''.join(t for t in unicodedata.normalize('NFD', nombre) if not unicodedata.combining(t)), c.pk)
     conductores.sort(key=orden)
-    salidas = Salida.objects.filter(importacion__estado='VALIDADO', fecha__range=(inicio, fin)).select_related('conductor_uno', 'conductor_dos')
+    salidas = list(Salida.objects.filter(importacion__estado='VALIDADO', fecha__range=(inicio, fin)).select_related('conductor_uno', 'conductor_dos'))
+    # Horas registradas por la app: solo informativas, sin alterar el conteo.
+    from movil.models import Operacion, ReglaDescanso
+    operaciones = {
+        op.salida_id: op for op in Operacion.objects.filter(
+            salida_id__in=[s.pk for s in salidas]
+        ).select_related('salida__importacion', 'salida__conductor_uno',
+                         'salida__conductor_dos')
+    }
+    from django.conf import settings
+    regla = ReglaDescanso.objects.first() if settings.SISMOC_DESCANSO_PUBLICACION_HABILITADA else None
+    evaluador = None
+    if regla and regla.activa:
+        from movil.descanso_publicacion import EvaluadorPublicacionLote
+        evaluador = EvaluadorPublicacionLote(
+            [op for op in operaciones.values() if op.estado == 'PROGRAMADO'], regla,
+        )
     indice = defaultdict(list)
     for s in salidas:
+        op = operaciones.get(s.pk)
+        s.inicio_app = op.salida_real if op else None
+        s.llegada_app = op.llegada_real if op else None
+        s.motivo_publicacion = ''
+        if evaluador and op and op.estado == 'PROGRAMADO':
+            habilitada, motivo = evaluador.estado(op)
+            if not habilitada:
+                s.motivo_publicacion = motivo
         for cid in {s.conductor_uno_id, s.conductor_dos_id} - {None}:
             indice[(cid, s.fecha)].append(s)
     situaciones = defaultdict(dict)

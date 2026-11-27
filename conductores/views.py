@@ -159,6 +159,8 @@ def documento(request, pk):
 
 @acceso
 def control(request):
+    from django.conf import settings
+    from movil.models import Perfil, AutorizacionInicialDescanso
     ultimo = Importacion.objects.filter(estado='VALIDADO').first()
     hoy = timezone.localdate()
     inicial = {'desde': ultimo.inicio if ultimo else hoy.replace(day=1), 'hasta': ultimo.fin if ultimo else hoy}
@@ -181,11 +183,51 @@ def control(request):
     salidas_por_confirmar = sorted(pendientes_salida.values(), key=lambda s: (s.fecha, s.hora, s.fila, s.pk))
     filas_resumen = resumen_periodo(filas, periodo.cleaned_data['q']) if periodo.is_valid() else []
     totales = {campo: sum(f[campo] for f in filas_resumen) for campo in ('trayectos', 'trabajados', 'descansos', 'vueltas', 'pago_vueltas', 'horas', 'una_x', 'dos_x', 'pendientes')}
+    pendientes_alta = (
+        Perfil.objects.filter(
+            conductor__isnull=False, activo=True,
+            autorizacioninicialdescanso__isnull=True,
+        ).select_related('conductor').order_by('conductor__nombre')
+        if settings.SISMOC_DESCANSO_PUBLICACION_HABILITADA else []
+    )
     return render(request, 'conductores/control.html', {'seccion': 'control', 'periodo': periodo, 'form': form,
+        'pendientes_alta': pendientes_alta,
+        'descanso_publicacion_habilitada': settings.SISMOC_DESCANSO_PUBLICACION_HABILITADA,
         'totales': totales, 'filas_resumen': filas_resumen, 'salidas_por_confirmar': salidas_por_confirmar,
         'situacion_tipos': SituacionForm.base_fields['tipo'].choices,
         'dias': dias, 'filas': filas, 'situaciones': situaciones.select_related('conductor').order_by('-inicio')[:100],
         'total_trayectos': sum(f['trayectos'] for f in filas), 'conflictos': sum(f['conflictos'] for f in filas)})
+
+
+@acceso
+@require_POST
+def autorizar_descanso_inicial(request):
+    from django.conf import settings
+    if not settings.SISMOC_DESCANSO_PUBLICACION_HABILITADA:
+        return HttpResponseForbidden('La revisión de descanso todavía no está habilitada.')
+    from movil.models import AutorizacionInicialDescanso, Auditoria as AuditoriaMovil, Perfil
+    motivo = request.POST.get('motivo', '').strip()
+    if not 10 <= len(motivo) <= 500:
+        messages.error(request, 'Explique el alta inicial de descanso (10 a 500 caracteres).')
+        return redirect('conductores_control')
+    with transaction.atomic():
+        perfil = get_object_or_404(
+            Perfil.objects.select_for_update().select_related('conductor'),
+            pk=request.POST.get('perfil'), conductor__isnull=False, activo=True,
+        )
+        if AutorizacionInicialDescanso.objects.filter(perfil=perfil).exists():
+            messages.error(request, 'El conductor ya tiene un alta inicial registrada.')
+            return redirect('conductores_control')
+        alta = AutorizacionInicialDescanso.objects.create(
+            perfil=perfil, autorizado_por=request.user, motivo=motivo,
+        )
+        AuditoriaMovil.objects.create(
+            actor=request.user, accion='autorizar_descanso_inicial',
+            detalle={'perfil': perfil.pk, 'conductor': perfil.conductor_id,
+                     'alta': alta.pk, 'motivo': motivo},
+        )
+    messages.success(request, 'Alta inicial registrada. Las siguientes asignaciones requieren 8 horas de descanso comprobable.')
+    return redirect('conductores_control')
 
 
 @acceso

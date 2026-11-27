@@ -1,22 +1,218 @@
 <div class="content-panel">
     <div class="panel-header-custom">
-        <div><h3 class="panel-title-text">Huellero · Registro en tiempo real</h3><p class="ayuda">Eventos biométricos recibidos por el sistema. Cada fila representa una marcación, no una persona ni una jornada completa.</p></div>
+        <div><h3 class="panel-title-text">Huellero · Registro en tiempo real</h3><p class="ayuda">Una fila por marcación recibida.</p></div>
         <div class="acciones-revision">
             <button class="btn-dark-outline" type="button" id="btnActualizarHuellero" onclick="actualizarRegistrosHuellero()">Actualizar registros</button>
-            {% if puede_gestionar %}<button class="btn-cumbe" type="button" onclick="sincronizarZKTeco()" id="btnSync">Consultar conexión del equipo</button>{% endif %}
+            {% if puede_gestionar %}<button class="btn-dark-outline" type="button" onclick="abrirConfigHuellero()">Configurar conexión</button>
+            <button class="btn-cumbe" type="button" onclick="sincronizarZKTeco()" id="btnSync">Consultar conexión del equipo</button>{% endif %}
         </div>
     </div>
     <div class="badge-huellero" id="estadoHuellero">ZKTeco {{ info_huellero.dispositivo_ip }}:{{ info_huellero.dispositivo_puerto }} · {{ info_huellero.estado_dispositivo }}</div>
     <p class="ayuda" id="detalleHuellero">Última comprobación: {{ info_huellero.ultima_comprobacion }}. Última sincronización: {{ info_huellero.ultima_sincronizacion }}. {{ info_huellero.mensaje }}</p>
-    <p class="aviso">La lista se actualiza cada 10 segundos mientras este apartado esté visible. Consulta los registros ya recibidos; la descarga directa desde el equipo todavía requiere integración.</p>
+    <p class="aviso">La nube no conecta directamente con la IP privada del equipo. Instale el agente en la PC de la sede que ya tiene el software ZKteco: él lee el huellero y envía las marcaciones a este sistema. La lista se actualiza cada 10 segundos.</p>
+    <style>
+    .huellero-fecha{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 6px}
+    .huellero-fecha label{font-weight:700;font-size:12px;color:#64748b}
+    .huellero-fecha>div{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .huellero-fecha .rango{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .huellero-fecha .rango span{font-size:12px;color:#64748b}
+    .huellero-fecha input[type=date]{height:38px;padding:0 10px;border:1px solid #d9e0ea;border-radius:9px;background:#fff;color:#17212f;font:inherit;font-size:13px}
+    .huellero-fecha button{padding:8px 14px;font-size:12px}
+    </style>
+    <div class="panel-header-custom huellero-fecha">
+        <label>Consultar marcaciones por rango</label>
+        <div>
+            <div class="rango"><span>Desde</span><input type="date" id="fechaDesdeHuellero" value="{{ registros_huellero.desde }}"><span>Hasta</span><input type="date" id="fechaHastaHuellero" value="{{ registros_huellero.hasta }}"></div>
+            <button class="btn-dark-outline" type="button" onclick="verHoyHuellero()">Hoy</button>
+            <button class="btn-dark-outline" type="button" onclick="verMesHuellero()">Este mes</button>
+            <button class="btn-cumbe" type="button" onclick="actualizarRegistrosHuellero()">Consultar</button>
+        </div>
+    </div>
     <div class="panel-header-custom"><span id="conteoRegistrosHuellero">{{ registros_huellero.total }} marcaciones de hoy · Se muestran las últimas {{ registros_huellero.limite }} como máximo</span><span class="ayuda" id="actualizacionHuellero" role="status">Última lectura de registros: {{ registros_huellero.actualizado }}</span></div>
     <p id="errorRegistrosHuellero" class="aviso aviso-error" role="alert" hidden></p>
     <div class="table-responsive" id="registroHuellero" data-url="{% url 'registros_huellero' %}">
         <table class="custom-dark-table" id="tablaZkLive">
             <caption class="visually-hidden">Últimas marcaciones biométricas de hoy, de la más reciente a la más antigua.</caption>
-            <thead><tr><th>Fecha y hora</th><th>DNI</th><th>Colaborador</th><th>Evento</th><th>Sede asignada</th><th>Equipo</th><th>ID biométrico</th></tr></thead>
+            <thead><tr><th>Fecha y hora</th><th>DNI</th><th>Colaborador</th><th>Evento</th><th>Sede</th><th>Equipo</th><th>ID biométrico</th></tr></thead>
             <tbody>{% for m in registros_huellero.registros %}<tr><td>{{ m.fecha_hora }}</td><td>{{ m.dni }}</td><td>{{ m.nombre }}</td><td>{{ m.evento }}</td><td>{{ m.sede }}</td><td>{{ m.equipo }}</td><td>{{ m.id_biometrico }}</td></tr>{% empty %}<tr><td colspan="7" class="estado-vacio">No hay marcaciones recibidas del huellero para hoy.</td></tr>{% endfor %}</tbody>
         </table>
     </div>
 </div>
-<div class="content-panel"><h3 class="panel-title-text">Registro manual por DNI</h3><p class="ayuda">Este registro tiene origen Kiosko/DNI. No se presenta como una lectura de huella y se consulta en Asistencia & HH.EE.</p><button class="btn-dark-outline" type="button" onclick="abrirModal()">Registrar marcación manual</button></div>
+<div class="content-panel"><h3 class="panel-title-text">Registro manual por DNI</h3><p class="ayuda">Marcación manual por DNI; se revisa en Asistencia. Se conserva como respaldo cuando el agente no esté disponible.</p><button class="btn-dark-outline" type="button" onclick="abrirModal()">Registrar marcación manual</button></div>
+
+{% if puede_gestionar %}
+<style>
+.cfg-huellero{--cfg-naranja:#f26522;background:#fff!important;color:#17212f!important;border:1px solid #e2e8f0!important;border-radius:20px;width:min(560px,94vw);max-height:90vh;overflow:auto;padding:0;box-shadow:0 30px 70px rgba(15,27,48,.28)}
+.cfg-huellero .cfg-head{padding:24px 26px 20px;border-bottom:1px solid #f1e6dc!important;display:flex;gap:16px;align-items:center;background:linear-gradient(120deg,#fff1e8 0%,#fff 75%)!important}
+.cfg-huellero .cfg-icon{width:52px;height:52px;flex:0 0 52px;border-radius:15px;background:#ffe6d6!important;display:grid;place-items:center}
+.cfg-huellero .cfg-icon svg{width:28px;height:28px;fill:none;stroke:var(--cfg-naranja);stroke-width:1.7;stroke-linecap:round}
+.cfg-huellero .cfg-eyebrow{font-size:10px;letter-spacing:1.6px;font-weight:800;color:var(--cfg-naranja)!important}
+.cfg-huellero .cfg-title{font-family:'Outfit',sans-serif;font-size:23px;font-weight:800;margin:3px 0 2px;color:#15243c!important}
+.cfg-huellero .cfg-sub{font-size:12px;color:#64748b!important;margin:0}
+.cfg-huellero .cfg-body{padding:20px 26px 8px}
+.cfg-huellero .cfg-section{font-size:10px;letter-spacing:1.4px;font-weight:800;color:#64748b!important;margin:0 0 10px}
+.cfg-huellero .cfg-section:not(:first-child){margin-top:20px}
+.cfg-huellero .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cfg-huellero .cfg-field label{display:block;font-size:11px;color:#64748b!important;margin-bottom:5px;font-weight:600}
+.cfg-huellero .cfg-field input,.cfg-huellero .cfg-copy input,.cfg-huellero .cfg-select{width:100%;box-sizing:border-box;height:42px;padding:0 12px;border-radius:10px;border:1px solid #d9e0ea!important;background:#fff!important;color:#17212f!important;-webkit-text-fill-color:#17212f!important;font:inherit;font-size:13px}
+.cfg-huellero .cfg-copy{display:flex;gap:8px;align-items:end;margin-bottom:10px}
+.cfg-huellero .cfg-copy>div{flex:1}
+.cfg-huellero .cfg-copy button{height:42px;padding:0 12px;border-radius:10px;border:1px solid #f6b48f!important;background:#fff3ec!important;color:#b45309!important;font-weight:700;cursor:pointer;font-size:12px}
+.cfg-huellero .cfg-copy button:hover{background:#ffe6d6!important}
+.cfg-huellero .cfg-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.cfg-huellero .cfg-chip{border:1px solid #f6c9a8!important;background:#fff1e8!important;color:#b45309!important;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700}
+.cfg-huellero .cfg-nota{font-size:11px;color:#64748b!important;margin:0 0 14px;line-height:1.5}
+.cfg-huellero .cfg-status{display:flex;gap:10px;align-items:flex-start;border:1px solid #e5e9f0!important;background:#f8fafc!important;border-radius:12px;padding:12px 14px;margin-bottom:6px}
+.cfg-huellero .cfg-dot{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:#f5a524;margin-top:5px;box-shadow:0 0 0 4px rgba(245,165,36,.14)}
+.cfg-huellero .cfg-status.activo .cfg-dot{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.14)}
+.cfg-huellero .cfg-status p{margin:0;font-size:12px;line-height:1.5;color:#334155!important}
+.cfg-huellero .cfg-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 26px 22px;border-top:1px solid #eef1f5!important}
+.cfg-huellero .cfg-foot .btn-dark-outline{background:#fff!important;border:1px solid #cbd5e1!important;color:#334155!important;border-radius:10px;padding:9px 18px;font-weight:700;cursor:pointer}
+.cfg-huellero .cfg-foot .btn-cumbe{background:var(--cfg-naranja)!important;border:0!important;color:#fff!important;border-radius:10px;padding:9px 18px;font-weight:800;cursor:pointer}
+.cfg-huellero .cfg-foot button:disabled{opacity:.6;cursor:default}
+@media(max-width:600px){.cfg-huellero .cfg-grid{grid-template-columns:1fr}.cfg-huellero .cfg-head,.cfg-huellero .cfg-body,.cfg-huellero .cfg-foot{padding-left:18px;padding-right:18px}}
+</style>
+<div class="custom-modal-backdrop" id="modalConfigHuellero" data-estado-url="{% url 'agente_estado_web' %}" data-prueba-url="{% url 'agente_prueba_web' %}">
+    <div class="custom-modal-box cfg-huellero" role="dialog" aria-modal="true" aria-labelledby="configHuelleroTitulo">
+        <div class="cfg-head">
+            <div class="cfg-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a3 3 0 0 1 3 3c0 3-.5 5-1.5 7M12 11a3 3 0 0 0-3 3c0 2 .3 3.5 1 5M8.5 6.5a7 7 0 0 0-2 5c0 4 .5 7 2 9M15.5 6.5a7 7 0 0 1 2 5c0 2-.2 3.5-.7 5M6 4a11 11 0 0 1 12 0"/></svg></div>
+            <div><span class="cfg-eyebrow">HUELLERO · CONFIGURACIÓN</span><h4 class="cfg-title" id="configHuelleroTitulo">Conexión del equipo</h4><p class="cfg-sub">ZKTeco MB360 · agente local en la PC de la sede</p></div>
+        </div>
+        <div class="cfg-body">
+            <p class="cfg-section">DATOS DEL EQUIPO</p>
+            <div class="cfg-grid">
+                <div class="cfg-field"><label>Dirección IP</label><input id="cfgIp" value="{{ info_huellero.config_agente.ip }}" readonly></div>
+                <div class="cfg-field"><label>Puerto TCP/IP</label><input id="cfgPuerto" value="{{ info_huellero.config_agente.puerto }}" readonly></div>
+                <div class="cfg-field"><label>Número de equipo</label><input id="cfgNumero" value="{{ info_huellero.config_agente.numero_equipo }}" readonly></div>
+                <div class="cfg-field"><label>Clave de comunicación</label><input id="cfgClave" value="{{ info_huellero.config_agente.clave_comunicacion }}" readonly></div>
+            </div>
+            <p class="cfg-section">CONFIGURACIÓN DEL AGENTE</p>
+            <div class="cfg-copy"><div><label class="cfg-section" for="cfgAgente">SEDE / AGENTE</label><select id="cfgAgente" class="cfg-select">{% for a in info_huellero.config_agente.agentes %}<option value="{{ a.id }}">{{ a.sede }} · {{ a.ip }}</option>{% endfor %}</select></div></div>
+            <div class="cfg-copy"><div><label class="cfg-section" for="cfgToken">TOKEN</label><input id="cfgToken" value="{{ info_huellero.config_agente.token }}" readonly></div><button type="button" onclick="copiarConfig('cfgToken')">Copiar</button></div>
+            <div class="cfg-copy"><div><label class="cfg-section" for="cfgApi">URL DE LA API</label><input id="cfgApi" value="{{ info_huellero.config_agente.api_url|default:'' }}" readonly></div><button type="button" onclick="copiarConfig('cfgApi')">Copiar</button></div>
+            <p class="cfg-section">VENTANAS DE REFRIGERIO</p>
+            <div class="cfg-chips"><span class="cfg-chip">Mañana · 07:15 – 08:00</span><span class="cfg-chip">Tarde · 18:00 – 18:45</span></div>
+            <p class="cfg-nota">Las marcas fuera de ventana se guardan como observación. No se descuentan automáticamente.</p>
+            <div class="cfg-status {% if info_huellero.estado_agente.conectado %}activo{% endif %}" id="cfgStatus"><span class="cfg-dot"></span><p id="estadoConfigAgente" role="status">{% if info_huellero.estado_agente.fecha %}Equipo {{ info_huellero.estado_agente.modelo|default:'MB360' }} · serie {{ info_huellero.estado_agente.numero_serie|default:'—' }} · último reporte {{ info_huellero.estado_agente.fecha }}{% else %}Sin reporte del agente. Instálelo en la PC de la sede y déjelo ejecutándose.{% endif %}</p></div>
+        </div>
+        <div class="cfg-foot">
+            <button class="btn-dark-outline" type="button" onclick="cerrarConfigHuellero()">Cerrar</button>
+            <button class="btn-cumbe" type="button" id="btnProbarAgente" onclick="probarConexionAgente()">Probar conexión</button>
+        </div>
+    </div>
+</div>
+<script>
+/* Funciones del popup: van con el HTML para no depender de la caché del JS estático. */
+let sondeoPrueba = null;
+function csrfHuellero() {
+    const coincidencia = document.cookie.match(/(^|;)\s*csrftoken=([^;]+)/);
+    return coincidencia ? decodeURIComponent(coincidencia[2]) : '';
+}
+function isoHuellero(fecha) {
+    return [fecha.getFullYear(),
+        String(fecha.getMonth() + 1).padStart(2, '0'),
+        String(fecha.getDate()).padStart(2, '0')].join('-');
+}
+function verHoyHuellero() {
+    const hoy = isoHuellero(new Date());
+    const desde = document.getElementById('fechaDesdeHuellero');
+    const hasta = document.getElementById('fechaHastaHuellero');
+    if (desde) desde.value = hoy;
+    if (hasta) hasta.value = hoy;
+    actualizarRegistrosHuellero();
+}
+function verMesHuellero() {
+    const ahora = new Date();
+    const desde = document.getElementById('fechaDesdeHuellero');
+    const hasta = document.getElementById('fechaHastaHuellero');
+    if (desde) desde.value = isoHuellero(new Date(ahora.getFullYear(), ahora.getMonth(), 1));
+    if (hasta) hasta.value = isoHuellero(new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0));
+    actualizarRegistrosHuellero();
+}
+function abrirConfigHuellero() {
+    const modal = document.getElementById('modalConfigHuellero');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    cargarEstadoAgente();
+}
+function cerrarConfigHuellero() {
+    const modal = document.getElementById('modalConfigHuellero');
+    if (modal) modal.style.display = 'none';
+    clearTimeout(sondeoPrueba);
+    const boton = document.getElementById('btnProbarAgente');
+    if (boton) { boton.disabled = false; boton.textContent = 'Probar conexión'; }
+}
+function copiarConfig(id) {
+    const campo = document.getElementById(id);
+    if (!campo) return;
+    navigator.clipboard.writeText(campo.value).then(() => {
+        const boton = campo.closest('.cfg-copy').querySelector('button');
+        const anterior = boton.textContent;
+        boton.textContent = 'Copiado ✓';
+        setTimeout(() => { boton.textContent = anterior; }, 1500);
+    });
+}
+function agenteElegido() {
+    return document.getElementById('cfgAgente')?.value || '';
+}
+function describirAgente(datos, agenteId) {
+    const estado = (datos.estados && datos.estados[agenteId]) || datos.estado || {};
+    const texto = document.getElementById('estadoConfigAgente');
+    const caja = document.getElementById('cfgStatus');
+    if (caja) caja.classList.toggle('activo', !!estado.conectado);
+    if (!texto) return;
+    if (!estado.fecha) {
+        texto.textContent = 'Sin reporte de esta sede. Instale el agente en su PC y déjelo ejecutándose.';
+        return;
+    }
+    texto.textContent = (estado.conectado ? 'Conectado' : 'Sin conexión con el equipo') +
+        ' · ' + (estado.modelo || 'MB360') + ' · serie ' + (estado.numero_serie || '—') +
+        ' · ' + (estado.total_registros || 0) + ' registros' +
+        ' · último reporte: ' + estado.fecha + '. ' + (estado.mensaje || '');
+}
+async function cargarEstadoAgente() {
+    const texto = document.getElementById('estadoConfigAgente');
+    try {
+        const res = await fetch('{% url "agente_estado_web" %}', {cache: 'no-store'});
+        if (!res.ok) throw new Error('No se pudo consultar el estado del agente.');
+        describirAgente(await res.json(), agenteElegido());
+    } catch (fallo) {
+        if (texto) texto.textContent = fallo.message;
+    }
+}
+async function probarConexionAgente() {
+    const boton = document.getElementById('btnProbarAgente');
+    if (!boton) return;
+    boton.disabled = true;
+    boton.textContent = 'Solicitud enviada…';
+    clearTimeout(sondeoPrueba);
+    try {
+        const res = await fetch('{% url "agente_prueba_web" %}', {
+            method: 'POST', headers: {'X-CSRFToken': csrfHuellero()},
+            body: new URLSearchParams({agente_id: agenteElegido()})
+        });
+        if (!res.ok) throw new Error('No se pudo enviar la prueba al agente.');
+        let intentos = 0;
+        const sondear = async () => {
+            const estado = await fetch('{% url "agente_estado_web" %}', {cache: 'no-store'});
+            const datos = await estado.json();
+            describirAgente(datos, agenteElegido());
+            if (!datos.comandos_pendientes?.[agenteElegido()] && datos.estados?.[agenteElegido()]?.fecha) {
+                boton.disabled = false;
+                boton.textContent = 'Probar conexión';
+                return;
+            }
+            if (++intentos < 40) sondeoPrueba = setTimeout(sondear, 2000);
+            else { boton.disabled = false; boton.textContent = 'Probar conexión'; }
+        };
+        sondeoPrueba = setTimeout(sondear, 2000);
+    } catch (fallo) {
+        const texto = document.getElementById('estadoConfigAgente');
+        if (texto) texto.textContent = fallo.message;
+        boton.disabled = false;
+        boton.textContent = 'Probar conexión';
+    }
+}
+document.getElementById('cfgAgente')?.addEventListener('change', cargarEstadoAgente);
+</script>
+{% endif %}

@@ -103,16 +103,23 @@ class Solicitud(models.Model):
 
 
 class Operacion(models.Model):
+    distribucion_asientos = models.JSONField(default=dict, blank=True)
     salida = models.OneToOneField('conductores.Salida', on_delete=models.PROTECT)
     estado = models.CharField(max_length=15, default='PROGRAMADO')
     embarcadores = models.ManyToManyField(Perfil, blank=True)
     permite_embarque_conductor = models.BooleanField(default=False)
     salida_real = models.DateTimeField(null=True, blank=True)
     llegada_real = models.DateTimeField(null=True, blank=True)
+    confirmado_por = models.ManyToManyField(Perfil, blank=True,
+        related_name='viajes_confirmados',
+        help_text='Conductores que confirmaron la salida del viaje.')
     conduciendo = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.PROTECT, related_name='+')
     relevo_pendiente = models.ForeignKey(Perfil, null=True, blank=True, on_delete=models.PROTECT, related_name='+')
     cambio_manual = models.BooleanField(default=False)
     fin_previsto = models.DateTimeField(null=True, blank=True)
+    llegadas_confirmadas = models.ManyToManyField(Perfil, blank=True,
+        related_name='llegadas_confirmadas',
+        help_text='Conductores que confirmaron su llegada.')
 
 
 class EventoViaje(models.Model):
@@ -136,7 +143,16 @@ class ReglaDescanso(models.Model):
     horas = models.PositiveIntegerField(default=8)
 
 
+class AutorizacionInicialDescanso(models.Model):
+    """Habilita el primer viaje sin historial, con decisión expresa de Control."""
+    perfil = models.OneToOneField(Perfil, on_delete=models.PROTECT)
+    autorizado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    autorizado_el = models.DateTimeField(default=timezone.now)
+    motivo = models.TextField()
+
+
 class Pasajero(models.Model):
+    punto_desembarque = models.CharField(max_length=150, blank=True, default='')
     operacion = models.ForeignKey(Operacion, on_delete=models.PROTECT, related_name='pasajeros')
     referencia = models.CharField(max_length=100)
     nombre = models.CharField(max_length=180)

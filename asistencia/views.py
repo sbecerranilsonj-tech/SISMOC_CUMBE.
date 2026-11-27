@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Min, Max
+from django.db.models import Q, Min, Max, Count
 from django.http import HttpResponse, HttpResponseForbidden
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -106,6 +106,15 @@ def contexto_asistencia(request):
         return contexto_detalle_rapido(request)
     filtros, qs = reporte_filtrado(request)
     resumenes = list(qs)
+    from copy import copy
+    consulta_resumen = copy(request)
+    consulta_resumen.GET = request.GET.copy()
+    consulta_resumen.GET.pop('revision', None)
+    _, base_resumen = reporte_filtrado(consulta_resumen)
+    conteos_resumen = {s: 0 for s in ('APROBADO', 'PENDIENTE', 'OBSERVADO')}
+    for estado in base_resumen.order_by().values('verificado_contabilidad', 'estado_revision').annotate(cantidad=Count('pk')):
+        clave = 'APROBADO' if estado['verificado_contabilidad'] else ('OBSERVADO' if estado['estado_revision'] == 'OBSERVADO' else 'PENDIENTE')
+        conteos_resumen[clave] += estado['cantidad']
     conteos = {s: 0 for s in ("APROBADO", "PENDIENTE", "OBSERVADO")}
     for r in resumenes:
         r.revision_visible = estado_revision(r)
@@ -277,6 +286,8 @@ def contexto_asistencia(request):
     dashboard_contable = resumen_dashboard(detalles_dashboard, filtros, cierres_periodo) if puede_gestionar(request.user) and request.GET.get('vista', 'dashboard') == 'dashboard' else None
     return {
         "dashboard_contable": dashboard_contable,
+        "conteos_resumen": conteos_resumen, "total_resumen": sum(conteos_resumen.values()),
+        "mostrar_jornadas": request.GET.get("listado") == "jornadas",
         "total_tiempo_faltante": total_tiempo_faltante,
         "filtros": filtros, "pagina_asistencia": pagina, "consulta_asistencia": urlencode(query),
         "detalle_jornada": detalle, "consolidado": grupos, "conteos_revision": conteos,
@@ -602,26 +613,16 @@ def exportar_asistencia(request):
     f, qs = reporte_filtrado(request)
     if f["error"]:
         return HttpResponse(f["error"], status=400)
-    response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = f'attachment; filename="asistencia_{f["desde"]}_{f["hasta"]}.csv"'
-    response.write("\ufeff")
-    writer = csv.writer(response, delimiter=";")
-    writer.writerow(["Desde", "Hasta", "Código", "Trabajador", "Sede", "Jornadas", "Horas efectivas", "Extras 25 %", "Extras 35 %", "Nocturnas", "Descanso/feriado", "Tiempo faltante (HH:MM:SS)", "Aprobadas", "Pendientes"])
     resumenes = list(qs)
     filas = consolidar(resumenes)
     from asistencia.services.revision_trabajador import detalles_en_lote
     from asistencia.services.tiempo_faltante import agregar_tiempo_faltante
-    agregar_tiempo_faltante(filas, detalles_en_lote(resumenes))
-    for fila in filas:
-        u = fila["usuario"]
-        def seguro(value):
-            text = str(value)
-            return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
-        codigo = getattr(u, "codigo", "")
-        if not codigo:
-            codigos = IdentidadBiometrica.objects.filter(Q(usuario_id=u.pk) | Q(trabajador__usuario_id=u.pk)).values_list("codigo", flat=True)
-            codigo = " / ".join(sorted(set(codigos))) or "Sin código importado"
-        writer.writerow([f["desde"], f["hasta"], seguro(codigo), seguro(u.nombre_completo), seguro(u.agencia_sede), fila["jornadas"], *[f"{fila[k]:.2f}" for k in ("horas_trabajadas", "horas_extras_25", "horas_extras_35", "horas_nocturnas", "descanso_feriado")], fila["tiempo_faltante"], fila["aprobadas"], fila["pendientes"]])
+    from asistencia.exportacion import libro_asistencia
+    detalles = detalles_en_lote(resumenes)
+    agregar_tiempo_faltante(filas, detalles)
+    response = HttpResponse(libro_asistencia(f, filas, resumenes, detalles),
+                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="asistencia_{f["desde"]}_{f["hasta"]}.xlsx"'
     return response
 
 
@@ -698,10 +699,16 @@ def consultar_huellero(request):
     return JsonResponse(ZKTecoLiveClient().sincronizar_marcaciones_en_vivo())
 
 
-def datos_registros_huellero(usuario):
+def datos_registros_huellero(usuario, desde=None, hasta=None):
     """Eventos recibidos del biométrico; la marca web no se presenta como huella."""
+    hoy = timezone.localdate()
+    desde = desde or hoy
+    hasta = hasta or desde
+    if desde > hasta:
+        desde, hasta = hasta, desde
     qs = MarcacionBiometrica.objects.filter(
-        fecha_hora__date=timezone.localdate(), es_valida=True,
+        fecha_hora__date__gte=desde, fecha_hora__date__lte=hasta,
+        es_valida=True,
         origen=MarcacionBiometrica.OrigenMarcacion.ZKTECO_EN_LINEA,
     ).select_related("usuario", "correccion_evento").order_by("-fecha_hora", "-pk")
     if not puede_gestionar(usuario):
@@ -716,17 +723,27 @@ def datos_registros_huellero(usuario):
             "nombre": m.usuario.nombre_corto if m.usuario else (m.identidad_biometrica.nombre_corto if m.identidad_biometrica_id else m.nombre_empleado) or "Por identificar",
             "fecha_hora": timezone.localtime(m.fecha_hora).strftime("%d/%m/%Y %H:%M:%S"),
             "evento": dict(MarcacionBiometrica.TipoEvento.choices).get(tipo, tipo),
-            "sede": m.usuario.agencia_sede if m.usuario else "Por identificar",
+            "sede": m.sede or (m.usuario.agencia_sede if m.usuario else "Por identificar"),
             "equipo": m.dispositivo_ip or "Sin equipo registrado",
             "id_biometrico": str(m.zkteco_user_id) if m.zkteco_user_id is not None else "—",
         })
-    return {"registros": eventos, "total": total, "limite": 100, "actualizado": timezone.localtime().strftime("%d/%m/%Y %H:%M:%S")}
+    return {"registros": eventos, "total": total, "limite": 100,
+            "desde": str(desde), "hasta": str(hasta),
+            "es_hoy": desde == hoy == hasta,
+            "actualizado": timezone.localtime().strftime("%d/%m/%Y %H:%M:%S")}
 
 
 @login_required
 @require_GET
 def registros_huellero(request):
-    response = JsonResponse(datos_registros_huellero(request.user))
+    from datetime import date
+    def fecha_parametro(clave):
+        try:
+            return date.fromisoformat(request.GET.get(clave, ''))
+        except ValueError:
+            return None
+    response = JsonResponse(datos_registros_huellero(
+        request.user, fecha_parametro('desde'), fecha_parametro('hasta')))
     response["Cache-Control"] = "no-store"
     return response
 

@@ -42,7 +42,7 @@ def sugerencias_personas(request):
     perfiles={p.conductor_id:p for p in Perfil.objects.filter(conductor__isnull=False).select_related('usuario')}
     resultados=[]
     def agregar(tipo,pk,nombre,area,sede='',dni='',requiere=False):
-        texto=normalizar(' '.join([nombre,area,sede,dni]))
+        texto=normalizar(' '.join(str(valor or '') for valor in (nombre,area,sede,dni)))
         if all(token in texto for token in tokens):
             resultados.append({'id':f'{tipo}:{pk}','nombre':nombre,'tipo':'Conductor' if tipo=='conductor' else 'Trabajador',
                 'area':area,'sede':sede,'requiere_identidad':requiere,'funcion_app':funcion_por_area(area,tipo=='conductor')})

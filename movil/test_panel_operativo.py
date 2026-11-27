@@ -25,6 +25,37 @@ class PanelOperativoTests(TestCase):
         self.client.force_login(u)
         return u,p
 
+    def test_panel_muestra_comisiones_registradas(self):
+        gestor, perfil = self.gestor()
+        Comision.objects.create(
+            perfil=perfil, motivo='Visita a otra sede',
+            desde=timezone.now() - timedelta(days=1),
+            hasta=timezone.now() + timedelta(days=1),
+            autorizada_por=gestor)
+        respuesta = self.client.get('/movil/')
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, 'Comisiones registradas')
+        self.assertContains(respuesta, 'Visita a otra sede')
+
+    def test_comision_por_fecha_cubre_el_dia_completo(self):
+        from datetime import date
+        _, perfil = self.gestor()
+        dia = date.today()
+        respuesta = self.client.post('/movil/', {
+            'accion': 'comision', 'perfil': str(perfil.pk),
+            'desde': str(dia), 'hasta': str(dia),
+            'motivo': 'Visita a otra sede',
+        }, follow=True)
+        self.assertEqual(respuesta.status_code, 200)
+        zona = timezone.get_current_timezone()
+        comision = Comision.objects.get()
+        self.assertEqual(comision.desde.astimezone(zona).date(), dia)
+        self.assertEqual(comision.desde.astimezone(zona).hour, 0)
+        self.assertEqual(comision.hasta.astimezone(zona).date(), dia)
+        self.assertEqual(comision.hasta.astimezone(zona).hour, 23)
+        self.assertEqual(comision.hasta.astimezone(zona).minute, 59)
+        self.assertContains(respuesta, 'type="date" name="desde"')
+
     def test_comision_sin_gps_no_requiere_excepcion_facial(self):
         self.personal()
         self.p.requiere_rostro=True;self.p.save()
@@ -49,6 +80,39 @@ class PanelOperativoTests(TestCase):
         self.assertEqual(self.post('marcar',self.mark()).status_code,422)
         Zona.objects.update(area='mecanica')
         self.assertEqual(self.post('marcar',self.mark()).status_code,200)
+
+    def test_panel_agrupa_zonas_por_sede_area_y_asignacion(self):
+        self.personal('MECANICA')
+        self.gestor()
+        z=Zona.objects.get()
+        z.area='mecanica';z.save()
+        response=self.client.get('/movil/')
+        self.assertEqual([p.pk for p in response.context['zonas'][0].personas],[self.p.pk])
+        self.assertContains(response,'data-zone-open=')
+        self.assertNotContains(response,'name="dni_conductor"')
+        z.area='VENTAS';z.save()
+        self.assertFalse(self.client.get('/movil/').context['zonas'][0].personas)
+
+        z.perfiles.add(self.p)
+        self.assertEqual(len(self.client.get('/movil/').context['zonas'][0].personas),1)
+        z.activa=False;z.save()
+        self.assertEqual(len(self.client.get('/movil/').context['zonas'][0].personas),1)
+        self.p.activo=False;self.p.save()
+        self.assertFalse(self.client.get('/movil/').context['zonas'][0].personas)
+
+    def test_ventas_y_flota_en_panel_boleteria_no_contadora(self):
+        usuario,_=self.gestor()
+        response=self.client.get('/?vista=asistencia')
+        self.assertNotContains(response,'Programación y embarque')
+        self.assertNotContains(response,'id="view-flota"')
+        self.assertEqual(self.client.get('/movil/ventas/').status_code,403)
+        usuario.rol='BOLETERIA';usuario.save(update_fields=['rol'])
+        response=self.client.get('/')
+        self.assertRedirects(response,'/movil/ventas/',fetch_redirect_response=False)
+        response=self.client.get('/movil/ventas/')
+        self.assertContains(response,'Programación y embarque')
+        self.assertContains(response,'/movil/buses/')
+        self.assertRedirects(self.client.get('/?vista=flota'),'/movil/buses/',fetch_redirect_response=False)
 
     def test_permiso_aprobado_registra_situacion_y_bloquea_asistencia(self):
         self.personal()
@@ -90,16 +154,17 @@ class PanelOperativoTests(TestCase):
         self.assertEqual(len(pagos),1)
         self.assertEqual(pagos[0]['monto'],'150.50')
 
-    def test_area_ventas_asigna_funcion_sin_selector(self):
+    def test_consulta_no_cambia_funcion_por_area(self):
         self.personal('AUXILIAR DE VENTAS')
-        self.assertEqual(self.post('inicio').json()['perfil']['rol'],'BOLETERIA')
-        self.user.refresh_from_db();self.assertEqual(self.user.rol,'BOLETERIA')
+        rol=self.user.rol
+        self.assertEqual(self.post('inicio').json()['perfil']['rol'],rol)
+        self.user.refresh_from_db();self.assertEqual(self.user.rol,rol)
 
-    def test_habilitacion_prioriza_area_sobre_funcion_manual(self):
+    def test_habilitacion_respeta_funcion_manual(self):
         self.gestor()
         t=Trabajador.objects.create(nombre_completo='VENTAS PRUEBA',dni='33333333',area='AUXILIAR DE VENTAS',sede='CHICLAYO')
         self.client.post('/movil/',{'accion':'habilitar','persona':f'trabajador:{t.pk}','funcion_app':'ADMINISTRATIVO'})
-        t.refresh_from_db();self.assertEqual(t.usuario.rol,'BOLETERIA')
+        t.refresh_from_db();self.assertEqual(t.usuario.rol,'ADMINISTRATIVO')
 
     def test_pago_no_se_duplica_al_reenviar_formulario(self):
         self.personal();self.gestor()

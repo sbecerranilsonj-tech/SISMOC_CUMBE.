@@ -1,8 +1,8 @@
 {% load static %}
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Programar horarios · SISMOC</title><link rel="stylesheet" href="{% static 'app.css' %}"><link rel="stylesheet" href="{% static 'horarios.css' %}?v=20261105-dialogs">{% include '_theme_head.html' %}</head>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Programar horarios · SISMOC</title><link rel="stylesheet" href="{% static 'app.css' %}"><link rel="stylesheet" href="{% static 'horarios.css' %}?v=20261105-dialogs">{% include '_theme_head.html' %}<link rel="stylesheet" href="{% static 'alineacion.css' %}?v=20261115-1"><link rel="stylesheet" href="{% static 'buscador_inteligente.css' %}?v=20261127-1"></head>
 <body class="schedule-page"><main>
     <header class="schedule-heading"><div><a class="schedule-back" href="{% url 'dashboard' %}?vista=personal&amp;desde={{ desde|date:'Y-m-d' }}&amp;hasta={{ hasta|date:'Y-m-d' }}">← Volver a Personal y jornadas</a><h1>Programar horarios</h1><p>Asigna el turno que corresponde a cada fecha.</p></div>{% include '_theme_toggle.html' %}<span class="schedule-brand">EL CUMBE <small>SISMOC</small></span></header>
-    {% for message in messages %}<p class="schedule-notice" role="status">{{ message }}</p>{% endfor %}
+    
     <div class="schedule-layout schedule-layout--saved">
         <section class="schedule-list" aria-labelledby="programacion-guardada"><div class="schedule-saved-heading"><h2 id="programacion-guardada">Programación guardada</h2><div class="schedule-saved-actions"><button type="button" class="schedule-primary" data-open-schedule="asignar-horario-dialog" aria-haspopup="dialog">Asignar horario</button><button type="button" class="schedule-secondary" data-open-schedule="registrar-horario-dialog" aria-haspopup="dialog">Registrar horario</button><button type="button" class="schedule-secondary" data-open-schedule="catalogo-horarios-dialog" aria-haspopup="dialog">Horarios disponibles</button></div></div>
             <form method="get" class="schedule-worker-search">
@@ -30,4 +30,5 @@
     </dialog>
 <dialog id="registrar-horario-dialog" class="schedule-editor schedule-dialog schedule-catalog-dialog" aria-labelledby="titulo-registrar-horario" {% if mostrar_catalogo %}data-auto-open{% endif %}><header class="schedule-dialog-heading"><h2 id="titulo-registrar-horario">Registrar horario</h2><button type="button" class="schedule-secondary" data-close-schedule>Cerrar</button></header><form method="post" class="schedule-new">{% csrf_token %}<input type="hidden" name="accion" value="crear_turno">{{ catalogo.non_field_errors }}{% for field in catalogo %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<button class="schedule-primary">Registrar horario</button></form></dialog>
 <script src="{% static 'horarios_dialogs.js' %}?v=20261105" defer></script>
+<script src="{% static 'buscador_inteligente.js' %}?v=20261127-1" defer></script>
 </main></body></html>

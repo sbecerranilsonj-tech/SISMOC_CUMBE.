@@ -1,6 +1,7 @@
 {% extends 'conductores/base.html' %}
 {% block titulo %}Importar itinerarios{% endblock %}
 {% block descripcion %}Consulta las salidas importadas por mes, revisa sus datos y confirma el reporte para pasarlo a control.{% endblock %}
+{% block acciones_cabecera %}<button type="button" class="cd-button cd-secondary" data-abrir-reportes aria-haspopup="dialog" aria-controls="reportes-itinerarios-dialog">Reportes cargados y confirmación</button>{% endblock %}
 {% block contenido %}
 {% if form.errors %}<div class="cd-notice cd-warning" role="alert">{{ form.errors }}</div>{% endif %}
 {% include 'conductores/registro_mensual.html' %}

@@ -16,4 +16,16 @@
 
 .personal-dialog .personal-history-description{margin:8px 0;font-size:13px;line-height:1.55;overflow-wrap:anywhere;white-space:normal}
 
+/* Evitar fondos claros con letras claras en el directorio nocturno. */
+html[data-theme="dark"] .personal-workspace table thead th {
+    background: var(--night-raised, #202d3b) !important;
+    color: var(--night-text, #e4ebf3) !important;
+    border-color: var(--night-line, #344458);
+}
+html[data-theme="dark"] .personal-workspace .personal-status:not(.personal-status--on) {
+    background: #293747 !important;
+    color: #d9e3ee !important;
+    border: 1px solid #53657a;
+}
+
 .rules-popup{width:min(1320px,calc(100vw - 40px));max-width:1320px;height:min(840px,90dvh);padding:0;margin:auto;border:1px solid var(--border-color,#dce3ed);border-radius:18px;background:var(--bg-card,#fff);color:var(--text-main,#223047);overflow:hidden;box-shadow:0 24px 64px #0004}.rules-popup:not([open]){display:none}.rules-popup::backdrop{background:#07101799}.rules-popup>header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 24px;border-bottom:1px solid var(--border-color,#dce3ed)}.rules-popup h2{margin:0;font-size:22px}.rules-popup iframe{display:block;border:0;width:100%;height:calc(100% - 88px)}body:has(.rules-popup[open]){overflow:hidden}@media(max-width:640px){.rules-popup{width:calc(100vw - 16px);height:94dvh}.rules-popup>header{padding:16px}}
