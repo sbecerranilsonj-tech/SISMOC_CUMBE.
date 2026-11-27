@@ -5,7 +5,7 @@ from django.db import transaction
 from asistencia.models import MarcacionBiometrica, RevisionAsistencia
 from asistencia.services.revision import comprobar_abierto, dejar_pendiente, detalle_jornada, puede_gestionar, registrar_historial
 
-VENTANA_SEGUNDOS = 10  # Solo aviso de proximidad, nunca una decisión automática.
+VENTANA_SEGUNDOS = 60  # Solo aviso de proximidad, nunca una decisión automática.
 EXCLUIR = 'Marcación excluida por duplicada'
 RESTAURAR = 'Marcación duplicada restaurada'
 
@@ -44,7 +44,7 @@ def revisar_duplicada(resumen, actor, marcacion_id, restaurar=False):
     else:
         companera = pares_cercanos(marcas).get(marca.pk)
         if not marca.es_valida or not companera:
-            raise ValidationError('No hay otra marca válida a 10 segundos o menos en esta jornada. Actualice la ventana y revise las marcas.')
+            raise ValidationError('No hay otra marca válida a 60 segundos o menos en esta jornada. Actualice la ventana y revise las marcas.')
         # Bloquear también la compañera evita excluir ambas por revisiones simultáneas.
         conservada = MarcacionBiometrica.objects.select_for_update().get(pk=companera)
         if not conservada.es_valida:

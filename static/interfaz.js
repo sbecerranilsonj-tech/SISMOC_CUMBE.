@@ -20,7 +20,7 @@
         const opening = !document.body.classList.contains('sidebar-open');
         document.body.classList.toggle('sidebar-open', opening);
         sync();
-        if (opening) sidebar.querySelector('.menu-link')?.focus();
+        if (opening) (sidebar.querySelector('.menu-link.active') || sidebar.querySelector('.menu-link'))?.focus({preventScroll: true});
     });
     scrim.addEventListener('click', () => close(true));
     document.addEventListener('keydown', event => {
@@ -36,6 +36,39 @@
     sidebar.querySelectorAll('button.menu-link').forEach(button => button.addEventListener('click', () => close(compact.matches)));
     compact.addEventListener('change', () => close());
     sync();
+})();
+
+// Centrar la opción actual; Aplicativo solo necesita quedar visible.
+(() => {
+    const menu = document.querySelector('#navegacion-principal .menu-list');
+    if (!menu) return;
+    let pendiente = false;
+    const centrar = () => {
+        if (pendiente) return;
+        pendiente = true;
+        requestAnimationFrame(() => {
+            pendiente = false;
+            const activo = menu.querySelector('.menu-link.active');
+            if (!activo || !menu.clientHeight) return;
+            const caja = menu.getBoundingClientRect();
+            const opcion = activo.getBoundingClientRect();
+            const arriba = caja.top + menu.clientTop;
+            const abajo = arriba + menu.clientHeight;
+            const esAplicativo = activo.textContent.trim() === 'Aplicativo de trabajadores';
+            if (!esAplicativo) {
+                menu.scrollTop += opcion.top - arriba - (menu.clientHeight - opcion.height) / 2;
+            } else if (opcion.top < arriba) menu.scrollTop += opcion.top - arriba;
+            else if (opcion.bottom > abajo) menu.scrollTop += opcion.bottom - abajo;
+        });
+    };
+    new MutationObserver(centrar).observe(menu, {
+        subtree: true, attributes: true, attributeFilter: ['class', 'aria-current']
+    });
+    window.addEventListener('load', centrar);
+    window.addEventListener('resize', centrar);
+    document.getElementById('abrir-navegacion')?.addEventListener('click', centrar);
+    document.getElementById('contraer-navegacion')?.addEventListener('click', centrar);
+    centrar();
 })();
 
 // Preferencias visuales locales: no alteran filtros, cálculos ni aprobaciones.
@@ -63,7 +96,7 @@
         document.body.classList.toggle('compact-tables', compact);
         density?.setAttribute('aria-pressed', String(compact));
     };
-    syncDensity(read('sismoc.compactTables') === 'true');
+    syncDensity(true);
     density?.addEventListener('click', () => {
         const compact = !document.body.classList.contains('compact-tables');
         syncDensity(compact);
@@ -92,11 +125,4 @@
     });
 })();
 
-// Solo el saludo de inicio de sesión caduca; los demás avisos siguen visibles.
-document.querySelectorAll('.app-alert[data-auto-dismiss]').forEach(alert => {
-    window.setTimeout(() => {
-        const container = alert.parentElement;
-        alert.remove();
-        if (container && !container.children.length) container.remove();
-    }, Number(alert.dataset.autoDismiss));
-});
+document.querySelectorAll('[data-auto-dismiss]').forEach(alert => { window.setTimeout(() => { alert.remove(); }, 5000); });

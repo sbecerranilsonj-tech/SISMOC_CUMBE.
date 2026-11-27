@@ -7,6 +7,17 @@ from asistencia.models import Trabajador, IdentidadBiometrica, MarcacionBiometri
 
 
 class FichasTrabajadorTests(TestCase):
+    def test_editar_seleccionado_no_confirma_vinculo(self):
+        ficha = Trabajador.objects.create(**self.datos, sede='CAJAMARCA')
+        resultado = self.client.get(reverse('buscar_trabajadores'), {'q':'Jorge'}).json()['resultados'][0]
+        self.assertEqual(resultado['url_editar'], reverse('editar_ficha_trabajador', args=[ficha.pk]))
+        respuesta = self.client.post(resultado['url_editar'], {**self.datos, 'nombre_completo':'Jorge Aguilar Ramos'})
+        self.assertEqual(respuesta.status_code, 200)
+        ficha.refresh_from_db()
+        self.identidad.refresh_from_db()
+        self.assertEqual(ficha.nombre_completo, 'Jorge Aguilar Ramos')
+        self.assertIsNone(self.identidad.trabajador_id)
+
     def setUp(self):
         self.admin = Usuario.objects.create_user('gestor_fichas', email='gestor@example.invalid', dni='12345678', rol='CONTADORA', first_name='Ana', last_name='Pérez')
         self.identidad = IdentidadBiometrica.objects.create(sede='CAJAMARCA', equipo='1', codigo='13', nombre='PASAPERA')

@@ -28,6 +28,26 @@
 .worker-review-approval input{width:16px;height:16px;accent-color:#bd4d14;flex-shrink:0}
 .worker-review-approval .btn-cumbe{font-size:12px;min-height:38px}
 .worker-review-idle{font-size:12px;color:#63758e}
+.worker-marks-disclosure{margin-top:22px;border-top:1px solid #e2e8f0}
+.worker-marks-disclosure>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;cursor:pointer;list-style:none;color:#243650;font-size:18px;font-weight:700}
+.worker-marks-disclosure>summary::-webkit-details-marker{display:none}
+.worker-marks-disclosure>summary .ui-icon{width:18px;height:18px;flex-shrink:0;color:#64748b;transition:transform .18s ease-out}
+.worker-marks-disclosure[open]>summary .ui-icon{transform:rotate(90deg)}
+.worker-marks-disclosure>summary:focus-visible{outline:2px solid #bd4d14;outline-offset:3px;border-radius:6px}
+html[data-theme=dark] .worker-marks-disclosure{border-color:var(--night-line)}
+html[data-theme=dark] .worker-marks-disclosure>summary{color:var(--night-text)}
+html[data-theme=dark] .worker-marks-disclosure>summary .ui-icon{color:var(--night-muted)}
+@media(prefers-reduced-motion:reduce){.worker-marks-disclosure>summary .ui-icon{transition:none}}
+.day-permission-note{margin-top:10px;max-width:360px;white-space:normal}
+.day-permission-note>summary{cursor:pointer;font-size:12px;font-weight:600;color:#a34010;padding:5px 0;width:fit-content}
+.day-permission-note>summary:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:3px}
+.day-permission-content{margin-top:6px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;overflow-wrap:anywhere}
+.day-permission-content p{margin:0;font-size:13px;line-height:1.6;color:#243650}
+.day-permission-content small{display:block;margin-top:8px;font-size:11px;line-height:1.5;color:#52647c}
+html[data-theme=dark] .day-permission-note>summary{color:#ffba8a}
+html[data-theme=dark] .day-permission-content{background:var(--night-field);border-color:var(--night-line)}
+html[data-theme=dark] .day-permission-content p{color:var(--night-text)}
+html[data-theme=dark] .day-permission-content small{color:var(--night-muted)}
 .worker-review-complete{display:inline-flex;align-items:center;gap:8px;color:#187455;font-weight:650}
 .worker-review-complete .ui-icon{width:18px;height:18px}
 .worker-nav-group{display:inline-flex;align-items:center;gap:5px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:3px 5px}

@@ -5,6 +5,8 @@
 
 from typing import List, Optional
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from ninja import Router
 from ninja.errors import HttpError
@@ -20,6 +22,7 @@ from core.schemas import (
     MensajeSchema,
 )
 from core.security import create_access_token, auth_any, auth_admin_only, auth_contadora_or_admin
+from core.seguridad_login import esta_bloqueado, registrar_intento
 
 router = Router()
 
@@ -33,6 +36,9 @@ def login(request, data: LoginSchema):
     """
     identificador = data.username_or_dni.strip()
     password = data.password
+    ip = getattr(request, 'META', {}).get('REMOTE_ADDR', '') if request else ''
+    if esta_bloqueado(identificador, ip):
+        raise HttpError(429, "Demasiados intentos fallidos. Intente en unos minutos.")
 
     # Buscar usuario por username o por DNI
     try:
@@ -40,15 +46,18 @@ def login(request, data: LoginSchema):
             Q(username__iexact=identificador) | Q(dni=identificador)
         )
     except Usuario.DoesNotExist:
-        raise HttpError(401, "Credenciales incorrectas: Usuario o DNI no encontrado")
+        registrar_intento(identificador, ip, correcto=False)
+        raise HttpError(401, "Credenciales incorrectas")
 
     # Autenticar contraseña
     if not user_obj.check_password(password):
-        raise HttpError(401, "Credenciales incorrectas: Contraseña no válida")
+        registrar_intento(identificador, ip, correcto=False)
+        raise HttpError(401, "Credenciales incorrectas")
 
     if not user_obj.is_active or not user_obj.esta_activo:
         raise HttpError(403, "Su cuenta de colaborador se encuentra inactiva. Contacte al Administrador.")
 
+    registrar_intento(identificador, ip, correcto=True)
     # Generar token JWT
     token = create_access_token(user_obj)
 
@@ -71,6 +80,10 @@ def cambiar_password(request, data: CambiarPasswordSchema):
     user = request.auth
     if not user.check_password(data.old_password):
         raise HttpError(400, "La contraseña actual no es correcta")
+    try:
+        validate_password(data.new_password, user)
+    except ValidationError as problemas:
+        raise HttpError(400, ' '.join(problemas.messages))
 
     user.set_password(data.new_password)
     user.save()
@@ -163,13 +176,17 @@ def listar_usuarios(
 def crear_usuario(request, data: UsuarioCreateSchema):
     """Registra un nuevo colaborador en la plataforma (Solo Administrador / Gerente)."""
     if Usuario.objects.filter(username__iexact=data.username).exists():
-        raise HttpError(400, f"El nombre de usuario '{data.username}' ya se encuentra en uso.")
+        raise HttpError(400, "El nombre de usuario ya se encuentra en uso.")
 
     if Usuario.objects.filter(dni=data.dni).exists():
-        raise HttpError(400, f"El DNI '{data.dni}' ya se encuentra registrado.")
+        raise HttpError(400, "El DNI ya se encuentra registrado.")
 
     if data.zkteco_user_id and Usuario.objects.filter(zkteco_user_id=data.zkteco_user_id).exists():
-        raise HttpError(400, f"El ID de biométrico ZKTeco '{data.zkteco_user_id}' ya pertenece a otro trabajador.")
+        raise HttpError(400, "El ID biométrico ya pertenece a otro trabajador.")
+    try:
+        validate_password(data.password, Usuario(username=data.username, email=data.email))
+    except ValidationError as problemas:
+        raise HttpError(400, ' '.join(problemas.messages))
 
     nuevo_usuario = Usuario.objects.create_user(
         username=data.username,

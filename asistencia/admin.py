@@ -4,6 +4,7 @@
 # ==============================================================================
 
 from django.contrib import admin
+from asistencia.forms import TrabajadorForm
 from asistencia.models import (
     TurnoHorario,
     MarcacionBiometrica,
@@ -16,9 +17,10 @@ from asistencia.models import (
 
 @admin.register(Trabajador)
 class TrabajadorAdmin(admin.ModelAdmin):
-    list_display = ("codigo", "nombre_completo", "dni", "area", "sede")
+    form = TrabajadorForm
+    list_display = ("codigo", "nombre_corto", "dni", "area", "sede")
     search_fields = ("identidades__codigo", "nombre_completo", "dni", "area")
-    readonly_fields = ("codigo", "creado_el")
+    readonly_fields = ("codigo", "creado_el", "nombre_completo")
 
 
 @admin.register(IdentidadBiometrica)

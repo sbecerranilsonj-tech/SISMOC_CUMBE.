@@ -1,0 +1,39 @@
+.reportes-itinerarios-dialog {
+    width: min(1120px, calc(100vw - 32px));
+    max-width: 1120px;
+    max-height: 88dvh;
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--border-color, #dce3ed);
+    border-radius: 20px;
+    background: var(--bg-card, #fff);
+    color: var(--text-main, #182638);
+    box-shadow: 0 24px 64px #0004;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+.reportes-itinerarios-dialog:not([open]) { display: none; }
+.reportes-itinerarios-dialog::backdrop { background: #07101799; }
+.reportes-itinerarios-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 26px;
+    background: var(--bg-card, #fff);
+    border-bottom: 1px solid var(--border-color, #dce3ed);
+}
+.reportes-itinerarios-header h2 { margin: 0; font-size: 1.2rem; }
+.reportes-itinerarios-body { padding: 24px 26px; }
+.reportes-itinerarios-body .cd-report-confirm { flex-wrap: wrap; }
+.reportes-itinerarios-body .cd-report-confirm > div:first-child { overflow-wrap: anywhere; }
+body:has(.reportes-itinerarios-dialog[open]) { overflow: hidden; }
+html[data-theme="dark"] .reportes-itinerarios-header {
+    background: var(--night-panel, #19232e);
+}
+@media (max-width: 600px) {
+    .reportes-itinerarios-header, .reportes-itinerarios-body { padding: 16px; }
+}

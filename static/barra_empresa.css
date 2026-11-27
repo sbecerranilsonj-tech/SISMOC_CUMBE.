@@ -1,0 +1,77 @@
+/* Colores representativos medidos del logo: naranja #f46e24, marrón #591e05. */
+.sidebar {
+    --nav-bg: #f46e24;
+    --nav-text: #501a04;
+    --nav-muted: #501a04;
+    --nav-line: #591e0540;
+    --nav-hover: #ff873f;
+    --nav-active: #591e05;
+    --nav-accent: #591e05;
+    --nav-icon: #ffffff26;
+    background: var(--nav-bg);
+    color: var(--nav-text);
+    border-right: 1px solid var(--nav-line);
+}
+.sidebar .brand { border-bottom-color: var(--nav-line); }
+.sidebar .brand-logo {
+    background: #fff3e8;
+    border-radius: 12px;
+    padding: 5px;
+}
+.sidebar .brand-title { color: var(--nav-accent); }
+.sidebar .brand-sub { color: var(--nav-muted); }
+.sidebar .sismoc-edition {
+    color: var(--nav-accent);
+    background: var(--nav-icon);
+    border-color: var(--nav-line);
+}
+.sidebar .menu-category { color: var(--nav-muted); }
+.sidebar .menu-category::before,
+.sidebar .menu-category::after { background: var(--nav-line); }
+.sidebar .menu-link { color: var(--nav-text); }
+.sidebar .menu-link:hover {
+    color: var(--nav-accent);
+    background: var(--nav-hover);
+}
+.sidebar .menu-link .menu-icon {
+    color: var(--nav-accent);
+    background: var(--nav-icon);
+}
+.sidebar .menu-link.active {
+    color: #fff3e8;
+    background: var(--nav-active);
+    border-color: #591e05;
+    box-shadow: inset 3px 0 #fff3e8;
+}
+.sidebar .menu-link.active .menu-icon {
+    color: #fff;
+    background: #ffffff1a;
+    box-shadow: none;
+}
+.sidebar .menu-link.active::after { background: #f46e24; }
+.sidebar .menu-link:focus-visible,
+.sidebar .btn-sidebar-logout:focus-visible {
+    outline: 3px solid #591e05;
+    outline-offset: 2px;
+}
+.sidebar .menu-list { scrollbar-color: #591e0580 transparent; }
+.sidebar .menu-list::-webkit-scrollbar-thumb { background: #591e0580; }
+.sidebar .sidebar-footer {
+    background: var(--nav-bg);
+    border-color: var(--nav-line);
+}
+.sidebar .sidebar-footer .user-badge-name { color: var(--nav-text); }
+.sidebar .sidebar-footer .user-badge-role { color: var(--nav-muted); }
+.sidebar .sidebar-footer .user-avatar-circle {
+    color: #fff3e8;
+    background: var(--nav-active);
+}
+.sidebar .sidebar-footer .btn-sidebar-logout {
+    color: var(--nav-text) !important;
+    background: transparent !important;
+    border-color: var(--nav-line) !important;
+}
+.sidebar .sidebar-footer .btn-sidebar-logout:hover {
+    color: var(--nav-accent) !important;
+    background: var(--nav-hover) !important;
+}

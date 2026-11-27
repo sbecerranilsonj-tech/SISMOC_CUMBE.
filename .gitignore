@@ -9,9 +9,29 @@ sismoc_cumbe_db.sqlite3
 
 # Environment
 .env
+.env.*
+!.env.example
+!.env.railway.example
+.codex/
+.agents/
+dump_data.json
+*.sql
+*.dump
+*.backup
+outputs/
+*.log
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+data/
+mobile/android/.kotlin/
 
 # Media & Uploads
 media/
+private_bancos/
+private_conductores/
 staticfiles/
 
 # IDE
@@ -27,3 +47,25 @@ tmp/
 
 
 node_modules/
+versiones/
+desktop/dist/
+desktop/build/
+desktop/instaladores/
+*.zip
+
+# Copias independientes de trabajo
+PROYECTOS/
+
+# Respaldos y recuperación locales (conservar fuera del repositorio)
+*.bak
+*.bak-*
+recuperado_demo/
+diff_actual.txt
+diff_out.txt
+*.apk
+*.aab
+
+# Estado y configuración privada del agente biométrico
+herramientas/agente_huellero/config.json
+herramientas/agente_huellero/ultimo_envio.json
+movil/_inspeccionar_*.py

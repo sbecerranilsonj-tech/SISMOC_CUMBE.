@@ -61,7 +61,7 @@ class MarcacionManualTests(TestCase):
 
     def test_dato_manual_invalido_revierte_correcciones_del_mismo_envio(self):
         ultima = self.marcas[-1]
-        self.client.post(self.url, {**self.datos, 'motivo_manual': '', f'evento_{ultima.pk}': 'SALIDA', f'original_{ultima.pk}': 'RETORNO_REFRIGERIO'})
+        self.client.post(self.url, {**self.datos, 'hora_manual': 'hora inválida', f'evento_{ultima.pk}': 'SALIDA', f'original_{ultima.pk}': 'RETORNO_REFRIGERIO'})
         self.assertFalse(CorreccionEvento.objects.exists())
         self.assertEqual(MarcacionBiometrica.objects.count(), 3)
 
@@ -117,3 +117,89 @@ class MarcacionManualTests(TestCase):
         self.assertEqual(MarcacionBiometrica.objects.count(), 3)
         self.resumen.refresh_from_db()
         self.assertEqual(self.resumen.estado_revision, 'PENDIENTE')
+
+    def test_editar_manual_conserva_id_y_audita_hora_anterior(self):
+        self.client.post(self.url,self.datos)
+        manual=MarcacionBiometrica.objects.get(origen='SISTEMA_MANUAL')
+        respuesta=self.client.post(self.url,{**self.datos,'accion':'editar_marcacion_manual',
+            'marcacion_id':manual.pk,'hora_manual':'09:10:00','motivo_manual':'Hora corregida con supervisora'})
+        self.assertEqual(respuesta.status_code,302)
+        manual.refresh_from_db()
+        self.assertEqual(timezone.localtime(manual.fecha_hora).time(),time(9,10))
+        self.assertEqual(MarcacionBiometrica.objects.filter(origen='SISTEMA_MANUAL').count(),1)
+        self.assertEqual(manual.motivo_manual,'Hora corregida con supervisora')
+        self.assertTrue(self.resumen.historial_revision.filter(accion='Marcación manual editada',detalle__contains='09:05').exists())
+        self.resumen.refresh_from_db()
+        self.assertFalse(self.resumen.verificado_contabilidad)
+
+    def test_editar_rechaza_importada_y_hora_duplicada(self):
+        original=self.marcas[0]
+        self.client.post(self.url,{**self.datos,'accion':'editar_marcacion_manual','marcacion_id':original.pk})
+        original.refresh_from_db()
+        self.assertEqual(timezone.localtime(original.fecha_hora).time(),time(6,4,29))
+        self.client.post(self.url,self.datos)
+        manual=MarcacionBiometrica.objects.get(origen='SISTEMA_MANUAL')
+        self.client.post(self.url,{**self.datos,'accion':'editar_marcacion_manual','marcacion_id':manual.pk,'hora_manual':'08:21:37'})
+        manual.refresh_from_db()
+        self.assertEqual(timezone.localtime(manual.fecha_hora).time(),time(9,5))
+
+    def test_mismo_codigo_en_dos_equipos_guarda_manual_sin_elegir_identidad(self):
+        otra=IdentidadBiometrica.objects.create(trabajador=self.ficha,sede='CAJAMARCA',equipo='104',codigo='42')
+        self.marcas[1].identidad_biometrica=otra
+        self.marcas[1].save(update_fields=['identidad_biometrica'])
+        datos={k:v for k,v in self.datos.items() if k not in {'identidad_manual','evidencia_manual_url','motivo_manual'}}
+        respuesta=self.client.post(self.url,datos)
+        self.assertEqual(respuesta.status_code,302)
+        manual=MarcacionBiometrica.objects.get(origen='SISTEMA_MANUAL')
+        self.assertEqual(manual.identidad_biometrica.codigo,'42')
+        self.assertEqual(manual.identidad_biometrica.trabajador_id,self.ficha.pk)
+        self.assertEqual(manual.motivo_manual,'')
+
+    def test_codigos_diferentes_en_la_misma_jornada_no_se_eligen_silenciosamente(self):
+        from asistencia.forms import MarcacionManualForm
+        otra=IdentidadBiometrica.objects.create(trabajador=self.ficha,sede='CAJAMARCA',equipo='104',codigo='99')
+        self.marcas[1].identidad_biometrica=otra
+        self.marcas[1].save(update_fields=['identidad_biometrica'])
+        datos={k:v for k,v in self.datos.items() if k!='identidad_manual'}
+        formulario=MarcacionManualForm(datos,resumen=self.resumen)
+        self.assertFalse(formulario.is_valid())
+        self.assertIn('identidad_manual',formulario.errors)
+
+    def test_salida_nocturna_requiere_fecha_siguiente_y_se_guarda(self):
+        from asistencia.services.marcacion_manual import agregar_marcacion_manual
+        from django.core.exceptions import ValidationError
+        from datetime import timedelta
+        MarcacionBiometrica.objects.filter(identidad_biometrica=self.identidad).delete()
+        turno=TurnoHorario.objects.create(nombre='Noche',hora_entrada=time(20),hora_salida=time(7))
+        r=self.resumen;r.turno_aplicado=turno;r.primera_entrada=time(20);r.ultima_salida=None;r.save()
+        MarcacionBiometrica.objects.create(identidad_biometrica=self.identidad,fecha_hora=timezone.make_aware(datetime.combine(self.dia,time(20))),tipo_evento='ENTRADA')
+        datos={'fecha_manual':str(self.dia),'hora_manual':'07:00:00','tipo_evento_manual':'SALIDA'}
+        with self.assertRaisesMessage(ValidationError,'día siguiente'):
+            agregar_marcacion_manual(r,datos,self.contadora)
+        self.assertFalse(MarcacionBiometrica.objects.filter(origen='SISTEMA_MANUAL').exists())
+        datos['fecha_manual']=str(self.dia+timedelta(days=1))
+        m=agregar_marcacion_manual(r,datos,self.contadora)
+        self.assertEqual(timezone.localtime(m.fecha_hora).date(),self.dia+timedelta(days=1))
+        r.refresh_from_db()
+        self.assertTrue(detalle_jornada(r)['completa'])
+
+    def test_madrugada_manual_no_bloqueada_por_jornada_siguiente_vacia(self):
+        from datetime import timedelta
+        self.marcas[0].fecha_hora = timezone.make_aware(datetime.combine(self.dia, time(21)))
+        self.marcas[0].save()
+        manana = self.dia + timedelta(days=1)
+        for marca, hora, evento in [(self.marcas[1], time(1, 12), 'SALIDA_REFRIGERIO'), (self.marcas[2], time(7), 'SALIDA')]:
+            marca.fecha_hora = timezone.make_aware(datetime.combine(manana, hora))
+            marca.tipo_evento = evento
+            marca.save()
+        turno = TurnoHorario.objects.create(nombre='Noche manual', hora_entrada=time(20), hora_salida=time(7))
+        self.resumen.turno_aplicado = turno
+        self.resumen.primera_entrada = time(21)
+        self.resumen.ultima_salida = time(7)
+        self.resumen.marcaciones_publicadas = [m.pk for m in self.marcas]
+        self.resumen.save()
+        ResumenAsistenciaDiaria.objects.create(trabajador=self.ficha, fecha=manana, turno_aplicado=turno, marcaciones_publicadas=[])
+        self.client.post(self.url, {**self.datos, 'fecha_manual': str(manana), 'hora_manual': '01:57:00'})
+        self.assertTrue(MarcacionBiometrica.objects.filter(origen='SISTEMA_MANUAL', tipo_evento='RETORNO_REFRIGERIO').exists())
+        self.resumen.refresh_from_db()
+        self.assertTrue(detalle_jornada(self.resumen)['completa'])

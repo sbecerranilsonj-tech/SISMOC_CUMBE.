@@ -51,10 +51,38 @@ def asegurar_jornada(usuario, fecha):
 
 
 class ZKTecoExcelParser:
-    def __init__(self, archivo_path_o_bytes, nombre_archivo, subido_por=None):
+    def __init__(self, archivo_path_o_bytes, nombre_archivo, subido_por=None, *, sede=None, progreso=None):
         self.archivo = archivo_path_o_bytes
         self.nombre_archivo = nombre_archivo
         self.subido_por = subido_por
+        self.sede = (sede or '').strip().upper()
+        self.progreso = progreso
+
+    def notificar(self, etapa, porcentaje, actual=0, total=0):
+        if self.progreso:
+            self.progreso({'tipo':'progreso','etapa':etapa,'porcentaje':porcentaje,'actual':actual,'total':total})
+
+    def sede_de_hoja(self, hoja):
+        """Una hoja genérica no es una sede; conservar el nombre original como procedencia."""
+        if not re.fullmatch(r'(sheet|hoja|feuille)\d*', normalizar(hoja)):
+            return hoja.strip().upper()
+        if self.sede:
+            if len(self.sede) > 100:
+                raise ValidationError('El nombre de la sede supera 100 caracteres.')
+            return self.sede
+        tokens = {normalizar(t) for t in re.findall(r'[^\W_]+', Path(self.nombre_archivo).stem)}
+        sedes = set()
+        if tokens & {'cix', 'chiclayo'}:
+            sedes.add('CHICLAYO')
+        if 'cajamarca' in tokens:
+            sedes.add('CAJAMARCA')
+        if 'jaen' in tokens:
+            sedes.add('JAEN')
+        if {'paul', 'harris'} <= tokens:
+            sedes.add('PAUL HARRIS')
+        if len(sedes) == 1:
+            return sedes.pop()
+        raise ValidationError(f'La hoja «{hoja}» no identifica una sede. Indique una sede única en el nombre del archivo (por ejemplo, asistencia octubre CIX.xls) o especifique la sede al importar.')
 
     def leer(self):
         """Validar todo el archivo antes de realizar escrituras."""
@@ -77,6 +105,7 @@ class ZKTecoExcelParser:
                 if codigo is None or fecha is None:
                     ignoradas.append(hoja.strip())
                     continue
+                sede = self.sede_de_hoja(hoja)
                 for posicion, (_, fila) in enumerate(df.iterrows(), 2):
                     code, valor_fecha = texto(fila[codigo]), fila[fecha]
                     if not code and pd.isna(valor_fecha):
@@ -99,7 +128,7 @@ class ZKTecoExcelParser:
                         else:
                             fh = timezone.localtime(fh)
                         registros.append({
-                            "hoja": hoja, "fila": posicion, "sede": hoja.strip().upper(),
+                            "hoja": hoja, "fila": posicion, "sede": sede,
                             "codigo": code, "fecha_hora": fh,
                             "nombre": texto(fila[nombre]) if nombre else "",
                             "equipo": texto(fila[equipo]) if equipo else "",
@@ -117,7 +146,9 @@ class ZKTecoExcelParser:
 
     @transaction.atomic
     def procesar(self):
+        self.notificar('validando', 0)
         registros, hojas, ignoradas = self.leer()
+        self.notificar('registrando', 5, total=len(registros))
         periodo = Counter(r["fecha_hora"].strftime("%Y-%m") for r in registros).most_common(1)[0][0]
         carga = CargaArchivoAsistencia.objects.create(
             nombre_archivo_original=self.nombre_archivo, subido_por=self.subido_por,
@@ -128,7 +159,8 @@ class ZKTecoExcelParser:
             "entrada": "ENTRADA", "checkin": "ENTRADA", "salida": "SALIDA", "checkout": "SALIDA",
             "salidarefrigerio": "SALIDA_REFRIGERIO", "retornorefrigerio": "RETORNO_REFRIGERIO",
         }
-        for r in registros:
+        salto = max(1, len(registros) // 100)
+        for numero, r in enumerate(registros, 1):
             clave = (r["sede"], r["equipo"], r["codigo"])
             if clave not in identidades:
                 usuario = None
@@ -170,6 +202,9 @@ class ZKTecoExcelParser:
             repetidas += int(not creada)
             if creada and identidad.usuario_id:
                 jornadas.add((identidad.usuario_id, timezone.localtime(r["fecha_hora"]).date()))
+            if numero % salto == 0 or numero == len(registros):
+                self.notificar('registrando', 5 + (90 * numero // len(registros)), numero, len(registros))
+        self.notificar('guardando', 97, len(registros), len(registros))
         generadas = 0
         for uid, fecha in jornadas:
             _, creada = asegurar_jornada(Usuario.objects.get(pk=uid), fecha)
@@ -185,6 +220,7 @@ class ZKTecoExcelParser:
         carga.estado = "COMPLETADO"
         carga.detalle_log = f"Nuevas: {nuevas}; repetidas: {repetidas}; códigos: {len(identidades)}.\n" + "\n".join(alertas)
         carga.save()
+        self.notificar('guardando', 99, len(registros), len(registros))
         return {
             "archivo": self.nombre_archivo, "carga_id": carga.pk, "hojas_encontradas": len(hojas),
             "filas_procesadas": len(registros), "empleados_identificados": carga.total_empleados_identificados,

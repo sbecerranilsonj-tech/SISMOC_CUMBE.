@@ -184,3 +184,86 @@ h3.panel-title-text{font-size:23px;font-weight:750}
 .filtros-dashboard{width:100%;max-width:none}
 @media(min-width:901px){body.nav-collapsed:not(.login-page){padding-left:80px}}
 .formulario-vertical [data-justificacion-permiso][hidden]{display:none}
+
+/* Escritorio: componentes comunes construidos con utilidades de Tailwind. */
+:root{--ui-accent:#c65313;--ui-border:#e2e8f0;--ui-muted:#64748b}
+body:not(.login-page){background:#f5f7fa;color:#263449}
+.main-wrapper{padding-bottom:48px}
+.content-panel{@apply rounded-2xl border border-slate-200 bg-white; padding:26px;box-shadow:0 3px 16px #15223804;margin-bottom:22px}
+.panel-header-custom{@apply flex flex-wrap items-center justify-between gap-4; margin-bottom:22px}
+h3.panel-title-text{font-size:22px;line-height:1.3;letter-spacing:-.035em;color:#1c2c3e}
+.ayuda{font-size:13px;line-height:1.7;color:var(--ui-muted);max-width:90ch}
+.sidebar{background:#13231f;border-color:#263a33}
+.sidebar .brand{padding-top:12px;padding-bottom:22px}
+.menu-link{min-height:46px;margin-bottom:3px;font-size:13px;border:1px solid transparent}
+.menu-link.active{background:#f179351b;border-color:#f1793524}
+.menu-category{font-size:9px;letter-spacing:.14em;padding-top:22px}
+.top-navbar{height:72px;min-height:72px;box-shadow:0 2px 8px #172c3d04}
+:is(.btn-cumbe,.btn-cumbe-submit,.btn-dark-outline,.toolbar-button){@apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold;min-height:42px;padding:10px 16px;line-height:1.4;text-decoration:none;cursor:pointer}
+:is(.btn-cumbe,.btn-cumbe-submit){background:#c65313;border:1px solid #c65313;color:white;box-shadow:0 3px 6px #c6531314}
+:is(.btn-cumbe,.btn-cumbe-submit):hover{background:#a74310;border-color:#a74310;color:white}
+.btn-dark-outline,.toolbar-button{background:white;color:#475569;border:1px solid #dce3ec;box-shadow:0 1px 2px #0f172a04}
+:is(.btn-dark-outline,.toolbar-button):hover{background:#fff7ed;border-color:#efc7aa;color:#a74310}
+:is(button,input,select,textarea,a,summary):focus-visible{outline:3px solid #f3b785;outline-offset:3px}
+button:disabled{cursor:not-allowed;opacity:.55;box-shadow:none}
+:is(.formulario-linea,.filtros-asistencia){display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));align-items:end;gap:16px}
+:is(.formulario-linea,.formulario-vertical,.filtros-asistencia) label{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:12px;font-weight:600;color:#475569;margin:0}
+:is(.formulario-linea,.formulario-vertical,.filtros-asistencia) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not([type=hidden]){@apply rounded-xl border border-slate-200 bg-white text-sm;min-height:44px;width:100%;min-width:0;padding:10px 12px;color:#263449;font-family:inherit;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
+:is(.formulario-linea,.formulario-vertical,.filtros-asistencia) :is(input,select,textarea):focus{border-color:#d8834d;box-shadow:0 0 0 3px #edac7b20;outline:0}
+:is(.formulario-linea,.formulario-vertical) :is(input[type=checkbox],input[type=radio]){width:17px;height:17px;accent-color:#c65313;flex-shrink:0}
+.formulario-vertical label:has(>input[type=checkbox]){flex-direction:row;align-items:center}
+.filtros-asistencia{background:#f8fafc;border:1px solid #e7edf4;padding:18px;border-radius:14px}
+[hidden]{display:none!important}
+.table-responsive,.tabla-trabajadores-asistencia{border:1px solid #e7edf4;border-radius:14px;overflow:auto}
+.custom-dark-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;margin:0}
+.custom-dark-table th{background:#f7f9fc;padding:14px 16px;color:#65748b;font-size:11px;font-weight:650;letter-spacing:.025em;white-space:nowrap;border-bottom:1px solid #e2e8f0}
+.custom-dark-table td{padding:16px;border-bottom:1px solid #edf1f5;vertical-align:middle;line-height:1.6}
+.custom-dark-table tbody tr:last-child td{border-bottom:0}
+.custom-dark-table tbody tr:hover td{background:#fafbfd}
+.custom-dark-table :is(.btn-cumbe,.btn-dark-outline){min-height:34px;padding:7px 12px;font-size:12px;border-radius:8px;white-space:nowrap}
+.custom-dark-table small{display:block;margin-top:3px;font-size:11px;color:#718096}
+.status-pill{@apply inline-flex items-center rounded-lg text-xs font-semibold; padding:5px 9px;white-space:nowrap}
+.pill-emerald{color:#16634d;background:#eaf7f0}.pill-orange{color:#94520e;background:#fff3df}
+.estado-vacio{text-align:center;padding:40px 24px!important;color:#718096!important;font-size:13px}
+.kpi-box{border-radius:16px;min-height:150px;padding:24px;box-shadow:0 3px 12px #15223805}
+.kpi-value{font-size:34px;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.kpi-title{font-size:10px;letter-spacing:.045em}
+.accounting-tile{border-radius:16px;box-shadow:0 3px 12px #15223805}
+:is(dialog.registro-trabajador-dialog,dialog.revision-trabajador-dialog,dialog.detalle-jornada-dialog,.custom-modal-box){border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 24px 70px #15223830;padding:28px}
+dialog::backdrop,.custom-modal-backdrop{background:#14282166;backdrop-filter:blur(3px)}
+/* Acceso: identidad de El Cumbe y un formulario concentrado en la tarea. */
+.login-page{font-family:Geist,'Segoe UI',sans-serif;background:#f5f7fa}
+.login-layout{min-height:100dvh;grid-template-columns:minmax(0,1fr) minmax(440px,1fr)}
+.login-intro{background:radial-gradient(ellipse at 10% 90%,#96502a55,transparent 60%),linear-gradient(140deg,#122d24,#12221e);color:white;padding:72px;position:relative;overflow:hidden}
+.login-intro::after{content:'';position:absolute;width:420px;height:420px;right:-240px;top:14%;border:1px solid #ffffff16;border-radius:50%;box-shadow:0 0 0 70px #ffffff04,0 0 0 140px #ffffff03;pointer-events:none}
+.login-intro h1{font-family:inherit;font-size:clamp(38px,4vw,58px);font-weight:700;letter-spacing:-.055em;line-height:1.12;margin-bottom:24px;color:white}
+.login-intro-main>p{max-width:390px;color:#c0d0c8;font-size:16px;line-height:1.85}
+.login-intro .login-legal{left:72px;color:#a7bdb2;font-size:11px}
+.login-form-panel{background:#f5f7fa;padding:56px 48px}
+.login-form-content{width:100%;max-width:440px}
+.login-logo-horizontal{width:215px;margin-bottom:28px}
+.form-heading h2{font-family:inherit;font-size:32px;font-weight:750;letter-spacing:-.045em;color:#1c2c3e;margin-bottom:10px}
+.form-heading>p{color:#718096;font-size:14px;line-height:1.7}
+.login-form-card{@apply rounded-2xl border border-slate-200 bg-white; padding:30px;margin-top:28px;box-shadow:0 8px 30px #15223806}
+.login-page .form-label-custom{font-size:12px;font-weight:600;color:#46556a;margin-bottom:8px}
+.login-page .form-control-custom{height:49px;border-radius:10px;border:1px solid #dce3ec;background:#fbfcfe;font-size:14px;color:#263449}
+.login-page .form-control-custom:focus{border-color:#d8834d;box-shadow:0 0 0 3px #edac7b20}
+.login-page .input-group-custom{margin-bottom:22px}
+.login-page .btn-cumbe-submit{width:100%;height:48px;margin-top:5px}
+.login-assistance{font-size:11px;line-height:1.8;color:#718096}
+html[data-theme=dark] body:not(.login-page){background:#101a22;color:#d3dce6}
+html[data-theme=dark] :is(.content-panel,.kpi-box,.top-navbar,.accounting-tile){background:#17232e;color:#d3dce6;border-color:#2c3b49}
+html[data-theme=dark] :is(h3.panel-title-text,.kpi-value){color:#e2e8f0}
+html[data-theme=dark] .custom-dark-table th{background:#1e2c38;color:#a5b5c7;border-color:#314151}
+html[data-theme=dark] .custom-dark-table td{color:#c5d1dd;border-color:#2a3845}
+html[data-theme=dark] .custom-dark-table tbody tr:hover td{background:#20303e}
+html[data-theme=dark] .filtros-asistencia{background:#17232e;border-color:#2c3b49}
+html[data-theme=dark] :is(.formulario-linea,.formulario-vertical,.filtros-asistencia) label{color:#adbdcd}
+html[data-theme=dark] :is(.formulario-linea,.formulario-vertical,.filtros-asistencia) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not([type=hidden]){background:#14212b;color:#d3dce6;border-color:#354656}
+@media(max-width:1000px){.login-intro{padding:42px}.login-intro .login-legal{left:42px}.login-form-panel{padding:36px}}
+@media(max-width:760px){.login-layout{grid-template-columns:minmax(0,1fr)}.login-intro{display:none}.login-form-panel{padding:32px 20px}.login-form-card{padding:26px}.login-logo-horizontal{margin:0 auto 24px}.form-heading{text-align:center}}
+@media(max-width:540px){.content-panel{padding:18px 14px}.panel-header-custom{gap:12px}.custom-dark-table th,.custom-dark-table td{padding:12px}.login-form-card{padding:24px 20px}.login-form-panel{padding:28px 16px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+@media print{.sidebar,.top-navbar{display:none!important}body:not(.login-page){padding-left:0}.content-panel{box-shadow:none;break-inside:avoid}.main-wrapper{padding:0}}
+
+@import "./pro-max.css";

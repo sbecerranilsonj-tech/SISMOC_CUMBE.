@@ -5,12 +5,24 @@ DIAS = list(enumerate(['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado
 
 
 class ProgramarHorarioForm(forms.Form):
-    trabajador = forms.ModelChoiceField(queryset=Trabajador.objects.all(), label='Trabajador')
+    trabajador = forms.ModelChoiceField(
+        queryset=Trabajador.objects.all(), label='Trabajador',
+        widget=forms.Select(attrs={
+            'data-buscador-inteligente': 'true',
+            'data-buscador-placeholder': 'Escribe nombre, DNI o código',
+            'data-buscador-incluir-vacio': 'false',
+        }))
     desde = forms.DateField(widget=forms.DateInput(attrs={'type':'date'}, format='%Y-%m-%d'))
     hasta = forms.DateField(widget=forms.DateInput(attrs={'type':'date'}, format='%Y-%m-%d'))
     dias = forms.TypedMultipleChoiceField(choices=DIAS, coerce=int, widget=forms.CheckboxSelectMultiple, initial=list(range(7)), label='Días a programar')
-    turno = forms.ModelChoiceField(queryset=TurnoHorario.objects.filter(activo=True), label='Horario confirmado')
-    motivo = forms.CharField(max_length=500, label='Referencia de la programación', widget=forms.TextInput(attrs={'placeholder':'Ej.: programación de Contabilidad para agosto'}))
+    turno = forms.ModelChoiceField(
+        queryset=TurnoHorario.objects.filter(activo=True), label='Horario confirmado',
+        widget=forms.Select(attrs={
+            'data-buscador-inteligente': 'true',
+            'data-buscador-placeholder': 'Escribe el nombre del horario',
+            'data-buscador-incluir-vacio': 'false',
+        }))
+    motivo = forms.CharField(max_length=500, required=False, label='Referencia de la programación (opcional)', widget=forms.TextInput(attrs={'placeholder':'Ej.: cambio temporal o reemplazo de compañero'}))
     confirmado = forms.BooleanField(label='Confirmo que este horario corresponde a las fechas seleccionadas.')
 
     def clean(self):
@@ -23,7 +35,7 @@ class ProgramarHorarioForm(forms.Form):
 class TurnoConfirmadoForm(forms.ModelForm):
     class Meta:
         model=TurnoHorario
-        fields=['nombre','hora_entrada','hora_salida','tolerancia_minutos','hora_inicio_refrigerio','hora_fin_refrigerio']
+        fields=['nombre','hora_entrada','hora_salida','evaluar_tardanzas','tolerancia_minutos','hora_inicio_refrigerio','hora_fin_refrigerio']
         widgets={key:forms.TimeInput(attrs={'type':'time'}) for key in ['hora_entrada','hora_salida','hora_inicio_refrigerio','hora_fin_refrigerio']}
 
     def clean_tolerancia_minutos(self):

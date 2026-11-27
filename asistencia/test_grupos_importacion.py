@@ -9,6 +9,59 @@ from core.models import Usuario
 
 
 class GruposImportacionTests(TestCase):
+    def test_todos_los_registros_incluye_y_envia_varios_meses(self):
+        from asistencia.services.grupos_importacion import validar_grupo_envio
+        from django.core.exceptions import ValidationError
+        grupo = grupo_importacion({'grupo_mes':'todos'})
+        self.assertTrue(grupo['todos'])
+        self.assertIsNone(grupo['inicio'])
+        self.assertEqual(set(grupo['marcas'].values_list('pk',flat=True)),{self.agosto.pk,self.septiembre.pk})
+        self.assertEqual(set(grupo['cargas'].values_list('pk',flat=True)),{self.a.pk,self.b.pk})
+        validar_grupo_envio({'grupo_mes':'todos'},date(2026,8,1),date(2026,9,30))
+        respuesta=self.client.get(reverse('dashboard'),{'vista':'excel-zk','grupo_mes':'todos'})
+        self.assertContains(respuesta,'Todos los registros')
+        self.assertContains(respuesta,'Todos los archivos')
+        repetida=self.marca(self.a,date(2026,8,1),9)
+        repetida.fecha_hora=self.agosto.fecha_hora.replace(second=2)
+        repetida.save()
+        respuesta=self.client.post(reverse('enviar_a_asistencia'),{'grupo_mes':'todos',
+            'desde_envio':'2026-08-01','hasta_envio':'2026-09-30','confirmar_identificacion':'si'})
+        self.assertEqual(respuesta.status_code,302)
+        self.assertEqual(set(ResumenAsistenciaDiaria.objects.values_list('fecha',flat=True)),{date(2026,8,1),date(2026,9,1)})
+        agosto=ResumenAsistenciaDiaria.objects.get(fecha=date(2026,8,1))
+        self.assertEqual(set(agosto.marcaciones_publicadas),{self.agosto.pk,repetida.pk})
+        self.assertFalse(agosto.verificado_contabilidad)
+
+    def test_filtro_pendientes_muestra_solo_codigos_sin_ficha(self):
+        pendiente=IdentidadBiometrica.objects.create(sede='CAJAMARCA',equipo='1',codigo='43',nombre='Sin ficha')
+        MarcacionBiometrica.objects.create(identidad_biometrica=pendiente,carga_origen=self.a,
+            fecha_hora=timezone.make_aware(datetime(2026,8,2,8)),origen='EXCEL_ZKTECO')
+        filtros={'vista':'excel-zk','grupo_mes':'2026-08','grupo_carga':self.a.pk,'sede_codigo':'CAJAMARCA','identificacion':'pendientes'}
+        res=self.client.get(reverse('dashboard'),filtros)
+        self.assertEqual([i.pk for i in res.context['identidades_biometricas']],[pendiente.pk])
+        self.assertEqual([(f['estado'],f['total']) for f in res.context['enlaces_identificacion']],[('todos',2),('pendientes',1),('identificados',1)])
+        res=self.client.get(reverse('dashboard'),{**filtros,'identificacion':'identificados'})
+        self.assertEqual([i.pk for i in res.context['identidades_biometricas']],[self.identidad.pk])
+        sugerencias=self.client.get(reverse('sugerir_codigos'),{**filtros,'q':'4'}).json()
+        self.assertEqual([i['codigo'] for i in sugerencias['resultados']],['43'])
+
+    def test_sugerencias_codigo_respetan_archivo_mes_y_sede(self):
+        otra = IdentidadBiometrica.objects.create(sede='CHICLAYO', equipo='104', codigo='42001', nombre='Persona Otra')
+        MarcacionBiometrica.objects.create(identidad_biometrica=otra, carga_origen=self.b,
+            fecha_hora=timezone.make_aware(datetime(2026,9,2,8)), origen='EXCEL_ZKTECO')
+        url = reverse('sugerir_codigos')
+        filtros = {'q':'4','grupo_mes':'2026-08','grupo_carga':self.a.pk,'sede_codigo':'CAJAMARCA'}
+        respuesta = self.client.get(url, filtros)
+        self.assertEqual(respuesta.status_code,200)
+        self.assertEqual([i['codigo'] for i in respuesta.json()['resultados']],['42'])
+        respuesta = self.client.get(url, {**filtros,'grupo_mes':'2026-09','grupo_carga':self.b.pk,'sede_codigo':'CHICLAYO'})
+        self.assertEqual([i['codigo'] for i in respuesta.json()['resultados']],['42001'])
+        self.assertEqual(self.client.get(url, {**filtros,'grupo_carga':'invalido'}).json()['resultados'],[])
+        self.assertEqual(self.client.get(url, {'q':''}).json()['resultados'],[])
+        self.actor.rol='ADMINISTRATIVO'
+        self.actor.save()
+        self.assertEqual(self.client.get(url,filtros).status_code,403)
+
     def setUp(self):
         self.actor=Usuario.objects.create_user('grupos',email='grupos@example.invalid',dni='11111111',rol='CONTADORA')
         self.ficha=Trabajador.objects.create(nombre_completo='Persona Grupos',dni='22222222',area='Boletería',sede='CAJAMARCA')

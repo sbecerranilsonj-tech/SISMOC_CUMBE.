@@ -1,0 +1,6 @@
+{% load static %}
+{% include 'movil/_viaje_form.html' with dialog_id='programar-viaje' prefijo='programar' titulo='Programar un viaje' nota='Busca sedes, placa y conductores registrados. Puedes programar a un conductor sin cuenta móvil; el viaje quedará pendiente y no aparecerá en la app hasta que Control verifique el descanso y ambos tengan cuenta activa.' accion='programar' es_edicion=False %}
+{% if salida_edit and salida_edit.original.origen_programacion == 'MANUAL' %}
+{% include 'movil/_viaje_form.html' with dialog_id='editar-viaje' prefijo='editar' titulo='Editar viaje' nota='El viaje aparece con los datos registrados. Pasajeros, distribución y responsable de embarque se conservan; si cambias la asignación, Control debe volver a verificar el descanso.' accion='editar' salida_edit=salida_edit es_edicion=True %}
+{% endif %}
+<script src="{% static 'programar_viaje.js' %}?v=20261125-3" defer></script>

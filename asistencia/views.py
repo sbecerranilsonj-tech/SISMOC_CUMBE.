@@ -1,7 +1,7 @@
 import csv
 import json
 from calendar import monthrange
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from urllib.parse import urlencode
 
@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Min, Max
+from django.db.models import Q, Min, Max, Count
 from django.http import HttpResponse, HttpResponseForbidden
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -19,6 +19,10 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST, require_GET
 
 from core.models import Usuario
+
+# Sedes operativas; los textos libres de cuentas antiguas no son nuevas sedes.
+SEDES_OPERATIVAS = ("CAJAMARCA", "CHICLAYO", "GACELA", "JAEN", "PAUL HARRIS", "TRUJILLO")
+
 from asistencia.models import (
     ResumenAsistenciaDiaria, MarcacionBiometrica, TurnoHorario, CargaArchivoAsistencia,
     IncidenciaAsistencia, AjusteAsistencia, CorreccionEvento, CierreAsistencia,
@@ -51,7 +55,7 @@ def filtros_asistencia(request):
     return {
         "desde": inicio.isoformat(), "hasta": fin.isoformat(), "sede": request.GET.get("sede", ""),
         "trabajador": request.GET.get("trabajador", "").strip(), "estado": request.GET.get("estado", ""),
-        "revision": request.GET.get("revision", ""), "error": error,
+        "revision": request.GET.get("revision", ""), "area": request.GET.get("area", "").strip(), "error": error,
     }
 
 
@@ -66,6 +70,11 @@ def reporte_filtrado(request):
             qs = qs.filter(Q(usuario__dni__icontains=palabra) | Q(usuario__first_name__icontains=palabra) | Q(usuario__last_name__icontains=palabra) | Q(trabajador__dni__icontains=palabra) | Q(trabajador__nombre_completo__icontains=palabra))
     if f["estado"]:
         qs = qs.filter(estado=f["estado"])
+    if f["area"]:
+        area = Q(trabajador__area__iexact=f["area"])
+        if f["area"].casefold() == "por completar":
+            area |= Q(trabajador__isnull=True) | Q(trabajador__area="")
+        qs = qs.filter(area)
     if f["revision"] == "APROBADO":
         qs = qs.filter(verificado_contabilidad=True)
     elif f["revision"] in {"PENDIENTE", "OBSERVADO"}:
@@ -92,8 +101,20 @@ def consolidar(resumenes):
 
 
 def contexto_asistencia(request):
+    if request.GET.get('vista') == 'asistencia' and request.GET.get('detalle', '').isdigit():
+        from asistencia.services.carga_detalle import contexto_detalle_rapido
+        return contexto_detalle_rapido(request)
     filtros, qs = reporte_filtrado(request)
     resumenes = list(qs)
+    from copy import copy
+    consulta_resumen = copy(request)
+    consulta_resumen.GET = request.GET.copy()
+    consulta_resumen.GET.pop('revision', None)
+    _, base_resumen = reporte_filtrado(consulta_resumen)
+    conteos_resumen = {s: 0 for s in ('APROBADO', 'PENDIENTE', 'OBSERVADO')}
+    for estado in base_resumen.order_by().values('verificado_contabilidad', 'estado_revision').annotate(cantidad=Count('pk')):
+        clave = 'APROBADO' if estado['verificado_contabilidad'] else ('OBSERVADO' if estado['estado_revision'] == 'OBSERVADO' else 'PENDIENTE')
+        conteos_resumen[clave] += estado['cantidad']
     conteos = {s: 0 for s in ("APROBADO", "PENDIENTE", "OBSERVADO")}
     for r in resumenes:
         r.revision_visible = estado_revision(r)
@@ -113,24 +134,37 @@ def contexto_asistencia(request):
     for fila in filas_visibles.values():
         fila["validadas"] = 0
         fila["por_aprobar"] = fila["jornadas"] - fila["aprobadas"]
-    detalles_dashboard = detalles_en_lote(resumenes if puede_gestionar(request.user) else [r for r in resumenes if r.persona.dni in filas_visibles])
+    # Al navegar un día solo se reconstruye el trabajador abierto, no toda la sede.
+    resumen_abierto = None
+    if request.GET.get('detalle', '').isdigit():
+        resumen_abierto = get_object_or_404(queryset_visible(request.user), pk=int(request.GET['detalle']))
+    jornadas_detalle = [r for r in resumenes if r.persona.dni == resumen_abierto.persona.dni] if resumen_abierto else (resumenes if puede_gestionar(request.user) else [r for r in resumenes if r.persona.dni in filas_visibles])
+    detalles_dashboard = detalles_en_lote(jornadas_detalle)
+    from asistencia.services.tiempo_faltante import agregar_tiempo_faltante
+    total_tiempo_faltante = agregar_tiempo_faltante(grupos, detalles_dashboard)
     for d in detalles_dashboard:
         if d["resumen"].persona.dni in filas_visibles:
             filas_visibles[d["resumen"].persona.dni]["validadas"] += int(dia_validado(d))
     for fila in filas_visibles.values():
         fila["sin_validar"] = fila["jornadas"] - fila["validadas"]
-    visibles = Usuario.objects.all() if puede_gestionar(request.user) else Usuario.objects.filter(pk=request.user.pk)
+    visibles = Usuario.objects.select_related('ficha_trabajador').all() if puede_gestionar(request.user) else Usuario.objects.select_related('ficha_trabajador').filter(pk=request.user.pk)
     query = {k: v for k, v in filtros.items() if k != "error" and v}
     query["vista"] = "asistencia"
     detalle = None
     dni_ventana = request.GET.get("persona_dni", "")
     if request.GET.get("detalle", "").isdigit():
-        r = get_object_or_404(queryset_visible(request.user), pk=int(request.GET["detalle"]))
+        r = resumen_abierto
         detalle = detalle_jornada(r)
+        from asistencia.services.reglas_jornada import calendario_especial
+        especial = calendario_especial(r.fecha, r.fecha).get(r.fecha, '')
+        semana = r.fecha.weekday()
+        detalle['calendario_dia'] = {
+            'dia': ('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo')[semana],
+            'clase': 'feriado' if especial else 'sabado' if semana == 5 else 'domingo' if semana == 6 else 'normal',
+            'feriado': especial,
+        }
         if not dni_ventana:
             dni_ventana = r.persona.dni
-        if detalle["solo_situacion"]:
-            detalle = None
     revision_trabajador = None
     seleccionadas = []
     if dni_ventana:
@@ -139,7 +173,9 @@ def contexto_asistencia(request):
         if not seleccionadas:
             from django.http import Http404
             raise Http404("El trabajador no tiene jornadas disponibles en este periodo.")
-        revision_trabajador = contexto_revision(seleccionadas, date.fromisoformat(filtros["desde"]), date.fromisoformat(filtros["hasta"]))
+        detalles_por_pk = {d['resumen'].pk: d for d in detalles_dashboard}
+        reutilizables = [detalles_por_pk[s.pk] for s in seleccionadas] if all(s.pk in detalles_por_pk for s in seleccionadas) else None
+        revision_trabajador = contexto_revision(seleccionadas, date.fromisoformat(filtros["desde"]), date.fromisoformat(filtros["hasta"]), detalles=reutilizables)
         ultimo = request.session.get("resultado_aprobacion_masiva", {})
         if ultimo.get("dni") == dni_ventana and ultimo.get("desde") == filtros["desde"] and ultimo.get("hasta") == filtros["hasta"]:
             revision_trabajador["resultado_aprobacion"] = ultimo
@@ -149,23 +185,45 @@ def contexto_asistencia(request):
             trabajador_ant = grupos[idx_w - 1]["usuario"] if idx_w > 0 else None
             trabajador_sig = grupos[idx_w + 1]["usuario"] if idx_w < len(dnis_trabajadores) - 1 else None
             revision_trabajador["anterior_dni"] = trabajador_ant.dni if trabajador_ant else None
-            revision_trabajador["anterior_nombre"] = trabajador_ant.nombre_completo if trabajador_ant else None
+            revision_trabajador["anterior_nombre"] = trabajador_ant.nombre_corto if trabajador_ant else None
             revision_trabajador["siguiente_dni"] = trabajador_sig.dni if trabajador_sig else None
-            revision_trabajador["siguiente_nombre"] = trabajador_sig.nombre_completo if trabajador_sig else None
+            revision_trabajador["siguiente_nombre"] = trabajador_sig.nombre_corto if trabajador_sig else None
             revision_trabajador["posicion_indice"] = idx_w + 1
             revision_trabajador["total_trabajadores"] = len(dnis_trabajadores)
     if detalle and seleccionadas:
         pks_dias = [s.pk for s in seleccionadas]
         if r.pk in pks_dias:
-            idx_d = pks_dias.index(r.pk)
-            dia_ant = seleccionadas[idx_d - 1] if idx_d > 0 else None
-            dia_sig = seleccionadas[idx_d + 1] if idx_d < len(pks_dias) - 1 else None
+            inicio_nav = date.fromisoformat(filtros['desde'])
+            fin_nav = date.fromisoformat(filtros['hasta'])
+            fecha_ant = r.fecha - timedelta(days=1) if r.fecha > inicio_nav else None
+            fecha_sig = r.fecha + timedelta(days=1) if r.fecha < fin_nav else None
+            por_fecha = {s.fecha: s for s in seleccionadas}
+            from asistencia.models import PeriodoVacaciones
+            vacaciones = list(PeriodoVacaciones.objects.filter(trabajador_id=r.trabajador_id, desde__lte=fin_nav, hasta__gte=inicio_nav)) if r.trabajador_id else []
+            omitidas = {s.fecha for s in seleccionadas if s.verificado_contabilidad and s.estado == 'VACACIONES' and any(v.aprobado_el and v.desde <= s.fecha <= v.hasta for v in vacaciones)}
+            omitidas.update(s.fecha for s in seleccionadas if s.verificado_contabilidad and s.estado == 'DIA_LIBRE' and s.conceptos_editados.get('descanso_validado_programacion'))
+            while fecha_ant in omitidas:
+                fecha_ant -= timedelta(days=1)
+            while fecha_sig in omitidas:
+                fecha_sig += timedelta(days=1)
+            if fecha_ant and fecha_ant < inicio_nav:
+                fecha_ant = None
+            if fecha_sig and fecha_sig > fin_nav:
+                fecha_sig = None
+            detalle['periodo_vacaciones'] = next((v for v in vacaciones if v.desde <= r.fecha <= v.hasta), None)
+            dia_ant = por_fecha.get(fecha_ant)
+            dia_sig = por_fecha.get(fecha_sig)
             detalle["anterior_pk"] = dia_ant.pk if dia_ant else None
-            detalle["anterior_fecha"] = dia_ant.fecha if dia_ant else None
+            detalle["anterior_fecha"] = fecha_ant
             detalle["siguiente_pk"] = dia_sig.pk if dia_sig else None
-            detalle["siguiente_fecha"] = dia_sig.fecha if dia_sig else None
-            detalle["posicion_indice"] = idx_d + 1
-            detalle["total_dias"] = len(pks_dias)
+            detalle["siguiente_fecha"] = fecha_sig
+            detalle["posicion_indice"] = (r.fecha - inicio_nav).days + 1
+            detalle["total_dias"] = (fin_nav - inicio_nav).days + 1
+    from django.conf import settings
+    if getattr(settings,'MOVIL_HABILITADO',True) and detalle and puede_gestionar(request.user):
+        from movil.models import Registro
+        r=detalle['resumen']
+        detalle['marcas_moviles_pendientes']=Registro.objects.filter(perfil__trabajador_id=r.trabajador_id,jornada=r.fecha,estado='POR_REVISAR') if r.trabajador_id else []
     inicio, fin = filtros["desde"], filtros["hasta"]
     marcas = MarcacionBiometrica.objects.filter(fecha_hora__date__range=(inicio, fin))
     if not puede_gestionar(request.user):
@@ -181,22 +239,37 @@ def contexto_asistencia(request):
     marcas_codigo = []
     filtros_codigos = {campo: request.GET.get(campo, "").strip()[:150] for campo in ("sede_codigo", "filtro_codigo", "nombre_codigo")}
     from asistencia.services.grupos_importacion import grupo_importacion
-    grupo = grupo_importacion(request.GET) if puede_gestionar(request.user) else None
+    es_importador = request.GET.get('vista') == 'excel-zk'
+    grupo = grupo_importacion(request.GET) if puede_gestionar(request.user) and es_importador else None
     if grupo:
         filtros_codigos.update(grupo_mes=grupo['mes'], grupo_carga=grupo['carga_id'])
-    identidades = IdentidadBiometrica.objects.select_related("usuario", "trabajador").all() if puede_gestionar(request.user) else IdentidadBiometrica.objects.none()
+    identidades = IdentidadBiometrica.objects.select_related("usuario", "trabajador").all() if puede_gestionar(request.user) and es_importador else IdentidadBiometrica.objects.none()
     if grupo and grupo['activo']:
         identidades = identidades.filter(
             Q(pk__in=grupo['marcas'].values('identidad_biometrica_id')) |
             Q(pk__in=FilaImportacionBiometrica.objects.filter(marcacion__in=grupo['marcas']).values('identidad_id'))
         )
-    sedes_codigos = list(identidades.order_by("sede").values_list("sede", flat=True).distinct())
+    sedes_codigos = SEDES_OPERATIVAS
     if filtros_codigos["sede_codigo"]:
         identidades = identidades.filter(sede=filtros_codigos["sede_codigo"])
     if filtros_codigos["filtro_codigo"]:
         identidades = identidades.filter(codigo__icontains=filtros_codigos["filtro_codigo"])
     for termino in filtros_codigos["nombre_codigo"].split():
         identidades = identidades.filter(Q(nombre__icontains=termino) | Q(trabajador__nombre_completo__icontains=termino))
+    total_identificacion = identidades.count()
+    pendientes_identificacion = identidades.filter(trabajador__isnull=True).count()
+    estado_identificacion = request.GET.get('identificacion', 'todos')
+    if estado_identificacion not in {'todos','pendientes','identificados'}:
+        estado_identificacion = 'todos'
+    filtros_codigos['identificacion'] = estado_identificacion
+    enlaces_identificacion = []
+    for clave, etiqueta, cantidad in [('todos','Todos',total_identificacion),('pendientes','Pendientes de identificar',pendientes_identificacion),('identificados','Identificados',total_identificacion-pendientes_identificacion)]:
+        enlaces_identificacion.append({'estado':clave,'nombre':etiqueta,'total':cantidad,
+            'url':'?' + urlencode({'vista':'excel-zk',**filtros_codigos,'identificacion':clave}) + '#lista-codigos-huellero'})
+    if estado_identificacion == 'pendientes':
+        identidades = identidades.filter(trabajador__isnull=True)
+    elif estado_identificacion == 'identificados':
+        identidades = identidades.filter(trabajador__isnull=False)
     identificados = identidades.exclude(trabajador__isnull=True)
     marcas_envio = MarcacionBiometrica.objects.filter(Q(identidad_biometrica__in=identificados) | Q(filas_origen__identidad__in=identificados))
     if grupo and grupo['activo']:
@@ -210,16 +283,20 @@ def contexto_asistencia(request):
         marcas_codigo = marcas_consultadas.distinct().select_related("carga_origen").prefetch_related("filas_origen").order_by("fecha_hora")[:100]
     cierres_periodo = list(CierreAsistencia.objects.filter(fecha_inicio__lte=fin, fecha_fin__gte=inicio)) if puede_gestionar(request.user) else []
     from asistencia.services.dashboard_contable import resumen_dashboard
-    dashboard_contable = resumen_dashboard(detalles_dashboard, filtros, cierres_periodo) if puede_gestionar(request.user) else None
+    dashboard_contable = resumen_dashboard(detalles_dashboard, filtros, cierres_periodo) if puede_gestionar(request.user) and request.GET.get('vista', 'dashboard') == 'dashboard' else None
     return {
         "dashboard_contable": dashboard_contable,
+        "conteos_resumen": conteos_resumen, "total_resumen": sum(conteos_resumen.values()),
+        "mostrar_jornadas": request.GET.get("listado") == "jornadas",
+        "total_tiempo_faltante": total_tiempo_faltante,
         "filtros": filtros, "pagina_asistencia": pagina, "consulta_asistencia": urlencode(query),
         "detalle_jornada": detalle, "consolidado": grupos, "conteos_revision": conteos,
         "pagina_trabajadores": pagina_trabajadores, "total_trabajadores_asistencia": len(grupos),
         "revision_trabajador": revision_trabajador,
         "total_jornadas": len(resumenes), "totales_asistencia": totales,
         "total_vueltas": sum(r.total_vueltas_num for r in resumenes),
-        "sedes_asistencia": sorted(set(visibles.values_list("agencia_sede", flat=True)) | set(queryset_visible(request.user).exclude(trabajador__isnull=True).values_list("trabajador__sede", flat=True))),
+        "sedes_asistencia": SEDES_OPERATIVAS,
+        "areas_asistencia": sorted({area or "Por completar" for area in queryset_visible(request.user).values_list("trabajador__area", flat=True)}, key=str.casefold),
         "estados_asistencia": ResumenAsistenciaDiaria.EstadoAsistencia.choices,
         "tipos_incidencia": IncidenciaAsistencia.TIPOS, "conceptos_ajuste": AjusteAsistencia.CONCEPTOS,
         "tipos_evento": MarcacionBiometrica.TipoEvento.choices,
@@ -229,7 +306,7 @@ def contexto_asistencia(request):
         "cargas_con_error": CargaArchivoAsistencia.objects.filter(estado="ERROR").order_by("-fecha_subida")[:10] if puede_gestionar(request.user) else [],
         "cierres_asistencia": cierres_periodo,
         "jornadas_fecha_futura": queryset_visible(request.user).filter(fecha__gt=timezone.localdate()).count(),
-        "identidades_biometricas": identidades[:200],
+        "identidades_biometricas": identidades[:200], "enlaces_identificacion": enlaces_identificacion,
         "grupo_importacion": grupo,
         "filtros_codigos": filtros_codigos, "sedes_codigos": sedes_codigos,
         "total_codigos_filtrados": identidades.count(),
@@ -244,9 +321,9 @@ def contexto_asistencia(request):
 
 def volver(request, resumen_id=None):
     # Construir la redirección con parámetros conocidos; no aceptar URLs externas.
-    parametros = {k: request.POST[k] for k in ("desde", "hasta", "sede", "trabajador", "estado", "revision") if request.POST.get(k)}
+    parametros = {k: request.POST[k] for k in ("desde", "hasta", "sede", "trabajador", "estado", "revision", "area") if request.POST.get(k)}
     parametros["vista"] = "asistencia"
-    if resumen_id and request.POST.get("solo_situacion") != "si":
+    if resumen_id and (request.POST.get("solo_situacion") != "si" or request.POST.get('mantener_detalle') == 'si'):
         parametros["detalle"] = resumen_id
     if request.POST.get("persona_dni"):
         parametros["persona_dni"] = request.POST["persona_dni"][:20]
@@ -264,13 +341,79 @@ def accion_jornada(request, resumen_id):
             comprobar_abierto(r.fecha)
             accion = request.POST.get("accion")
             motivo = request.POST.get("motivo", "").strip()
-            if accion == 'aprobar_dia_situacion':
+            if accion == 'observacion_dia':
+                texto = request.POST.get('observacion_dia', '').strip()
+                if len(texto) > 3000:
+                    raise ValidationError('La observación admite hasta 3000 caracteres.')
+                if texto != r.observacion_dia:
+                    registrar_historial(r, request.user, 'Observación del día', f'Antes: {r.observacion_dia}. Ahora: {texto}.')
+                    r.observacion_dia = texto
+                    r.save(update_fields=['observacion_dia'])
+                messages.success(request, 'Observación del día guardada.')
+            elif accion == 'configurar_nocturnas':
+                if not r.trabajador_id:
+                    raise ValidationError('Vincule la cuenta a una ficha de trabajador antes de configurar las nocturnas.')
+                from asistencia.services.configuracion_nocturnas import configurar_nocturnas
+                cantidad = configurar_nocturnas(r.trabajador, request.POST.get('calcular_nocturnas') == 'si', request.user)
+                messages.success(request, f'Configuración de nocturnas guardada. {cantidad} jornadas pendientes actualizadas.')
+            elif accion == 'validar_descansos':
+                from datetime import date
+                from asistencia.services.validacion_descansos import validar_descansos
+                if not r.trabajador_id:
+                    raise ValidationError('Vincule el trabajador antes de validar descansos.')
+                try:
+                    desde = date.fromisoformat(request.POST.get('desde', ''))
+                    hasta = date.fromisoformat(request.POST.get('hasta', ''))
+                except ValueError:
+                    raise ValidationError('Seleccione un periodo válido para validar descansos.')
+                cantidad, omitidas = validar_descansos(r.trabajador, desde, hasta, request.user)
+                messages.success(request, f'{cantidad} días programados validados. {omitidas} días con registros o revisión previa conservados.')
+            elif accion == 'validar_vacaciones':
+                from asistencia.models import PeriodoVacaciones
+                from asistencia.services.vacaciones import validar_vacaciones
+                periodo = get_object_or_404(PeriodoVacaciones, pk=request.POST.get('periodo_id'), trabajador_id=r.trabajador_id)
+                validar_vacaciones(periodo, request.user)
+                messages.success(request, 'Vacaciones validadas. La navegación omitirá las fechas aprobadas del periodo.')
+            elif accion == 'confirmar_descanso_trabajado':
+                from asistencia.services.descanso_trabajado import confirmar_descanso_trabajado
+                confirmar_descanso_trabajado(r, request.POST.get('tipo_descanso'), request.POST.get('fecha_descanso'), request.user)
+                messages.success(request, 'Situación del descanso guardada. La jornada conserva su revisión pendiente.')
+            elif accion == 'confirmar_feriado_trabajado':
+                from asistencia.services.feriado_trabajado import confirmar_feriado_trabajado
+                confirmar_feriado_trabajado(r, request.user)
+                messages.success(request, 'Feriado trabajado confirmado: 08:00:00 adicionales registradas.')
+            elif accion == 'aprobar_dia_situacion':
                 from asistencia.services.aprobacion_situacion import aprobar_situacion_del_dia
                 aprobar_situacion_del_dia(r, request.user, request.POST.get('tipo',''), motivo)
             elif accion in {"APROBADO", "OBSERVADO"}:
                 revisar(r, request.user, accion, motivo)
             elif accion == "reabrir":
                 dejar_pendiente(r, request.user, "Jornada reabierta para revisión y edición de datos.")
+            elif accion in {'confirmar_refrigerio', 'retirar_refrigerio'}:
+                if r.verificado_contabilidad:
+                    raise ValidationError('Reabra la jornada antes de cambiar el refrigerio.')
+                if not motivo:
+                    raise ValidationError('Indique el motivo de la confirmación del refrigerio.')
+                from asistencia.services.reglas_jornada import regla_resumen
+                from asistencia.services.cuadro_excel import segundos_nocturnos
+                detalle = detalle_jornada(r, incluir_formulario=False)
+                conceptos = dict(r.conceptos_editados)
+                if accion == 'confirmar_refrigerio':
+                    regla = regla_resumen(r)
+                    if not detalle['falta_refrigerio'] or not regla:
+                        raise ValidationError('La jornada no tiene un refrigerio pendiente de confirmar.')
+                    if segundos_nocturnos(detalle['tramos']):
+                        raise ValidationError('En trabajo nocturno registre las horas reales del refrigerio para calcular correctamente la nocturnidad.')
+                    conceptos['refrigerio_confirmado'] = regla.minutos_refrigerio * 60
+                else:
+                    conceptos.pop('refrigerio_confirmado', None)
+                registrar_historial(r, request.user, 'Refrigerio confirmado' if accion == 'confirmar_refrigerio' else 'Refrigerio retirado',
+                                    f'Antes: {r.conceptos_editados}. Ahora: {conceptos}. {motivo}')
+                r.conceptos_editados = conceptos
+                r.save(update_fields=['conceptos_editados'])
+                dejar_pendiente(r, request.user, motivo)
+                from asistencia.services.revision_trabajador import validar_periodo
+                validar_periodo([r], {}, {}, None, motivo, request.user)
             elif accion == "turno":
                 turno = get_object_or_404(TurnoHorario, pk=request.POST.get("turno"), activo=True)
                 if r.trabajador_id:
@@ -298,7 +441,7 @@ def accion_jornada(request, resumen_id):
                 situacion = detalle["situacion_dia"]
                 if not situacion or situacion.tipo != "OTRO" or r.verificado_contabilidad:
                     raise ValidationError("Solo puede completar un día no trabajado pendiente de justificar.")
-                tipos = {"DESCANSO_SEMANAL", "FERIADO_NO_LABORADO", "VACACIONES", "PERMISO", "DESCANSO_MEDICO", "CAMBIO_DESCANSO"}
+                tipos = {"DESCANSO_SEMANAL", "FERIADO_NO_LABORADO", "VACACIONES", "PERMISO", "DESCANSO_MEDICO", "CAMBIO_DESCANSO", "NO_LABORO", "CUMPLEANOS"}
                 tipo = request.POST.get("tipo", "")
                 if tipo not in tipos:
                     raise ValidationError("Seleccione la situación real del día.")
@@ -314,6 +457,27 @@ def accion_jornada(request, resumen_id):
                 r.estado = "POR_REVISAR"
                 r.save(update_fields=["estado"])
                 dejar_pendiente(r, request.user, f"Situación del día corregida. Antes: {anterior}. Ahora: {situacion.get_tipo_display()}: {motivo}. Requiere nueva aprobación.")
+            elif accion in {'editar_conceptos', 'restaurar_conceptos'}:
+                if not puede_aprobar(request.user):
+                    return HttpResponseForbidden('La edición corresponde a Contabilidad o Gerencia.')
+                from asistencia.services.edicion_conceptos import guardar_conceptos
+                if not detalle_jornada(r, incluir_formulario=False)['completa']:
+                    raise ValidationError('Complete y valide las marcaciones antes de editar los tiempos.')
+                if accion == 'restaurar_conceptos':
+                    if r.verificado_contabilidad:
+                        raise ValidationError('Reabra la jornada antes de restaurar sus tiempos.')
+                    registrar_historial(r, request.user, 'Conceptos originales restaurados', str(r.conceptos_editados))
+                    adicionales = list(r.ajustes.filter(concepto='descanso_feriado').values())
+                    if adicionales:
+                        registrar_historial(r, request.user, 'Adicional de feriado o descanso retirado', str(adicionales))
+                        r.ajustes.filter(concepto='descanso_feriado').delete()
+                        getattr(r, '_prefetched_objects_cache', {}).pop('ajustes', None)
+                    r.conceptos_editados = {}
+                    r.save(update_fields=['conceptos_editados'])
+                else:
+                    guardar_conceptos(r, request.POST, request.user)
+                from asistencia.services.revision_trabajador import validar_periodo
+                validar_periodo([r], {}, {}, None, 'Actualización de conceptos diarios.', request.user)
             elif accion == "ajuste":
                 if not motivo:
                     raise ValidationError("Indique el motivo del ajuste.")
@@ -343,19 +507,20 @@ def accion_jornada(request, resumen_id):
                 obj.aprobado_por, obj.aprobado_el = request.user, timezone.now()
                 obj.save(update_fields=["aprobado_por", "aprobado_el"])
                 if accion == "aprobar_incidencia" and obj.minutos is None:
-                    estados = {"VACACIONES": "VACACIONES", "PERMISO": "PERMISO", "DESCANSO_MEDICO": "DESCANSO_MEDICO", "CAMBIO_DESCANSO": "DIA_LIBRE", "DESCANSO_SEMANAL": "DIA_LIBRE", "FERIADO_NO_LABORADO": "FERIADO"}
+                    estados = {"CUMPLEANOS": "DIA_LIBRE", "VACACIONES": "VACACIONES", "PERMISO": "PERMISO", "DESCANSO_MEDICO": "DESCANSO_MEDICO", "CAMBIO_DESCANSO": "DIA_LIBRE", "DESCANSO_SEMANAL": "DIA_LIBRE", "FERIADO_NO_LABORADO": "FERIADO"}
                     if obj.tipo in estados:
                         r.estado = estados[obj.tipo]
                         r.save(update_fields=["estado"])
                 dejar_pendiente(r, request.user, f"{obj.__class__.__name__} #{obj.pk} aprobado: {obj.motivo}")
-            elif accion == "marcacion_manual":
+            elif accion in {"marcacion_manual", "editar_marcacion_manual"}:
                 from asistencia.services.marcacion_manual import agregar_marcacion_manual
                 from asistencia.services.revision_trabajador import validar_periodo
                 cambios = {int(k.removeprefix("evento_")): v for k, v in request.POST.items() if k.startswith("evento_")}
                 originales = {int(k.removeprefix("original_")): v for k, v in request.POST.items() if k.startswith("original_")}
                 if cambios:
                     validar_periodo([r], cambios, originales, None, "Clasificación junto al registro manual.", request.user)
-                agregar_marcacion_manual(r, request.POST, request.user)
+                marca_editar = get_object_or_404(MarcacionBiometrica.objects.select_for_update(), pk=request.POST.get('marcacion_id')) if accion == 'editar_marcacion_manual' else None
+                agregar_marcacion_manual(r, request.POST, request.user, marcacion=marca_editar)
             elif accion == "eliminar_marcacion_manual":
                 marcacion_id = request.POST.get("marcacion_id")
                 if not marcacion_id:
@@ -392,6 +557,14 @@ def accion_jornada(request, resumen_id):
                 if not cambios:
                     raise ValidationError("No hay marcaciones disponibles para corregir.")
                 validar_periodo([r], cambios, originales, None, motivo, request.user)
+                if request.POST.get('editar_tiempos') == 'si' or 'jornada_base' in request.POST:
+                    if not puede_aprobar(request.user):
+                        raise ValidationError('La edición de tiempos corresponde a Contabilidad o Gerencia.')
+                    if not detalle_jornada(r, incluir_formulario=False)['completa']:
+                        raise ValidationError('Complete las marcaciones antes de editar los tiempos.')
+                    from asistencia.services.edicion_conceptos import guardar_conceptos
+                    guardar_conceptos(r, request.POST, request.user)
+                    validar_periodo([r], {}, {}, None, 'Tiempos guardados junto a las correcciones.', request.user)
             elif accion == "corregir_evento":
                 motivo = motivo or "Clasificación de marcación laboral."
                 marca = get_object_or_404(MarcacionBiometrica, pk=request.POST.get("marcacion_id"))
@@ -440,17 +613,16 @@ def exportar_asistencia(request):
     f, qs = reporte_filtrado(request)
     if f["error"]:
         return HttpResponse(f["error"], status=400)
-    response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = f'attachment; filename="asistencia_{f["desde"]}_{f["hasta"]}.csv"'
-    response.write("\ufeff")
-    writer = csv.writer(response, delimiter=";")
-    writer.writerow(["Desde", "Hasta", "DNI", "Trabajador", "Sede", "Jornadas", "Aprobadas", "Pendientes", "Observadas", "Horas efectivas", "Extras 25 %", "Extras 35 %", "Nocturnas", "Descanso/feriado", "Descuento (h)", "Compensacion (h)"])
-    for fila in consolidar(qs):
-        u = fila["usuario"]
-        def seguro(value):
-            text = str(value)
-            return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
-        writer.writerow([f["desde"], f["hasta"], seguro(u.dni), seguro(u.nombre_completo), seguro(u.agencia_sede), fila["jornadas"], fila["aprobadas"], fila["pendientes"], fila["observadas"], *[f"{fila[k]:.2f}" for k, _ in AjusteAsistencia.CONCEPTOS]])
+    resumenes = list(qs)
+    filas = consolidar(resumenes)
+    from asistencia.services.revision_trabajador import detalles_en_lote
+    from asistencia.services.tiempo_faltante import agregar_tiempo_faltante
+    from asistencia.exportacion import libro_asistencia
+    detalles = detalles_en_lote(resumenes)
+    agregar_tiempo_faltante(filas, detalles)
+    response = HttpResponse(libro_asistencia(f, filas, resumenes, detalles),
+                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="asistencia_{f["desde"]}_{f["hasta"]}.xlsx"'
     return response
 
 
@@ -527,10 +699,16 @@ def consultar_huellero(request):
     return JsonResponse(ZKTecoLiveClient().sincronizar_marcaciones_en_vivo())
 
 
-def datos_registros_huellero(usuario):
+def datos_registros_huellero(usuario, desde=None, hasta=None):
     """Eventos recibidos del biométrico; la marca web no se presenta como huella."""
+    hoy = timezone.localdate()
+    desde = desde or hoy
+    hasta = hasta or desde
+    if desde > hasta:
+        desde, hasta = hasta, desde
     qs = MarcacionBiometrica.objects.filter(
-        fecha_hora__date=timezone.localdate(), es_valida=True,
+        fecha_hora__date__gte=desde, fecha_hora__date__lte=hasta,
+        es_valida=True,
         origen=MarcacionBiometrica.OrigenMarcacion.ZKTECO_EN_LINEA,
     ).select_related("usuario", "correccion_evento").order_by("-fecha_hora", "-pk")
     if not puede_gestionar(usuario):
@@ -542,20 +720,30 @@ def datos_registros_huellero(usuario):
         tipo = correccion.tipo_evento if correccion else m.tipo_evento
         eventos.append({
             "id": m.pk, "dni": m.usuario.dni if m.usuario else m.dni,
-            "nombre": m.usuario.nombre_completo if m.usuario else m.nombre_empleado or "Por identificar",
+            "nombre": m.usuario.nombre_corto if m.usuario else (m.identidad_biometrica.nombre_corto if m.identidad_biometrica_id else m.nombre_empleado) or "Por identificar",
             "fecha_hora": timezone.localtime(m.fecha_hora).strftime("%d/%m/%Y %H:%M:%S"),
             "evento": dict(MarcacionBiometrica.TipoEvento.choices).get(tipo, tipo),
-            "sede": m.usuario.agencia_sede if m.usuario else "Por identificar",
+            "sede": m.sede or (m.usuario.agencia_sede if m.usuario else "Por identificar"),
             "equipo": m.dispositivo_ip or "Sin equipo registrado",
             "id_biometrico": str(m.zkteco_user_id) if m.zkteco_user_id is not None else "—",
         })
-    return {"registros": eventos, "total": total, "limite": 100, "actualizado": timezone.localtime().strftime("%d/%m/%Y %H:%M:%S")}
+    return {"registros": eventos, "total": total, "limite": 100,
+            "desde": str(desde), "hasta": str(hasta),
+            "es_hoy": desde == hoy == hasta,
+            "actualizado": timezone.localtime().strftime("%d/%m/%Y %H:%M:%S")}
 
 
 @login_required
 @require_GET
 def registros_huellero(request):
-    response = JsonResponse(datos_registros_huellero(request.user))
+    from datetime import date
+    def fecha_parametro(clave):
+        try:
+            return date.fromisoformat(request.GET.get(clave, ''))
+        except ValueError:
+            return None
+    response = JsonResponse(datos_registros_huellero(
+        request.user, fecha_parametro('desde'), fecha_parametro('hasta')))
     response["Cache-Control"] = "no-store"
     return response
 
@@ -566,8 +754,16 @@ def importar_excel_web(request):
     if not puede_gestionar(request.user):
         return JsonResponse({"detail": "No tiene permiso para importar archivos."}, status=403)
     archivo = request.FILES.get("file")
-    if not archivo or not archivo.name.lower().endswith((".xlsx", ".xls")):
+    if not archivo:
         return JsonResponse({"detail": "Seleccione un archivo Excel .xlsx o .xls."}, status=400)
+    from core.archivos import validar_archivo_subido
+    try:
+        validar_archivo_subido(archivo, (".xlsx", ".xls"))
+    except ValidationError as exc:
+        return JsonResponse({"detail": " ".join(exc.messages)}, status=400)
+    if request.POST.get('progreso') == 'si':
+        from asistencia.services.progreso_importacion import respuesta_importacion
+        return respuesta_importacion(archivo, request.user.pk)
     from asistencia.services.zkteco_parser import ZKTecoExcelParser
     try:
         with transaction.atomic():

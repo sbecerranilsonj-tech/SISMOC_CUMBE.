@@ -5,7 +5,7 @@ from django.utils import timezone
 from asistencia.models import IncidenciaAsistencia
 from asistencia.services.revision import puede_aprobar, comprobar_abierto, detalle_jornada, registrar_historial, revisar
 
-ESTADOS = {'DESCANSO_SEMANAL':'DIA_LIBRE','FERIADO_NO_LABORADO':'FERIADO','PERMISO':'PERMISO','VACACIONES':'VACACIONES','DESCANSO_MEDICO':'DESCANSO_MEDICO','CAMBIO_DESCANSO':'DIA_LIBRE'}
+ESTADOS = {'SIN_PROGRAMACION':'DIA_LIBRE','CUMPLEANOS':'DIA_LIBRE','DESCANSO_SEMANAL':'DIA_LIBRE','FERIADO_NO_LABORADO':'FERIADO','NO_LABORO':'NO_LABORO','PERMISO':'PERMISO','VACACIONES':'VACACIONES','DESCANSO_MEDICO':'DESCANSO_MEDICO','CAMBIO_DESCANSO':'DIA_LIBRE'}
 
 
 @transaction.atomic
@@ -21,8 +21,14 @@ def aprobar_situacion_del_dia(resumen, actor, tipo, motivo=''):
     d=detalle_jornada(resumen,incluir_formulario=False)
     if resumen.verificado_contabilidad:
         raise ValidationError('El día ya está aprobado. Reábralo antes de modificar su situación.')
-    if not d['solo_situacion'] or any(m.es_valida for m in d['marcas']):
+    if any(m.es_valida for m in d['marcas']) or resumen.ajustes.exists():
         raise ValidationError('La jornada tiene marcaciones o ajustes. Revísela desde su detalle.')
+    if not d['solo_situacion']:
+        if resumen.incidencias.exists() or resumen.horas_trabajadas:
+            raise ValidationError('Revise las incidencias y horas registradas antes de confirmar la situación.')
+        situacion = IncidenciaAsistencia.objects.create(resumen=resumen, tipo=tipo, motivo=motivo.strip() if tipo == 'PERMISO' else dict(IncidenciaAsistencia.TIPOS)[tipo], creado_por=actor)
+        getattr(resumen, '_prefetched_objects_cache', {}).pop('incidencias', None)
+        d['situacion_dia'] = situacion
     situacion=d['situacion_dia']
     anterior=f'{situacion.get_tipo_display()}: {situacion.motivo}; aprobación: {situacion.aprobado_el or "pendiente"}'
     situacion.tipo=tipo

@@ -1,0 +1,12 @@
+{% extends 'conductores/base.html' %}{% load static %}
+{% block titulo %}Ventas y embarque{% endblock %}
+{% block descripcion %}{% endblock %}
+{% block recuadro_cabecera %}<span class="cd-emblema">{{ user.agencia_sede|default:'Boletería' }}</span>{% endblock %}
+{% block contenido %}
+<link rel="stylesheet" href="{% static 'movil_busqueda.css' %}?v=20261115-4">
+<div class="movil-settings">
+{% include 'movil/revision_itinerario.html' %}
+{% include 'movil/registro_ventas.html' %}
+<form method="post" enctype="multipart/form-data" id="cd-upload-directo" class="cd-upload-directo">{% csrf_token %}<input type="hidden" name="accion" value="importar_itinerario"><input type="file" name="archivo" id="cd-itinerario-file" accept=".xls,.xlsx" hidden required><button class="cd-button" type="button" data-upload-directo aria-controls="cd-itinerario-file"><svg class="ui-icon"><use href="#icon-file"></use></svg><span>Subir itinerarios</span></button><span class="cd-upload-status" role="status"></span></form>
+</div><script src="{% static 'revision_itinerario.js' %}?v=20261115-1" defer></script><script src="{% static 'movil_busqueda.js' %}?v=20261112-2" defer></script>
+{% endblock %}

@@ -1,10 +1,11 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'revision_trabajador.css' %}?v=20261020-2">
+<link rel="stylesheet" href="{% static 'reglas_jornada.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'revision_trabajador.css' %}?v=20261028-plegable">
 <dialog id="revision-trabajador-dialog" class="revision-trabajador-dialog" aria-labelledby="titulo-revision-trabajador" data-volver="?{{ consulta_asistencia }}">
     <header class="worker-review-header">
         <div class="worker-review-person">
-            <span class="worker-review-avatar" aria-hidden="true">{{ revision_trabajador.persona.nombre_completo|slice:":1"|upper }}</span>
-            <div><h3 id="titulo-revision-trabajador">{{ revision_trabajador.persona.nombre_completo }}</h3>
+            <span class="worker-review-avatar" aria-hidden="true">{{ revision_trabajador.persona.nombre_corto|slice:":1"|upper }}</span>
+            <div><h3 id="titulo-revision-trabajador">{{ revision_trabajador.persona.nombre_corto }}</h3>
                 <dl class="worker-review-identity">
                     <div><dt>DNI</dt><dd>{{ revision_trabajador.dni }}</dd></div>
                     <div><dt>Código</dt><dd>{{ revision_trabajador.codigo }}</dd></div>
@@ -39,7 +40,7 @@
                 {% endif %}
             </div>
             {% endif %}
-            {% if puede_gestionar %}<a class="btn-dark-outline" href="{% url 'programar_horarios' %}?desde={{ filtros.desde }}&amp;hasta={{ filtros.hasta }}">Programar horarios</a>{% endif %}<a class="btn-dark-outline" href="?{{ consulta_asistencia }}">Cerrar ventana</a>
+            {% if puede_gestionar %}<a class="btn-dark-outline" href="{% url 'dashboard' %}?vista=personal{% if revision_trabajador.persona.pk %}&amp;ficha={{ revision_trabajador.persona.pk }}{% endif %}&amp;volver_a={{ request.get_full_path|urlencode }}">Configurar trabajador</a>{% endif %}<a class="btn-dark-outline" href="?{{ consulta_asistencia }}">Cerrar ventana</a>
         </div>
     </header>
     <div class="worker-review-context">
@@ -70,19 +71,18 @@
             {% endif %}
         {% endif %}
     </section>
-    {% if revision_trabajador.resultado_aprobacion %}<details class="resultado-aprobacion-masiva" open><summary>Resultado de la última aprobación conjunta</summary><p>{{ revision_trabajador.resultado_aprobacion.aprobadas }} aprobadas en esa operación · {{ revision_trabajador.resultado_aprobacion.ya_aprobadas }} ya estaban aprobadas.</p>
-    {% for fila in revision_trabajador.resultado_aprobacion.pendientes %}<p><strong>{{ fila.fecha }}</strong>: {{ fila.motivos|join:' ' }}</p>{% empty %}<p>Todas las fechas del periodo tienen una jornada aprobada.</p>{% endfor %}</details>{% endif %}
     <h4>Resultado por jornada</h4>
 
     <div class="table-responsive"><table class="custom-dark-table"><thead><tr><th>Fecha</th><th>Situación del día / validación</th><th>Trabajo</th><th>Refrigerio</th><th>Extras 25 %</th><th>Extras 35 %</th><th>Acciones</th></tr></thead><tbody>
-    {% for dia in revision_trabajador.calendario %}{% if dia.detalle %}{% with d=dia.detalle %}{% if d.solo_situacion %}{% include 'asistencia/fila_situacion_dia.html' %}{% else %}<tr><td>{{ d.resumen.fecha|date:'d/m/Y' }}{% if d.cruza_medianoche %}<small>al {{ d.fin_consulta|date:'d/m/Y' }}</small>{% endif %}</td><td><small>{{ d.estado_asistencia_visible }}</small>{% for i in d.resumen.incidencias.all %}<small>{{ i.get_tipo_display }} · {% if i.aprobado_el %}Aprobada{% else %}Pendiente de aprobación{% endif %}</small>{% endfor %}{% if d.ausencia_justificada %}<span class="status-pill pill-emerald">Día justificado</span>{% elif d.resumen.verificado_contabilidad %}<span class="status-pill pill-emerald">Jornada aprobada</span>{% elif d.completa %}<span class="status-pill pill-emerald">Marcaciones validadas</span>{% else %}<span class="status-pill pill-orange">Por completar</span>{% endif %}{% for aviso in d.alertas %}<small>{{ aviso }}</small>{% endfor %}</td><td>{% if d.ausencia_justificada %}No laboró{% else %}{{ d.trabajo_reconstruido|default:'Por revisar' }}{% endif %}</td><td>{% if d.ausencia_justificada %}No laboró{% else %}{{ d.refrigerio|default:'Por revisar' }}{% endif %}</td><td>{% if d.ausencia_justificada %}No laboró{% else %}{{ d.cuadro_excel.totales.he25 }}{% endif %}</td><td>{% if d.ausencia_justificada %}No laboró{% else %}{{ d.cuadro_excel.totales.he35 }}{% endif %}</td><td><a class="btn-dark-outline" href="?{{ consulta_asistencia }}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}&amp;detalle={{ d.resumen.pk }}#detalle-jornada">Ver detalle</a></td></tr>{% endif %}{% endwith %}{% else %}<tr>
-        <td>{{ dia.fecha|date:'d/m/Y' }}</td><td><span class="status-pill pill-orange">Sin marcaciones</span><small>Situación del día por registrar</small></td><td>—</td><td>—</td><td>—</td><td>—</td>
-        <td>{% if dia.cerrado %}Periodo cerrado{% elif puede_gestionar %}<details><summary>Registrar situación</summary><form method="post" action="{% url 'registrar_dia_sin_marcas' %}" class="formulario-vertical">{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="fecha" value="{{ dia.fecha|date:'Y-m-d' }}"><label>Situación del día<select name="tipo_dia" required><option value="">Seleccione</option><option value="FERIADO_NO_LABORADO">Feriado no laborado</option><option value="DESCANSO_SEMANAL">Descanso semanal</option><option value="NO_TRABAJO">No trabajó · pendiente de justificar</option><option value="VACACIONES">Vacaciones</option><option value="PERMISO">Permiso</option><option value="DESCANSO_MEDICO">Descanso médico</option></select></label><button class="btn-dark-outline" type="submit">Registrar día</button></form></details>{% else %}Pendiente de registro{% endif %}</td>
+    {% for dia in revision_trabajador.calendario %}{% if dia.detalle %}{% with d=dia.detalle %}{% if d.solo_situacion %}{% include 'asistencia/fila_situacion_dia.html' %}{% else %}<tr class="{% if dia.especial %}dia-especial{% elif dia.es_sabado %}dia-sabado{% endif %}"><td>{% include 'asistencia/_etiqueta_fecha.html' %}{{ d.resumen.fecha|date:'d/m/Y' }}{% if d.cruza_medianoche %}<small>al {{ d.fin_consulta|date:'d/m/Y' }}</small>{% endif %}</td><td>{% if not d.control_por_jornada %}<small>{{ d.estado_asistencia_visible }}</small>{% endif %}{% if d.trabajo_en_descanso %}<small>{% if not d.descanso_confirmado %}Marcaciones en descanso programado · Por confirmar{% elif d.decision_descanso.tipo == 'CAMBIO_DESCANSO' %}Cambio de descanso · {{ d.decision_descanso.fecha_destino }}{% else %}Descanso trabajado confirmado{% endif %}</small>{% endif %}{% for i in d.resumen.incidencias.all %}<small>{{ i.get_tipo_display }} · {% if i.aprobado_el %}Aprobada{% else %}Pendiente de aprobación{% endif %}</small>{% endfor %}{% if d.ausencia_justificada %}<span class="status-pill pill-emerald">Día justificado</span>{% elif d.resumen.verificado_contabilidad %}<span class="status-pill pill-emerald">Jornada aprobada</span>{% elif d.completa and not d.falta_refrigerio %}<span class="status-pill pill-emerald">Marcaciones validadas</span>{% else %}<span class="status-pill pill-orange">Por completar</span>{% endif %}{% for aviso in d.alertas %}<small>{{ aviso }}</small>{% endfor %}</td><td>{% if d.exenta_marcacion %}Exonerada{% elif d.ausencia_justificada %}No laboró{% else %}{{ d.trabajo_reconstruido|default:'Por revisar' }}{% endif %}</td><td>{% if d.exenta_marcacion %}Exonerada{% elif d.ausencia_justificada %}No laboró{% else %}{{ d.refrigerio|default:'Por revisar' }}{% endif %}</td><td>{% if d.exenta_marcacion %}Exonerada{% elif d.ausencia_justificada %}No laboró{% else %}{{ d.cuadro_excel.totales.he25 }}{% endif %}</td><td>{% if d.exenta_marcacion %}Exonerada{% elif d.ausencia_justificada %}No laboró{% else %}{{ d.cuadro_excel.totales.he35 }}{% endif %}</td><td><a class="btn-dark-outline" href="?{{ consulta_asistencia }}&amp;persona_dni={{ revision_trabajador.dni|urlencode }}&amp;detalle={{ d.resumen.pk }}#detalle-jornada">Ver detalle</a></td></tr>{% endif %}{% endwith %}{% else %}<tr class="{% if dia.especial %}dia-especial{% elif dia.es_sabado %}dia-sabado{% endif %}">
+        <td>{% include 'asistencia/_etiqueta_fecha.html' %}{{ dia.fecha|date:'d/m/Y' }}</td><td><span class="status-pill {% if dia.exenta %}pill-emerald{% else %}pill-orange{% endif %}">{% if dia.exenta %}Exonerada de marcar{% else %}Sin marcaciones{% endif %}</span><small>{% if dia.exenta %}Sin horas generadas automáticamente{% else %}Situación del día por registrar{% endif %}</small></td><td>—</td><td>—</td><td>—</td><td>—</td>
+        <td>{% if dia.cerrado %}Periodo cerrado{% elif puede_gestionar %}<details><summary>Registrar situación</summary><form method="post" action="{% url 'registrar_dia_sin_marcas' %}" class="formulario-vertical">{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="fecha" value="{{ dia.fecha|date:'Y-m-d' }}"><label>Situación del día<select name="tipo_dia" required><option value="">Seleccione</option><option value="FERIADO_NO_LABORADO">Feriado no laborado</option><option value="TRABAJO_SIN_MARCAR" data-fecha="{{ dia.fecha|date:'Y-m-d' }}">Trabajó sin marcar</option><option value="DESCANSO_SEMANAL">Descanso semanal</option><option value="NO_LABORO">No laboró</option><option value="NO_TRABAJO">No trabajó · pendiente de justificar</option><option value="VACACIONES">Vacaciones</option><option value="CUMPLEANOS">Cumpleaños</option><option value="PERMISO">Permiso</option><option value="DESCANSO_MEDICO">Descanso médico</option><option value="CAMBIO_DESCANSO">Cambio de descanso</option></select></label><button class="btn-dark-outline" type="submit">Registrar día</button></form></details>{% else %}Pendiente de registro{% endif %}</td>
     </tr>{% endif %}{% endfor %}
     </tbody></table></div>
-    <h4>Marcaciones y clasificación</h4>
     <form method="post" action="{% url 'validar_marcaciones_trabajador' %}" class="formulario-vertical">
         {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+    <details class="worker-marks-disclosure">
+    <summary><span>Marcaciones y clasificación</span><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
         <div class="table-responsive marcas-trabajador-periodo"><table class="custom-dark-table">
             <thead><tr><th>Fecha</th><th>Hora</th><th>Código</th><th>Estado original</th><th>Verificación</th><th>Clasificar marcación</th></tr></thead>
             <tbody>{% for m in revision_trabajador.marcas %}<tr>
@@ -91,7 +91,10 @@
                 <td>{% if puede_gestionar and m.es_valida and not m.esta_cerrada %}<input type="hidden" name="original_{{ m.pk }}" value="{{ m.evento_efectivo }}"><select name="evento_{{ m.pk }}" aria-label="Evento del {{ m.fecha_local|date:'d/m/Y H:i:s' }}">{% for codigo, nombre in tipos_evento %}<option value="{{ codigo }}" {% if codigo == m.evento_seleccionado %}selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>{% else %}{{ m.evento_etiqueta }}<small>{% if m.esta_cerrada %}Periodo cerrado{% elif not m.es_valida %}Marca invalidada{% endif %}</small>{% endif %}</td>
             </tr>{% empty %}<tr><td colspan="6">No hay marcaciones dentro de las jornadas del periodo.</td></tr>{% endfor %}</tbody>
         </table></div>
-        {% if puede_gestionar %}<div class="formulario-linea"><label>Horario para las jornadas abiertas<select name="turno"><option value="">Conservar el horario de cada jornada</option>{% for turno in turnos %}<option value="{{ turno.pk }}">{{ turno }}</option>{% endfor %}</select></label></div>
+    </details>
+        {% if puede_gestionar %}
         <button class="btn-cumbe" type="submit">Guardar clasificación y validar jornadas</button>{% endif %}
     </form>
 </dialog>
+
+{% include 'asistencia/_trabajo_omitido.html' %}

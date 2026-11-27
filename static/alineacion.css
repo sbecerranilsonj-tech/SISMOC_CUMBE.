@@ -1,0 +1,54 @@
+/* Alineación compartida de formularios, acciones y paneles de la edición web. */
+body:not(.login-page){--control-alto:44px;--control-gap:8px}
+body:not(.login-page) :is(.cd-card,.content-panel,.bancos-workspace section,.personal-data-grid)>*{min-width:0}
+body:not(.login-page) :is(.cd-form,.formulario-linea,.personal-data-grid,.personal-dates,.personal-search,.bancos-workspace .filtros) :is(input,select):not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]):not([type=submit]){box-sizing:border-box;height:var(--control-alto);min-height:var(--control-alto);max-width:100%;margin-block:0}
+body:not(.login-page) :is(.cd-form,.formulario-linea,.personal-data-grid,.personal-dates,.bancos-workspace .filtros) label{min-width:0;margin-bottom:0;gap:var(--control-gap)}
+body:not(.login-page) :is(.cd-form,.bancos-workspace .filtros,.formulario-linea) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]){width:100%}
+body:not(.login-page) :is(.cd-button,.cd-heading-actions>.cd-button,.bancos-workspace .boton){display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;line-height:1.3;max-width:100%;text-decoration:none}
+body:not(.login-page) :is(.cd-inline,.formulario-linea,.bancos-workspace .filtros){align-items:flex-end}
+body:not(.login-page) :is(.cd-inline,.formulario-linea) :is(p,label){min-width:0}
+body:not(.login-page) :is(.cd-inline,.formulario-linea,.bancos-workspace .filtros)>:is(button,.cd-button,.btn-cumbe,.btn-dark-outline,.boton){align-self:flex-end;height:var(--control-alto);min-height:var(--control-alto);margin-block:0;padding-block:8px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;line-height:1.3}
+body:not(.login-page) .cd-inline>p>label{margin:0}
+body:not(.login-page) :is(.cd-heading,.cd-section-heading,.workspace-toolbar,.bus-popup-header){align-items:center;gap:18px}
+body:not(.login-page) :is(.cd-heading,.cd-section-heading,.workspace-toolbar,.bus-popup-header)>div{min-width:0}
+body:not(.login-page) :is(.cd-section-heading,.workspace-toolbar,.bus-popup-header)>:is(h2,h3){margin:0}
+body:not(.login-page) .cd-heading-actions{flex-wrap:wrap;align-items:center;justify-content:flex-end;min-width:0;max-width:100%}
+body:not(.login-page) :is(.cd-calendar-actions,.asistencia-header-actions,.toolbar-actions,.manual-entry-actions){display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+body:not(.login-page) :is(.toolbar-actions,.cd-actions,.movil-actions) form{margin:0}
+body:not(.login-page) .cd-table-wrap{max-width:100%;overflow-x:auto}
+body:not(.login-page) :is(.cd-table,.bancos-workspace table) :is(th,td){vertical-align:middle}
+body:not(.login-page) :is(.cd-table,.bancos-workspace table) form{margin:0}
+body:not(.login-page) .cd-table .cd-button{min-height:32px;padding:7px 10px;font-size:.78rem}
+/* Filtros de archivo: una línea con campos flexibles y acciones de ancho natural. */
+body:not(.login-page) :is(.cd-month-filters,.bancos-workspace .banco-filtros){display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) auto auto;align-items:end;gap:14px}
+body:not(.login-page) :is(.cd-month-filters,.bancos-workspace .banco-filtros)>label{min-width:0;max-width:none;flex:none}
+body:not(.login-page) .filtros-codigos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto auto;gap:12px;align-items:end}
+body:not(.login-page) .filtros-codigos>label{min-width:0}
+body:not(.login-page) #filtros-asistencia{--control-alto:38px;align-items:end}
+/* Las fichas personales conservan su cuadrícula, sin botones entre los campos. */
+body:not(.login-page) .personal-data-grid{align-items:end}
+body:not(.login-page) .personal-data-grid>div{display:flex;flex-direction:column;gap:8px;min-width:0}
+body:not(.login-page) .personal-data-grid>button{grid-column:1/-1;justify-self:end;margin:0;min-height:44px}
+body:not(.login-page) .personal-dates{align-items:end}
+body:not(.login-page) .personal-table-scroll{position:relative;min-width:0;max-width:100%}
+body:not(.login-page) .personal-search>div{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+body:not(.login-page) .personal-search>div>input{flex:1 1 220px;min-width:0}
+body:not(.login-page) .personal-search>div>:is(button,a){min-height:44px;margin:0;display:inline-flex;align-items:center;justify-content:center}
+/* El estado del autocompletado no desplaza las acciones debajo de los campos. */
+body:not(.login-page) .movil-settings [data-persona-form] label{line-height:20px}
+body:not(.login-page) .movil-settings [data-persona-form]>.movil-persona-picker{gap:8px}
+body:not(.login-page) .movil-settings [data-persona-form]>button{align-self:start;margin-top:28px;min-height:44px}
+body:not(.login-page) .movil-settings .movil-rest-form label:has(input[type=checkbox]){min-height:44px;align-self:end;flex-direction:row;align-items:center}
+body:not(.login-page) .movil-settings .movil-rest-form>.cd-button{min-height:44px}
+@media(max-width:1200px){body:not(.login-page) .filtros-codigos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){body:not(.login-page) :is(.cd-month-filters,.bancos-workspace .banco-filtros){grid-template-columns:repeat(2,minmax(0,1fr))}body:not(.login-page) :is(.cd-month-filters,.bancos-workspace .banco-filtros)>label{grid-column:1/-1}body:not(.login-page) .cd-heading{flex-wrap:wrap}body:not(.login-page) .cd-heading-actions{justify-content:flex-start}}
+@media(max-width:650px){body:not(.login-page) .filtros-codigos{grid-template-columns:minmax(0,1fr)}body:not(.login-page) .movil-settings [data-persona-form]>button{margin-top:0;align-self:end}body:not(.login-page) :is(.cd-inline,.bancos-workspace .filtros)>:is(p,label){flex:1 1 100%;min-width:0;width:100%}body:not(.login-page) :is(.cd-inline,.formulario-linea,.bancos-workspace .filtros)>:is(button,.cd-button,.btn-cumbe,.btn-dark-outline,.boton){max-width:100%;white-space:normal}body:not(.login-page) .personal-data-grid>button{justify-self:stretch}}
+@media(max-width:650px){body:not(.login-page) :is(.cd-inline,.formulario-linea,.bancos-workspace .filtros)>:is(button,.cd-button,.btn-cumbe,.btn-dark-outline,.boton){height:auto}}
+/* Formularios independientes de jornadas y horarios. */
+.schedule-page :is(.schedule-search-row,.schedule-dialog-heading,.schedule-saved-heading,.schedule-saved-actions){align-items:center;gap:12px}
+.schedule-page .schedule-dialog-heading h2{margin:0}
+.schedule-page :is(.schedule-new,.schedule-date-grid){align-items:end}
+.schedule-page :is(.schedule-editor,.schedule-worker-search) :is(input,select):not([type=checkbox]):not([type=radio]):not([type=hidden]){box-sizing:border-box;height:44px;min-height:44px;width:100%;margin:0}
+.schedule-page :is(.schedule-search-row,.schedule-dialog-heading)>:is(button,a){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:44px;margin:0;text-decoration:none}
+.schedule-page .schedule-editor label{margin-bottom:8px}
+@media(max-width:650px){.schedule-page :is(.schedule-saved-heading,.schedule-search-row){flex-wrap:wrap}.schedule-page .schedule-search-row>.schedule-autocomplete{flex:1 1 100%;min-width:0}}

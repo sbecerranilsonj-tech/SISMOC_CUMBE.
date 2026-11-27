@@ -1,0 +1,67 @@
+{% load static %}
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mis credenciales · SISMOC-CUMBE</title>
+<link rel="stylesheet" href="{% static 'app.css' %}">
+{% include '_theme_head.html' %}
+<style>
+.cred-body{margin:0;min-height:100dvh;background:#f4f6fa;color:#172b45;font-family:inherit}
+dialog.cred-dialog{width:min(470px,94vw);max-height:92dvh;padding:0;border:1px solid #e4e9ef;border-radius:22px;background:#fff;color:#172b45;box-shadow:0 30px 70px rgba(8,20,36,.28);overflow:auto}
+dialog.cred-dialog::backdrop{background:rgba(8,20,36,.55);backdrop-filter:blur(3px)}
+.cred-head{display:flex;align-items:flex-start;gap:14px;padding:24px 26px 20px;border-bottom:1px solid #eef1f5;background:linear-gradient(120deg,#fff2e9 0%,#fff 78%)}
+.cred-mark{width:48px;height:48px;flex:0 0 48px;border-radius:14px;display:grid;place-items:center;background:#ffe4d2;color:#d85c1e}
+.cred-mark svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cred-head .cred-text{flex:1;min-width:0}
+.cred-eyebrow{display:block;font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:#d85c1e;margin-bottom:5px}
+.cred-head h1{font-size:1.35rem;letter-spacing:-.03em;margin:0 0 5px;color:#172b45}
+.cred-head p{margin:0;color:#718096;font-size:.76rem;line-height:1.55}
+.cred-close{flex:0 0 34px;height:34px;border:1px solid #e5e9ef;border-radius:9px;background:#fff;color:#718096;font-size:1.1rem;line-height:1;cursor:pointer;text-decoration:none;display:grid;place-items:center}
+.cred-close:hover{background:#fff2e9;color:#d85c1e;border-color:#f3cdb5}
+.cred-form{padding:22px 26px 8px}
+.cred-group{margin-bottom:17px}
+.cred-group label{display:block;font-size:.74rem;font-weight:700;color:#465870;margin-bottom:7px}
+.cred-group input{width:100%;height:46px;box-sizing:border-box;border:1px solid #dde4ec;border-radius:11px;background:#fcfdfe;color:#172b45;padding:0 13px;font:inherit;font-size:.85rem;transition:border-color .15s,box-shadow .15s,background .15s}
+.cred-group input:hover{border-color:#c8d2df}
+.cred-group input:focus{outline:0;border-color:#f26522;background:#fff;box-shadow:0 0 0 3px rgba(242,101,34,.13)}
+.cred-group small{display:block;color:#8d97a6;font-size:.68rem;margin-top:5px}
+.cred-note{display:flex;gap:10px;align-items:flex-start;padding:12px 13px;border-radius:11px;background:#f6f8fb;border:1px solid #e7ecf3;color:#64748b;font-size:.72rem;line-height:1.6;margin:6px 0 10px}
+.cred-note svg{width:17px;height:17px;flex:0 0 17px;fill:none;stroke:#8494aa;stroke-width:1.8}
+.cred-error{padding:11px 13px;border-radius:10px;background:#fff0f1;color:#a82d35;border:1px solid #ebbbc1;font-size:.76rem;margin-bottom:16px}
+.cred-actions{display:flex;gap:10px;padding:16px 26px 24px;border-top:1px solid #eef1f5;background:#fcfdfe}
+.cred-actions a,.cred-actions button{flex:1;min-height:45px;border-radius:11px;font:inherit;font-size:.8rem;font-weight:700;text-align:center;padding:12px 8px;cursor:pointer;text-decoration:none;display:grid;place-items:center}
+.cred-actions a{border:1px solid #dde4ec;background:#fff;color:#65768d}
+.cred-actions a:hover{background:#f5f7fa}
+.cred-actions button{border:1px solid #f26522;background:#f26522;color:#fff}
+.cred-actions button:hover{background:#d95416;border-color:#d95416}
+@media(max-width:520px){.cred-head{padding:20px}.cred-form{padding:18px 20px 8px}.cred-actions{padding:14px 20px 18px}}
+</style></head><body class="cred-body">
+
+<dialog id="credenciales-dialog" class="cred-dialog" aria-labelledby="cred-titulo">
+  <header class="cred-head">
+    <span class="cred-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4"/><circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg></span>
+    <div class="cred-text"><span class="cred-eyebrow">Mi cuenta</span>
+      <h1 id="cred-titulo">Mis credenciales</h1>
+      <p>Cambia tu usuario y contraseña sin ayuda de administración.</p></div>
+    <a class="cred-close" href="{% url 'dashboard' %}" aria-label="Cerrar">×</a>
+  </header>
+  {% if error %}<div style="padding:20px 26px 0"><p class="cred-error" role="alert">{{ error }}</p></div>{% endif %}
+  <form method="post" class="cred-form">{% csrf_token %}
+    <div class="cred-group"><label for="id_actual">Contraseña actual de {{ username }}</label>
+      <input type="password" id="id_actual" name="actual" required autocomplete="current-password">
+      <small>Debe coincidir con la clave del usuario que inició sesión. Si no es correcta, no se cambia nada.</small></div>
+    <div class="cred-group"><label for="id_username">Nuevo usuario</label>
+      <input type="text" id="id_username" name="username" value="{{ username }}" minlength="3" maxlength="150" required autocomplete="username"></div>
+    <div class="cred-group"><label for="id_password">Nueva contraseña</label>
+      <input type="password" id="id_password" name="password" autocomplete="new-password">
+      <small>Déjala vacía si solo quieres cambiar el usuario.</small></div>
+    <div class="cred-group"><label for="id_password2">Repetir nueva contraseña</label>
+      <input type="password" id="id_password2" name="password2" autocomplete="new-password"></div>
+    <div class="cred-note"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5m0 3h.01"/></svg>
+      <span>Debe tener al menos 12 caracteres, mayúscula, minúscula, número y símbolo. Tu rol y permisos no cambian.</span></div>
+    <div class="cred-actions"><a href="{% url 'dashboard' %}">Cancelar</a><button type="submit">Guardar cambios</button></div>
+  </form>
+</dialog>
+<script>
+  document.getElementById('credenciales-dialog')?.showModal();
+</script>
+</body></html>

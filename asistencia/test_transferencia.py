@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from core.models import Usuario
 from asistencia.models import Trabajador, IdentidadBiometrica, MarcacionBiometrica, ResumenAsistenciaDiaria, CierreAsistencia, TurnoHorario
 from asistencia.services.transferencia import pasar_a_asistencia
@@ -45,7 +47,13 @@ class TransferenciaAsistenciaTests(TestCase):
         self.assertEqual(respuesta.context['total_jornadas'], 1)
         self.assertContains(respuesta, self.ficha.nombre_completo)
         self.assertContains(respuesta, 'Guardar todas las correcciones')
-        self.assertContains(self.client.get(reverse('exportar_asistencia'), filtros), self.ficha.dni)
+        exportado = self.client.get(reverse('exportar_asistencia'), filtros)
+        from io import BytesIO
+        from openpyxl import load_workbook
+        libro = load_workbook(BytesIO(exportado.content))
+        valores = [cell.value for ws in libro for row in ws for cell in row]
+        self.assertIn(self.identidad.codigo, valores)
+        self.assertNotIn(self.ficha.dni, valores)
         from core.security import create_access_token
         token = create_access_token(self.gestor)
         respuesta = self.client.get('/api/asistencia/resumen', {'fecha_inicio': str(self.dia), 'fecha_fin': str(self.dia), 'dni': self.ficha.dni}, HTTP_AUTHORIZATION=f'Bearer {token}')
@@ -68,7 +76,7 @@ class TransferenciaAsistenciaTests(TestCase):
 
     def test_boton_respeta_filtros_y_abre_periodo_importado(self):
         respuesta = self.client.get(reverse('dashboard'), {'vista': 'excel-zk'})
-        self.assertContains(respuesta, 'Validar y pasar a Asistencia y HH.EE.')
+        self.assertContains(respuesta, 'Validar y enviar')
         IdentidadBiometrica.objects.create(sede='TRUJILLO', equipo='1', codigo='99')
         respuesta = self.client.post(reverse('enviar_a_asistencia'), {'confirmar_identificacion': 'si', 'desde_envio': str(self.dia), 'hasta_envio': str(self.dia), 'sede_codigo': 'CAJAMARCA'})
         self.assertEqual(respuesta.status_code, 302)
@@ -105,3 +113,31 @@ class TransferenciaAsistenciaTests(TestCase):
         self.assertEqual(resumen.horas_trabajadas, 8)
         self.assertEqual(resumen.horas_nocturnas, 8)
         self.assertEqual(detalle_jornada(resumen)['trabajo_reconstruido'], '08:00:00')
+
+    def test_envio_mensual_acota_consultas_y_preserva_aprobaciones(self):
+        fin = self.dia + timedelta(days=22)
+        MarcacionBiometrica.objects.bulk_create([
+            MarcacionBiometrica(identidad_biometrica=self.identidad,
+                fecha_hora=timezone.make_aware(datetime.combine(self.dia + timedelta(days=d), h)))
+            for d in range(1, 23) for h in [time(8), time(12), time(13), time(17)]
+        ])
+        with CaptureQueriesContext(connection) as consultas:
+            resultado = pasar_a_asistencia([self.ficha.pk], self.dia, fin, self.gestor)
+        self.assertEqual(resultado['nuevas'], 23)
+        self.assertLess(len(consultas), 30)
+        resumen = ResumenAsistenciaDiaria.objects.get(fecha=self.dia)
+        resumen.estado_revision = 'APROBADO'
+        resumen.verificado_contabilidad = True
+        resumen.save()
+        from asistencia.models import RevisionAsistencia
+        historial = RevisionAsistencia.objects.count()
+        self.assertEqual(historial, 23)
+        with CaptureQueriesContext(connection) as consultas:
+            repetido = pasar_a_asistencia([self.ficha.pk], self.dia, fin, self.gestor)
+        self.assertLess(len(consultas), 20)
+        self.assertEqual(repetido['nuevas'], 0)
+        self.assertEqual(repetido['existentes'], 23)
+        resumen.refresh_from_db()
+        self.assertTrue(resumen.verificado_contabilidad)
+        self.assertEqual(resumen.estado_revision, 'APROBADO')
+        self.assertEqual(RevisionAsistencia.objects.count(), historial)

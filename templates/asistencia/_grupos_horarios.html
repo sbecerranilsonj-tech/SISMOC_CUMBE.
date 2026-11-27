@@ -1,0 +1,8 @@
+<div class="schedule-groups">
+{% for grupo in programacion %}
+<details class="schedule-month-group">
+    <summary><div class="schedule-group-person"><strong>{{ grupo.mes|date:'F Y'|capfirst }}</strong><span>{{ grupo.trabajador.nombre_corto }}</span><small>{{ grupo.trabajador.sede }}</small></div><div class="schedule-group-shift"><strong>{{ grupo.turno.hora_entrada|time:'H:i' }}–{{ grupo.turno.hora_salida|time:'H:i' }}{% if grupo.turno.hora_salida < grupo.turno.hora_entrada %} · día siguiente{% endif %}</strong><span>{{ grupo.turno.nombre }}</span><small>{{ grupo.desde|date:'d/m' }}–{{ grupo.hasta|date:'d/m/Y' }} · {{ grupo.dias }}</small></div><span class="schedule-group-count">{{ grupo.total }} días<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></span></summary>
+    <div class="schedule-group-dates"><p>Fechas configuradas</p><div class="schedule-date-chips">{% for p in grupo.fechas %}<span title="{{ p.fecha|date:'l d/m/Y' }}">{{ p.fecha|date:'d/m' }}</span>{% endfor %}</div><details class="schedule-confirmation-details"><summary>Ver referencias y responsables</summary>{% for p in grupo.fechas %}<div><strong>{{ p.fecha|date:'d/m/Y' }}</strong><span>{{ p.motivo|default:'Sin referencia' }}</span><small>{{ p.responsable.get_full_name|default:p.responsable.username }} · {{ p.actualizado_el|date:'d/m/Y H:i' }}</small></div>{% endfor %}</details></div>
+</details>
+{% empty %}<p class="schedule-empty">No hay horarios programados en este rango.</p>{% endfor %}
+</div>

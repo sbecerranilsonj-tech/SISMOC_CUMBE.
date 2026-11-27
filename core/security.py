@@ -11,7 +11,9 @@ from ninja.security import HttpBearer
 from core.models import Usuario
 
 
-JWT_SECRET_KEY = getattr(settings, "SECRET_KEY", "sismoc-cumbe-jwt-secret-key-2026")
+JWT_SECRET_KEY = getattr(settings, "JWT_SIGNING_KEY", "")
+if len(JWT_SECRET_KEY) < 32:
+    raise RuntimeError("Configure JWT_SIGNING_KEY con al menos 32 caracteres aleatorios.")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24  # 24 horas de vigencia para el token
 
@@ -66,6 +68,13 @@ class AuthBearer(HttpBearer):
             usuario = Usuario.objects.get(id=int(payload["sub"]), esta_activo=True)
         except Usuario.DoesNotExist:
             return None
+
+        from core.permissions import solo_consulta, MENSAJE_SOLO_CONSULTA
+        propias = request.path.rstrip('/').endswith('cambiar_credenciales')
+        if (solo_consulta(usuario) and not propias
+                and request.method not in {'GET', 'HEAD', 'OPTIONS'}):
+            from ninja.errors import HttpError
+            raise HttpError(403, MENSAJE_SOLO_CONSULTA)
 
         # Si se especificaron roles permitidos, verificar que el usuario tenga uno de ellos
         if self.roles_permitidos:

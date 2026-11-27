@@ -102,6 +102,29 @@ class ImportacionBiometricaTests(TestCase):
             self.importar({"TERAN": [["MARTES DESCANSA"], [None, None, "2", FECHA]]})
         self.assertFalse(IdentidadBiometrica.objects.exists())
 
+    def test_exportacion_generica_cix_reutiliza_sede_e_identidad(self):
+        identidad=IdentidadBiometrica.objects.create(sede='CHICLAYO',equipo='104',codigo='12345678',nombre='Persona conocida',usuario=self.usuario)
+        fila=['Esta Compañia','Persona exportada','12345678',FECHA,'','104','FP']
+        for nombre in ['asistencia octubre cix.xls','asistencia_octubre_CIX.xls']:
+            resultado=ZKTecoExcelParser(archivo_prueba({'Sheet 1':[CABECERA,fila]}),nombre,self.admin).procesar()
+        marca=MarcacionBiometrica.objects.get()
+        self.assertEqual(marca.identidad_biometrica_id,identidad.pk)
+        self.assertEqual(resultado['marcaciones_nuevas'],0)
+        self.assertEqual(IdentidadBiometrica.objects.count(),1)
+        self.assertEqual(set(FilaImportacionBiometrica.objects.values_list('hoja',flat=True)),{'Sheet 1'})
+
+    def test_hoja_generica_sin_sede_o_ambigua_no_crea_asociaciones(self):
+        fila=['','Persona','12',FECHA,'','104','FP']
+        for nombre in ['exportacion.xls','asistencia cix cajamarca.xls']:
+            with self.assertRaises(ValidationError):
+                ZKTecoExcelParser(archivo_prueba({'Sheet 1':[CABECERA,fila]}),nombre,self.admin).procesar()
+        self.assertFalse(CargaArchivoAsistencia.objects.exists())
+
+    def test_sede_explicita_solo_resuelve_hojas_genericas(self):
+        fila=['','Persona','12',FECHA,'','104','FP']
+        r,_,_=ZKTecoExcelParser(archivo_prueba({'Sheet 1':[CABECERA,fila],'CAJAMARCA':[CABECERA,fila]}),'exportacion.xlsx',sede='CHICLAYO').leer()
+        self.assertEqual([m['sede'] for m in r],['CHICLAYO','CAJAMARCA'])
+
     def test_asociacion_desde_pantalla_persiste_para_proximas_cargas(self):
         self.importar({"CAJAMARCA": [CABECERA, ["", "2", "2", FECHA, "", "1", "FACE"]]})
         identidad = IdentidadBiometrica.objects.get()

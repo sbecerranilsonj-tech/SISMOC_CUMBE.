@@ -1,0 +1,14 @@
+/* Buscador inteligente: convierte un <select> de lista en entrada con sugerencias. */
+.bus-inteligente{position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;width:100%}
+.bus-inteligente input[type=search]{width:100%;box-sizing:border-box;height:46px;padding:0 12px;font:inherit;border:1px solid var(--border-color,#d8e4e4);border-radius:10px;background:var(--bg-input,#fff);color:var(--text-main,#192d33)}
+.bus-inteligente input[type=search]:focus{outline:2px solid #d7782650;border-color:#d77826}
+.bus-inteligente input[type=search]::-webkit-search-cancel-button{cursor:pointer}
+.bus-inteligente .bus-inteligente-opciones{position:absolute;z-index:60;top:100%;left:0;right:0;margin:6px 0 0;padding:6px;max-height:260px;overflow:auto;background:var(--bg-card,#fff);border:1px solid var(--border-color,#d8e4e4);border-radius:12px;box-shadow:0 12px 30px #0003}
+.bus-inteligente .bus-inteligente-opciones[hidden]{display:none!important}
+.bus-inteligente .bus-inteligente-opciones button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 10px;border-radius:8px;cursor:pointer;font:inherit;line-height:1.4;color:var(--text-main,#192d33)}
+.bus-inteligente .bus-inteligente-opciones button:hover,.bus-inteligente .bus-inteligente-opciones button[aria-selected=true]{background:#d7782618;outline:1px solid #d7782650}
+.bus-inteligente .bus-inteligente-opciones strong{display:block;font-size:.85rem;font-weight:700}
+.bus-inteligente .bus-inteligente-opciones span{display:block;font-size:.76rem;color:var(--text-muted,#56677e)}
+.bus-inteligente small{font-size:.78rem;line-height:1.4;color:var(--text-muted,#56677e);min-height:18px}
+.bus-inteligente small:empty{display:none}
+@media(max-width:650px){.bus-inteligente .bus-inteligente-opciones{max-height:300px}}

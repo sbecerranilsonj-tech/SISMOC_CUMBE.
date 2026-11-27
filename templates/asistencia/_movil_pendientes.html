@@ -1,0 +1,12 @@
+{% if puede_gestionar and d.marcas_moviles_pendientes %}
+<section class="content-panel"><h3>Marcaciones de la app pendientes de confirmar</h3><p>Estas horas se capturaron sin conexión. Confirma su hora real antes de aprobar la jornada.</p>
+{% for marca in d.marcas_moviles_pendientes %}
+<form method="post" action="{% url 'movil_revisar_marca_diaria' d.resumen.pk %}" class="toolbar-actions" style="flex-wrap:wrap;padding:12px 0">
+  {% csrf_token %}<input type="hidden" name="registro" value="{{ marca.pk }}">
+  <strong>{{ marca.tipo }}</strong><span>Teléfono: {{ marca.fecha_dispositivo|date:'d/m/Y H:i' }}</span>
+  <label>Hora confirmada<input class="form-control" type="datetime-local" name="fecha_confirmada" value="{{ marca.fecha_dispositivo|date:'Y-m-d\TH:i' }}"></label>
+  <label>Motivo<input class="form-control" name="motivo" minlength="5" maxlength="500" required></label>
+  <button class="btn-orange" name="decision" value="aceptar">Aceptar marcación</button><button class="btn-dark-outline" name="decision" value="rechazar">Rechazar</button>
+</form>
+{% endfor %}</section>
+{% endif %}

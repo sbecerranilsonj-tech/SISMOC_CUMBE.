@@ -42,3 +42,10 @@ html[data-theme="dark"] :is(.day-time-detail>summary::after,.provenance-time>spa
 @media print{.theme-toggle{display:none}}
 .import-months{display:flex;gap:10px;overflow-x:auto;padding:4px 0 16px;margin:8px 0 4px}.import-month{display:flex;flex-direction:column;gap:5px;flex:0 0 auto;min-width:150px;padding:13px 16px;border:1px solid #dce3ed;border-radius:12px;color:#344763;background:#f8fafc;text-decoration:none}.import-month strong{font-size:13px}.import-month span{font-size:11px;color:#566b85}.import-month:hover{border-color:#bd4d14}.import-month.is-selected{border-color:#bd4d14;background:#fff3e9;color:#9e3e0b}.filtros-codigos label:has(select[name=grupo_carga]){min-width:220px;flex:1.5}.filtros-codigos select[name=grupo_carga]{max-width:100%;text-overflow:ellipsis}.import-month:focus-visible{outline:3px solid #bd4d14;outline-offset:2px}
 html[data-theme="dark"] .import-month{background:var(--night-raised);border-color:var(--night-line);color:var(--night-text)}html[data-theme="dark"] .import-month span{color:var(--night-muted)}html[data-theme="dark"] .import-month.is-selected{background:#433024;border-color:#e4935e;color:#ffd2b0}
+
+html[data-theme="dark"] .resumen-contable-card{background:var(--night-field)!important;border-color:var(--night-line)!important;box-shadow:none!important}
+html[data-theme="dark"] .resumen-card-value{color:var(--night-text)!important}
+html[data-theme="dark"] :is(.resumen-card-label,.resumen-card-unit){color:var(--night-muted)!important}
+html[data-theme="dark"] .resumen-card-icon.icon-date{background:#3d2616!important;color:#ffa96b!important;border-color:#63391b!important}
+html[data-theme="dark"] .resumen-card-icon.icon-users{background:#2a1f42!important;color:#c4b5fd!important;border-color:#4c337a!important}
+html[data-theme="dark"] .resumen-card-icon.icon-shifts{background:#14352b!important;color:#6ee7b7!important;border-color:#215c4a!important}

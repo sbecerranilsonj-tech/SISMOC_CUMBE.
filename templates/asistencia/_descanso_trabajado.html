@@ -1,0 +1,17 @@
+{% load static %}
+{% if d.trabajo_en_descanso %}
+<div class="rest-work-review">
+    <span class="status-pill {% if d.descanso_confirmado %}pill-emerald{% else %}pill-orange{% endif %}">{% if d.descanso_confirmado %}{% if d.decision_descanso.tipo == 'CAMBIO_DESCANSO' %}Cambio de descanso · {{ d.decision_descanso.fecha_destino }}{% else %}Descanso trabajado confirmado{% endif %}{% else %}Marcaciones en descanso programado · Por confirmar{% endif %}</span>
+    {% if puede_aprobar and not d.cerrada and not d.resumen.verificado_contabilidad %}
+    <details class="rest-work-choice"><summary>{% if d.descanso_confirmado %}Cambiar situación{% else %}Confirmar situación{% endif %}</summary>
+        <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}" data-descanso-trabajado>
+            {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="accion" value="confirmar_descanso_trabajado">
+            <label>Situación<select name="tipo_descanso" required><option value="">Seleccione</option><option value="DESCANSO_TRABAJADO" {% if d.decision_descanso.tipo == 'DESCANSO_TRABAJADO' %}selected{% endif %}>Descanso trabajado</option><option value="CAMBIO_DESCANSO" {% if d.decision_descanso.tipo == 'CAMBIO_DESCANSO' %}selected{% endif %}>Cambio de descanso</option></select></label>
+            <label data-fecha-descanso>Nueva fecha de descanso<input type="date" name="fecha_descanso" value="{{ d.decision_descanso.fecha_destino|default:'' }}"></label>
+            <button class="btn-dark-outline" type="submit">Guardar situación</button>
+        </form>
+    </details>
+    {% endif %}
+</div>
+<script src="{% static 'descanso_trabajado.js' %}?v=20261105" defer></script>
+{% endif %}

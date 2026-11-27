@@ -24,6 +24,18 @@ dialog.registro-trabajador-dialog,dialog.revision-trabajador-dialog,dialog.detal
 @media(max-width:540px){.main-wrapper{padding:0 12px 24px}.content-panel{padding:18px 14px;border-radius:9px}.top-title h2{font-size:16px}.top-title p{font-size:10px}h3.panel-title-text{font-size:20px}.kpi-box{padding:18px 14px}.kpi-value{font-size:24px}.kpi-sub{font-size:11px}.panel-header-custom .btn-dark-outline{font-size:12px;min-height:36px;padding:8px 12px}.filtros-asistencia{gap:12px}.ayuda{font-size:13px}.detalle-grid{grid-template-columns:minmax(0,1fr)}.custom-dark-table td{padding:12px}.avance-revision-trabajador{padding:14px}.revision-trabajador-dialog .panel-header-custom a{margin-left:0}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
+/* Filtros de personal compactos según el espacio real del panel. */
+.attendance-panel{container-name:attendance;container-type:inline-size;min-width:0}
+.filtros-personal{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px;padding:14px 0}
+.filtros-personal label{min-width:0;font-size:12px;gap:5px}
+.filtros-personal input,.filtros-personal select{height:38px;min-width:0;padding:7px 9px;font-size:13px}
+.filtros-personal input[type=date]{padding-inline:7px;font-variant-numeric:tabular-nums}
+.filtros-personal select{text-overflow:ellipsis}
+.filtros-personal .btn-cumbe,.filtros-personal .btn-dark-outline{display:inline-flex;align-items:center;justify-content:center;height:38px;min-height:38px;padding:7px 12px;font-size:12px;white-space:nowrap}
+.filtros-personal[hidden]{display:none}
+@container attendance (min-width:560px){.filtros-personal{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@container attendance (min-width:900px){.filtros-personal{grid-template-columns:124px 124px minmax(90px,1fr) minmax(110px,1.2fr) minmax(110px,1.2fr) 100px max-content max-content;gap:10px}}
+
 /* La carga queda disponible sin ocupar el área de revisión de identidades. */
 .zk-upload-control{position:fixed;right:24px;bottom:24px;z-index:1050}
 .zk-upload-trigger{display:flex;align-items:center;gap:8px;min-height:44px;list-style:none;cursor:pointer;margin:0}

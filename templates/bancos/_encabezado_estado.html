@@ -1,0 +1,17 @@
+{% if not sin_titulos %}<div class="banco-titulo">
+    <div><p class="etiqueta">GESTIÓN BANCARIA · BCP</p><h1>Estado de cuenta</h1><p class="subtitulo">Revisión de movimientos y comprobación de saldos</p></div>
+    <span class="banco-estado {% if estado.estado == 'VALIDADO' %}banco-estado-validado{% endif %}"><span aria-hidden="true"></span>{{ estado.get_estado_display }}</span>
+</div>
+{% endif %}
+<section class="banco-ficha" aria-label="Datos del estado de cuenta">
+    <div class="banco-titular">
+        <div class="banco-sello" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bank"></use></svg></div>
+        <div><p class="etiqueta">TITULAR DE LA CUENTA</p><h2>Empresa de Transportes<br>El Cumbe S.A.</h2><p class="banco-direccion">José Quiñones 425<br>Chiclayo · Lambayeque</p></div>
+        <a class="banco-documento" href="{% url 'bancos_pdf' estado.pk %}" target="_blank" rel="noopener"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg>Consultar PDF original <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="banco-datos">
+        <div class="banco-cuenta"><span class="banco-campo">CÓDIGO DE CUENTA</span><strong>{{ estado.cuenta }}</strong><span class="banco-banco">Banco de Crédito del Perú</span></div>
+        <div class="banco-moneda"><span class="banco-campo">MONEDA</span><strong>{{ estado.moneda|title }}</strong><span class="banco-banco">{% if estado.moneda == 'SOLES' %}PEN · S/{% endif %}</span></div>
+        <div class="banco-periodo"><span class="banco-campo"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg>PERÍODO DEL ESTADO DE CUENTA</span><div><span><small>Desde</small><strong>{{ estado.inicio|date:'d/m/Y' }}</strong></span><span class="banco-periodo-flecha" aria-hidden="true">→</span><span><small>Hasta</small><strong>{{ estado.fin|date:'d/m/Y' }}</strong></span></div></div>
+    </div>
+</section>

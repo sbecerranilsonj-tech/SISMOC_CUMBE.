@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 from asistencia.forms import TrabajadorForm
-from asistencia.models import Trabajador, IdentidadBiometrica, MarcacionBiometrica
+from asistencia.models import Trabajador, IdentidadBiometrica, MarcacionBiometrica, FilaImportacionBiometrica
 from asistencia.services.revision import puede_gestionar, comprobar_abierto, registrar_historial
 from django.utils import timezone
 from asistencia.services.trabajadores import vincular_ficha, corregir_ficha_duplicada
@@ -19,7 +19,37 @@ from django.urls import reverse
 
 
 def datos(trabajador):
-    return {"id": trabajador.pk, "nombre": trabajador.nombre_completo, "dni": trabajador.dni, "codigo": trabajador.codigo, "area": trabajador.area}
+    return {"id": trabajador.pk, "nombre": trabajador.nombre_corto, "nombre_completo": trabajador.nombre_completo,
+            "nombres": trabajador.nombres, "apellido_paterno": trabajador.apellido_paterno, "apellido_materno": trabajador.apellido_materno,
+            "dni": trabajador.dni, "codigo": trabajador.codigo, "area": trabajador.area,
+            "url_editar": reverse('editar_ficha_trabajador', args=[trabajador.pk])}
+
+
+@login_required
+@require_GET
+def sugerir_codigos(request):
+    if not puede_gestionar(request.user):
+        return JsonResponse({'detail':'No tiene permiso para consultar códigos.'}, status=403)
+    consulta = request.GET.get('q', '').strip()[:60]
+    if not consulta:
+        return JsonResponse({'resultados':[]})
+    from asistencia.services.grupos_importacion import grupo_importacion
+    grupo = grupo_importacion(request.GET)
+    identidades = IdentidadBiometrica.objects.select_related('trabajador').filter(codigo__icontains=consulta)
+    if grupo['activo']:
+        identidades = identidades.filter(Q(pk__in=grupo['marcas'].values('identidad_biometrica_id')) |
+            Q(pk__in=FilaImportacionBiometrica.objects.filter(marcacion__in=grupo['marcas']).values('identidad_id')))
+    sede = request.GET.get('sede_codigo', '').strip()[:100]
+    if sede:
+        identidades = identidades.filter(sede=sede)
+    if request.GET.get('identificacion') == 'pendientes':
+        identidades = identidades.filter(trabajador__isnull=True)
+    elif request.GET.get('identificacion') == 'identificados':
+        identidades = identidades.filter(trabajador__isnull=False)
+    for termino in request.GET.get('nombre_codigo', '').strip()[:150].split():
+        identidades = identidades.filter(Q(nombre__icontains=termino) | Q(trabajador__nombre_completo__icontains=termino))
+    return JsonResponse({'resultados':[{'codigo':i.codigo, 'nombre':i.nombre_corto,
+        'sede':i.sede, 'equipo':i.equipo} for i in identidades.order_by('codigo','sede','equipo')[:15]]})
 
 
 @login_required
@@ -79,13 +109,15 @@ def registrar_trabajador(request, identidad_id):
 
 @login_required
 @require_POST
-def editar_trabajador(request, identidad_id):
+def editar_trabajador(request, identidad_id=None, trabajador_id=None):
     if not puede_gestionar(request.user):
         return JsonResponse({"detail": "No tiene permiso para editar trabajadores."}, status=403)
     try:
         with transaction.atomic():
-            identidad = get_object_or_404(IdentidadBiometrica.objects.select_for_update(), pk=identidad_id)
-            trabajador = get_object_or_404(Trabajador.objects.select_for_update(), pk=identidad.trabajador_id)
+            if identidad_id is not None:
+                identidad = get_object_or_404(IdentidadBiometrica.objects.select_for_update(), pk=identidad_id)
+                trabajador_id = identidad.trabajador_id
+            trabajador = get_object_or_404(Trabajador.objects.select_for_update(), pk=trabajador_id)
             dni_propuesto = request.POST.get("dni", "").strip()
             existente = Trabajador.objects.select_for_update().filter(dni=dni_propuesto).exclude(pk=trabajador.pk).first()
             if existente:
@@ -100,7 +132,7 @@ def editar_trabajador(request, identidad_id):
                 }, status=409)
             if request.POST.get("usar_existente") == "1":
                 raise ValidationError("La ficha de destino ya no coincide. Vuelva a comprobar el DNI.")
-            anterior = {campo: getattr(trabajador, campo) for campo in ("nombre_completo", "dni", "area")}
+            anterior = {campo: getattr(trabajador, campo) for campo in ("nombre_completo", "nombres", "apellido_paterno", "apellido_materno", "dni", "area")}
             formulario = TrabajadorForm(request.POST, instance=trabajador)
             if not formulario.is_valid():
                 return JsonResponse({"detail": "Revise los datos del trabajador.", "errores": formulario.errors}, status=400)
@@ -141,7 +173,7 @@ def enviar_a_asistencia(request):
         grupo = validar_grupo_envio(filtros, desde, hasta)
         identidades = IdentidadBiometrica.objects.filter(trabajador__isnull=False)
         if grupo['activo']:
-            identidades = identidades.filter(Q(marcaciones__in=grupo['marcas'])|Q(filaimportacionbiometrica__marcacion__in=grupo['marcas'])).distinct()
+            identidades = identidades.filter(Q(pk__in=grupo['marcas'].values('identidad_biometrica_id')) | Q(pk__in=FilaImportacionBiometrica.objects.filter(marcacion__in=grupo['marcas']).values('identidad_id')))
         if filtros["sede_codigo"]:
             identidades = identidades.filter(sede=filtros["sede_codigo"])
         if filtros["filtro_codigo"]:

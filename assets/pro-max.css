@@ -1,0 +1,168 @@
+/* Identidad persistente: design-system/sismoc-contabilidad/MASTER.md */
+:root{--ds-canvas:#f3f6f7;--ds-surface:#fff;--ds-surface-soft:#edf3f2;--ds-ink:#20343b;--ds-muted:#52676c;--ds-line:#dce6e5;--ds-brand:#b94b16;--ds-teal:#087f78;--ds-shadow:0 6px 24px #173c3507;--ds-speed:160ms}
+html[data-theme=dark]{--ds-canvas:#101d23;--ds-surface:#182930;--ds-surface-soft:#1d343b;--ds-ink:#e3edee;--ds-muted:#a7bbbf;--ds-line:#354e55;--ds-brand:#f6a06d;--ds-teal:#5ccbc1;--ds-shadow:0 8px 28px #00000018}
+body:not(.login-page){background:radial-gradient(ellipse at 90% 0%,#d9ebe64d,transparent 45%),var(--ds-canvas);color:var(--ds-ink)}
+.main-wrapper{max-width:1900px;margin-inline:auto;padding-inline:32px}
+.sidebar{background:radial-gradient(ellipse at 0% 0%,#315c5366,transparent 65%),#132923;border-right:1px solid #315147}
+.sidebar .brand-logo{width:64px;height:64px}
+.sidebar .brand{padding-top:18px;padding-bottom:24px}
+.sidebar .brand-sub{letter-spacing:.07em}
+.sidebar .sismoc-edition{background:#81b7a50f;border-color:#81b7a52b;color:#c2d6ce}
+.menu-link{border-radius:12px;transition:background var(--ds-speed),border-color var(--ds-speed),color var(--ds-speed)}
+.menu-link.active{background:linear-gradient(100deg,#d57b3524,#d57b3510);border-color:#d57b353b;box-shadow:inset 3px 0 #f49b5e}
+.menu-link.active::after{content:'';width:5px;height:5px;border-radius:50%;right:12px;background:#f4ae7e}
+.menu-link.active .menu-icon{background:#b94b16;box-shadow:0 3px 10px #0002}
+.sidebar-footer{background:#132923}
+.top-navbar{background:var(--ds-surface);border-color:var(--ds-line);padding-inline:32px;margin-inline:-32px;box-shadow:0 2px 10px #173c3504}
+.workspace-breadcrumb strong{color:var(--ds-brand)}
+.account-avatar{background:#b94b16;border-radius:13px;box-shadow:0 3px 10px #b94b1620}
+.content-panel{background:var(--ds-surface);border-color:var(--ds-line);border-radius:20px;box-shadow:var(--ds-shadow);padding:26px}
+.panel-title-text,h3.panel-title-text{color:var(--ds-ink);font-size:24px;letter-spacing:-.04em;line-height:1.3}
+.ayuda{color:var(--ds-muted);font-size:13px}
+.ds-eyebrow{@apply mb-2 inline-flex items-center gap-2 text-xs font-semibold;letter-spacing:.12em;text-transform:uppercase;color:var(--ds-muted)}
+.ds-eyebrow::before{content:'';width:7px;height:7px;border-radius:3px;background:var(--ds-teal);box-shadow:0 0 0 4px #087f780c}
+.attendance-panel{position:relative;border-top:3px solid var(--ds-teal)}
+.attendance-panel>.panel-header-custom{padding-bottom:22px;margin-bottom:0;border-bottom:1px solid var(--ds-line);gap:18px}
+.asistencia-header-actions{@apply flex flex-wrap items-center gap-2}
+.attendance-panel .workspace-toolbar{border:0;padding:20px 0;gap:16px}
+.toolbar-count{color:var(--ds-muted);font-size:13px}
+.toolbar-count strong{font-size:19px;color:var(--ds-ink);margin-right:4px;font-variant-numeric:tabular-nums}
+:is(.toolbar-button,.btn-dark-outline){background:var(--ds-surface);border-color:var(--ds-line);color:var(--ds-muted);box-shadow:0 1px 2px #173c3504}
+:is(.toolbar-button,.btn-dark-outline):hover{background:var(--ds-surface-soft);border-color:var(--ds-teal);color:var(--ds-ink)}
+.btn-cumbe,.btn-cumbe-submit{background:#b94b16;border-color:#b94b16;color:#fff;box-shadow:0 3px 10px #b94b161a}
+:is(.btn-cumbe,.btn-cumbe-submit):hover{background:#9d3e10;border-color:#9d3e10;color:#fff}
+:is(.btn-cumbe,.btn-dark-outline,.toolbar-button,.btn-cumbe-submit){transition:background var(--ds-speed),border-color var(--ds-speed),box-shadow var(--ds-speed),transform var(--ds-speed)}
+:is(.btn-cumbe,.btn-dark-outline,.toolbar-button,.btn-cumbe-submit):active:not(:disabled){transform:translateY(1px)}
+.filtros-asistencia{background:var(--ds-surface-soft);border:1px solid var(--ds-line);border-radius:14px;padding:18px;margin-bottom:20px;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))}
+.filtros-asistencia label{font-size:12px;color:var(--ds-muted)}
+.filtros-asistencia :is(input,select){background:var(--ds-surface);color:var(--ds-ink);border-color:var(--ds-line)}
+.attendance-summary{@apply flex flex-wrap items-center gap-3; padding:0 0 22px;color:var(--ds-muted);font-size:12px}
+.attendance-summary>span{padding:7px 10px;border:1px solid var(--ds-line);border-radius:9px;background:var(--ds-surface);min-height:32px}
+.attendance-summary strong{color:var(--ds-ink)}
+.table-responsive,.tabla-trabajadores-asistencia{border-color:var(--ds-line);border-radius:14px;background:var(--ds-surface)}
+.custom-dark-table{font-size:13px;font-variant-numeric:tabular-nums}
+.custom-dark-table th{background:var(--ds-surface-soft);color:var(--ds-muted);padding:15px 14px;font-size:12px;font-weight:600;border-color:var(--ds-line);letter-spacing:0}
+.custom-dark-table td{background:var(--ds-surface);color:var(--ds-ink);padding:17px 14px;border-color:var(--ds-line)}
+.custom-dark-table tbody tr:hover td{background:color-mix(in srgb,var(--ds-surface-soft) 55%,var(--ds-surface))}
+.tabla-trabajadores-asistencia td:first-child a{color:var(--ds-ink);font-weight:600;gap:12px;text-decoration:none}
+.person-avatar{width:34px;height:34px;background:var(--ds-surface-soft);color:var(--ds-teal);border:1px solid var(--ds-line);border-radius:11px}
+.custom-dark-table small{font-size:12px;color:var(--ds-muted)}
+.status-pill{font-size:12px;font-weight:550;border-radius:7px;white-space:normal;text-wrap:pretty;max-width:100%}
+.tabla-trabajadores-asistencia .btn-dark-outline{background:var(--ds-surface-soft);color:var(--ds-teal);border-color:var(--ds-line);font-size:12px}
+.paginacion{display:flex;align-items:center;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ds-muted);padding-top:8px}
+.kpi-box{background:var(--ds-surface);border-color:var(--ds-line)!important;border-radius:18px;box-shadow:var(--ds-shadow)}
+.kpi-value{color:var(--ds-ink);font-variant-numeric:tabular-nums}
+.kpi-sub,.kpi-title{color:var(--ds-muted);font-size:12px}
+.compact-tables .custom-dark-table td{padding-block:10px}
+:is(dialog.registro-trabajador-dialog,dialog.revision-trabajador-dialog,dialog.detalle-jornada-dialog,.custom-modal-box){background:var(--ds-surface);color:var(--ds-ink);border-color:var(--ds-line)}
+:focus-visible{outline:3px solid var(--ds-teal);outline-offset:3px;scroll-margin-block:100px}
+@keyframes ds-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:no-preference){.view-section.active>.content-panel{animation:ds-enter 220ms ease-out both}dialog[open]{animation:ds-enter 180ms ease-out both}}
+@media(max-width:900px){.main-wrapper{padding-inline:18px}.top-navbar{margin-inline:-18px;padding-inline:18px}.attendance-panel>.panel-header-custom{align-items:flex-start}.asistencia-header-actions{width:100%}.content-panel{padding:22px}}
+@media(max-width:540px){.main-wrapper{padding-inline:12px}.top-navbar{margin-inline:-12px;padding-inline:12px}.content-panel{padding:18px 14px}.panel-title-text,h3.panel-title-text{font-size:22px}.ds-eyebrow{font-size:11px;letter-spacing:.07em}.asistencia-header-actions>*{flex:1 1 150px}.attendance-summary{gap:8px}.custom-dark-table td,.custom-dark-table th{padding:12px}.custom-dark-table .btn-dark-outline{min-height:44px}.toolbar-button{min-height:44px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media print{body:not(.login-page){background:white}.content-panel{box-shadow:none;border-color:#ccc}.attendance-panel{border-top-color:#333}.custom-dark-table th,.custom-dark-table td{color:#111;background:white}}
+
+/* Referencia de movimiento: Glassy Dashboard V5; se conserva la identidad El Cumbe. */
+.sismoc-motion-ready .view-section.active>.content-panel,
+.sismoc-motion-ready dialog[open]{animation:none}
+@media(prefers-reduced-motion:no-preference){
+ .kpi-box,.accounting-tile,.modulo-dashboard{transition:transform 260ms cubic-bezier(.22,1,.36,1),box-shadow 260ms ease,border-color 200ms ease}
+ .kpi-box:hover,.accounting-tile:hover,.modulo-dashboard:hover{transform:translateY(-4px);box-shadow:0 12px 28px #173c3512;border-color:color-mix(in srgb,var(--ds-teal) 28%,var(--ds-line))!important}
+ .menu-link .menu-icon{transition:transform 240ms cubic-bezier(.22,1,.36,1),background-color 160ms ease}
+ .menu-link:hover .menu-icon{transform:translateY(-2px)}
+ .account-menu[open] .account-popover{animation:ds-popover 220ms cubic-bezier(.22,1,.36,1) both;transform-origin:top right}
+ .login-form-content{animation:ds-login 520ms cubic-bezier(.22,1,.36,1) both}
+}
+@keyframes ds-popover{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes ds-login{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.kpi-box:hover,.accounting-tile:hover,.modulo-dashboard:hover,.menu-link:hover .menu-icon{transform:none}}
+@media print{.kpi-box,.accounting-tile,.modulo-dashboard{transform:none!important;filter:none!important;opacity:1!important}}
+
+/* Legibilidad para trabajo contable prolongado; menos texto, mejor jerarquia. */
+body:not(.login-page){font-size:14px;line-height:1.55}
+body:not(.login-page) .menu-link{font-size:14px}
+body:not(.login-page) :is(.ayuda,.form-label-custom,.filtros-asistencia label,.formulario-linea label,.formulario-vertical label){font-size:13px;line-height:1.55}
+body:not(.login-page) :is(.formulario-linea,.formulario-vertical,.filtros-asistencia) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not([type=hidden]){font-size:14px}
+body:not(.login-page) .custom-dark-table{font-size:14px;line-height:1.5}
+body:not(.login-page) .custom-dark-table th{font-size:13px;white-space:normal;line-height:1.4}
+body:not(.login-page) :is(.custom-dark-table small,.status-pill,.kpi-title,.kpi-sub,.account-role,.workspace-breadcrumb,.attendance-summary,.toolbar-count,.paginacion){font-size:12px;line-height:1.5}
+body:not(.login-page) .sidebar-footer .user-badge-name{font-size:13px}
+body:not(.login-page) .sidebar-footer .user-badge-role{font-size:12px}
+body:not(.login-page) .panel-title-text{font-size:22px;line-height:1.3}
+body:not(.login-page) .custom-dark-table :is(.btn-dark-outline,.btn-cumbe){font-size:13px}
+body:not(.login-page) .ayuda:empty{display:none}
+.login-page :is(.form-label-custom,.login-assistance){font-size:13px;line-height:1.6}
+@media(max-width:540px){body:not(.login-page) .custom-dark-table{font-size:14px}body:not(.login-page) .panel-title-text{font-size:21px}}
+
+/* Dashboard y filtros compactos de una sola barra. */
+.dashboard-welcome{margin:0}.dashboard-welcome h3{margin:0;font-size:28px}
+.dashboard-top-row{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:12px 0 26px}
+body:not(.login-page) .filtros-dashboard{display:flex;width:auto;gap:10px;padding:10px 12px;margin:0;box-shadow:none;border:1px solid var(--ds-line);border-radius:12px;background:var(--ds-surface)}
+body:not(.login-page) .filtros-dashboard label{min-width:0;width:136px}
+body:not(.login-page) .filtros-dashboard input{height:38px;min-height:38px;font-size:13px;padding:8px}
+body:not(.login-page) #filtros-asistencia{grid-template-columns:124px 124px minmax(90px,1fr) minmax(100px,1.15fr) minmax(100px,1fr) 100px auto auto;gap:8px;padding:12px}
+body:not(.login-page) #filtros-asistencia label{font-size:12px;min-width:0;gap:5px}
+body:not(.login-page) #filtros-asistencia :is(input,select){height:38px;min-height:38px;font-size:13px;padding:8px;max-width:100%}
+body:not(.login-page) #filtros-asistencia :is(.btn-cumbe,.btn-dark-outline){height:38px;min-height:38px;padding:8px 10px;font-size:12px}
+.attendance-summary{display:flex;gap:10px;flex-wrap:wrap;margin:0;padding:0 0 18px}
+.attendance-summary>a{display:inline-flex;gap:7px;align-items:center;padding:8px 12px;min-height:38px;border:1px solid var(--ds-line);border-radius:9px;text-decoration:none;color:var(--ds-muted);background:var(--ds-surface);font-size:13px}
+.attendance-summary>a:hover,.attendance-summary>a.selected{border-color:var(--ds-teal);color:var(--ds-teal);background:var(--ds-surface-soft)}
+body:not(.login-page) .tabla-trabajadores-asistencia td{padding-block:10px}
+body:not(.login-page) .tabla-trabajadores-asistencia .status-pill{white-space:nowrap;font-size:12px;padding:5px 8px}
+.dashboard-chart{display:flex;align-items:center;justify-content:space-between;gap:32px;margin-top:24px}
+.dashboard-chart .attendance-summary{padding:0;margin-top:20px}
+.jornadas-donut{position:relative;width:180px;height:180px;flex:0 0 180px}
+.jornadas-donut svg{width:100%;height:100%}.jornadas-donut>div{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.jornadas-donut strong{font-size:34px;color:var(--ds-ink);line-height:1.2}.jornadas-donut span{font-size:12px;color:var(--ds-muted)}
+.flatpickr-calendar{font-family:Geist,'Segoe UI',sans-serif;background:var(--ds-surface);border:1px solid var(--ds-line);border-radius:16px;padding:10px;box-shadow:0 15px 45px #173c3526;width:328px;color:var(--ds-ink)}
+.flatpickr-calendar:before,.flatpickr-calendar:after{display:none}
+.flatpickr-months .flatpickr-month,.flatpickr-current-month .flatpickr-monthDropdown-months,.flatpickr-current-month input.cur-year,.flatpickr-weekdays,span.flatpickr-weekday{background:var(--ds-surface);color:var(--ds-ink);fill:var(--ds-ink)}
+.flatpickr-current-month{font-size:14px;font-weight:600}.flatpickr-weekday{font-size:12px}
+.flatpickr-day{color:var(--ds-ink);border-radius:10px;font-size:13px}
+.flatpickr-day:hover,.flatpickr-day:focus{background:var(--ds-surface-soft);border-color:var(--ds-line)}
+.flatpickr-day.selected,.flatpickr-day.selected:hover{background:#087f78;border-color:#087f78;color:white}
+.flatpickr-day.today{border-color:var(--ds-teal)}
+.flatpickr-day.prevMonthDay,.flatpickr-day.nextMonthDay{color:var(--ds-muted);opacity:.6}
+.flatpickr-months .flatpickr-prev-month,.flatpickr-months .flatpickr-next-month{color:var(--ds-ink);fill:var(--ds-ink)}
+@media(max-width:1200px){body:not(.login-page) #filtros-asistencia{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:760px){.dashboard-top-row{align-items:flex-start;flex-direction:column}.dashboard-chart{gap:16px;flex-wrap:wrap}.jornadas-donut{margin:auto}body:not(.login-page) #filtros-asistencia{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-welcome h3{font-size:24px}}
+
+/* Indicadores graficos reales, conservando las cuatro tarjetas originales. */
+.analytics-cards{align-items:stretch}
+.kpi-box.analytics-card{display:flex;flex-direction:column;gap:14px;min-height:240px;padding:22px;overflow:visible}
+.analytics-card h3{margin:0;color:var(--ds-muted);font-size:13px;font-weight:650;line-height:1.5}
+.analytics-number{display:flex;align-items:baseline;gap:8px;color:var(--ds-muted)}
+.analytics-number strong{font-size:32px;color:var(--ds-ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.analytics-number span{font-size:12px}
+.analytics-card figure{margin:0}
+.horizontal-chart{display:grid;gap:12px;margin-top:auto!important}
+.horizontal-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 12px;font-size:12px;color:var(--ds-muted);--chart-color:#087f78}
+.horizontal-row>span{overflow-wrap:anywhere}.horizontal-row strong{color:var(--ds-ink);font-weight:600;font-variant-numeric:tabular-nums}
+.horizontal-track{grid-column:1/-1;height:7px;border-radius:5px;background:var(--ds-surface-soft);overflow:hidden}
+.horizontal-track>i{display:block;width:var(--bar-size,0%);height:100%;border-radius:inherit;background:var(--chart-color)}
+.horizontal-row.secondary{--chart-color:#719c94}.horizontal-row.warning{--chart-color:#b66b12}.horizontal-row.danger{--chart-color:#b34053}
+.personnel-chart{max-height:160px;overflow:auto;padding-right:4px}
+.mini-columns{display:flex;gap:7px;align-items:end;margin-top:auto!important;height:108px}
+.mini-column{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9px;color:var(--ds-muted);white-space:nowrap}
+.column-count{font-size:11px;font-variant-numeric:tabular-nums}.column-track{height:62px;width:14px;display:flex;align-items:flex-end;background:var(--ds-surface-soft);border-radius:4px;overflow:hidden}
+.column-track>i{display:block;width:100%;height:var(--bar-size,0%);background:#b94b16;border-radius:4px}
+.chart-legend{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:12px;min-width:220px}
+.chart-legend li{display:flex;align-items:center;gap:10px;color:var(--ds-muted);font-size:14px}.chart-legend strong{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ds-ink)}
+.chart-legend a{color:inherit;text-decoration:none}.chart-legend a:hover{color:var(--ds-teal);text-decoration:underline}
+@media(prefers-reduced-motion:no-preference){.horizontal-track>i{transition:width 400ms ease-out}.column-track>i{transition:height 400ms ease-out}}
+@media(max-width:540px){.analytics-cards{grid-template-columns:minmax(0,1fr)}.chart-legend{min-width:0;width:100%}.analytics-card{min-height:210px}}
+
+/* Hoy al inicio: consulta diaria separada visualmente del periodo filtrado. */
+.content-panel.today-banner{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px 22px;margin-bottom:22px;border-radius:16px;border:1px solid var(--ds-line);border-left:3px solid var(--ds-teal);background:var(--ds-surface);box-shadow:var(--ds-shadow)}
+.today-heading{display:flex;align-items:center;gap:14px;min-width:160px}
+.today-icon{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:13px;background:var(--ds-surface-soft);color:var(--ds-teal);flex-shrink:0}
+.today-icon .ui-icon{width:22px;height:22px}
+.today-heading h3{margin:0 0 3px;font-size:18px;font-weight:700;color:var(--ds-ink);line-height:1.3}
+.today-heading time{font-size:12px;color:var(--ds-muted)}
+.today-total{display:flex;align-items:center;gap:12px;margin-right:auto;padding-left:24px;border-left:1px solid var(--ds-line)}
+.today-total strong{font-size:30px;line-height:1.1;font-weight:750;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--ds-ink)}
+.today-total span{font-size:13px;color:var(--ds-muted)}
+.today-action{white-space:nowrap}.today-action .ui-icon{width:16px;height:16px}
+@media(max-width:760px){.content-panel.today-banner{flex-wrap:wrap;gap:16px}.today-total{border:0;padding-left:0}.today-action{width:100%}}
+@media(max-width:420px){.today-heading{min-width:0}.today-total{width:100%;padding-left:58px}.today-total strong{font-size:26px}}

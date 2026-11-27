@@ -41,13 +41,17 @@
         const elegido = formulario.querySelector('[name=trabajador]');
         const confirmar = formulario.querySelector('.confirmar-trabajador');
         const crear = formulario.querySelector('.abrir-registro-trabajador');
+        const editar = formulario.querySelector('.editar-seleccionado');
+        const datosImportados = {nombres: '', apellidoPaterno: '', apellidoMaterno: '', ...editar.dataset};
         const seleccion = formulario.querySelector('.seleccion-trabajador');
         const error = formulario.querySelector('.error-trabajador');
         let espera, controlador;
         entrada.addEventListener('input', () => {
             clearTimeout(espera);
             if (controlador) controlador.abort();
-            resultados.replaceChildren(); elegido.value = ''; confirmar.disabled = true; crear.hidden = true; seleccion.textContent = '';
+            resultados.replaceChildren(); elegido.value = ''; confirmar.disabled = true; seleccion.textContent = '';
+            Object.assign(editar.dataset, datosImportados);
+            editar.title = 'Editar y completar los datos importados';
             mostrarError(error, '');
             const consulta = entrada.value.trim();
             if (consulta.length < 2) return;
@@ -70,6 +74,9 @@
                         boton.textContent = `${t.nombre} · DNI ${t.dni} · ${t.codigo} · Área: ${t.area}`;
                         boton.addEventListener('click', () => {
                             elegido.value = t.id; confirmar.disabled = false;
+                            Object.assign(editar.dataset, {url:t.url_editar,nombre:t.nombre_completo,nombres:t.nombres,apellidoPaterno:t.apellido_paterno,apellidoMaterno:t.apellido_materno,dni:t.dni,area:t.area,pendiente:'no'});
+                            editar.disabled = false;
+                            editar.title = 'Editar la ficha de ' + t.nombre;
                             seleccion.textContent = `Seleccionado: ${t.nombre} · DNI ${t.dni} · ${t.codigo} · Área: ${t.area}`;
                             resultados.replaceChildren();
                         });
@@ -96,7 +103,7 @@
             document.getElementById('codigo-importado-registro').value = formulario.dataset.codigo;
             const consulta = entrada.value.trim();
             if (/^[0-9]{8}$/.test(consulta)) registro.elements.dni.value = consulta;
-            else if (/[a-záéíóúñ]/i.test(consulta)) registro.elements.nombre_completo.value = consulta;
+            document.getElementById('nombre-anterior-trabajador').hidden = true;
             mostrarError(registro.querySelector('.error-registro-trabajador'), '');
             dialogo.showModal();
         });
@@ -105,13 +112,21 @@
         boton.addEventListener('click', () => {
             limpiarConflicto();
             origen = boton; registro.reset(); registro.action = boton.dataset.url;
+            const pendiente = boton.dataset.pendiente === 'si';
             document.getElementById('titulo-registro-trabajador').textContent = 'Editar trabajador';
-            document.getElementById('descripcion-registro-trabajador').textContent = 'Los cambios se guardarán en su ficha de personal y se mostrarán en los códigos vinculados a este trabajador.';
+            document.getElementById('descripcion-registro-trabajador').textContent = pendiente
+                ? 'Complete el nombre importado, DNI y área para guardar la ficha y vincularla a este código. Si ya tiene ficha, búsquela y selecciónela para editarla.'
+                : 'Los cambios se guardarán en su ficha de personal y se mostrarán en los códigos vinculados a este trabajador.';
             document.getElementById('codigo-importado-registro').value = boton.dataset.codigo;
-            registro.elements.nombre_completo.value = boton.dataset.nombre;
+            registro.elements.nombres.value = boton.dataset.nombres || '';
+            registro.elements.apellido_paterno.value = boton.dataset.apellidoPaterno || '';
+            registro.elements.apellido_materno.value = boton.dataset.apellidoMaterno || '';
+            const anterior = document.getElementById('nombre-anterior-trabajador');
+            anterior.textContent = 'Nombre registrado anteriormente: ' + (boton.dataset.nombre || '') + '. Complete los campos por separado.';
+            anterior.hidden = Boolean(boton.dataset.nombres) || !boton.dataset.nombre || boton.dataset.nombre === boton.dataset.codigo;
             registro.elements.dni.value = boton.dataset.dni;
             registro.elements.area.value = boton.dataset.area;
-            registro.querySelector('[type=submit]').textContent = 'Guardar cambios';
+            registro.querySelector('[type=submit]').textContent = pendiente ? 'Guardar y vincular' : 'Guardar cambios';
             mostrarError(registro.querySelector('.error-registro-trabajador'), '');
             dialogo.showModal();
         });

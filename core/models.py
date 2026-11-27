@@ -15,7 +15,7 @@ class UsuarioManager(BaseUserManager):
     def create_user(self, username, email=None, password=None, **extra_fields):
         if not username:
             raise ValueError(_("El nombre de usuario es obligatorio"))
-        email = self.normalize_email(email) if email else None
+        email = self.normalize_email(email) if email else ''
         user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -53,6 +53,8 @@ class Usuario(AbstractUser):
     dni = models.CharField(
         max_length=8,
         unique=True,
+        null=True,
+        blank=True,
         verbose_name="DNI",
         help_text="Documento Nacional de Identidad (8 dígitos)",
     )
@@ -105,6 +107,7 @@ class Usuario(AbstractUser):
     # Agencia / Sede de asignación principal
     agencia_sede = models.CharField(
         max_length=100,
+        blank=True,
         default="Chiclayo - Terminal Central",
         verbose_name="Agencia / Sede Asignada",
         help_text="Chiclayo, Cajamarca, Trujillo, Jaén, Chota, Cutervo, Lima",
@@ -148,6 +151,11 @@ class Usuario(AbstractUser):
         verbose_name_plural = "Usuarios SISMOC (Personal El Cumbe)"
         ordering = ["last_name", "first_name", "username"]
 
+    def save(self, *args, **kwargs):
+        if self.dni == '':
+            self.dni = None
+        super().save(*args, **kwargs)
+
     def __str__(self):
         nombre = f"{self.first_name} {self.last_name}".strip()
         if not nombre:
@@ -183,3 +191,12 @@ class Usuario(AbstractUser):
     def nombre_completo(self):
         nombre = f"{self.first_name} {self.last_name}".strip()
         return nombre if nombre else self.username
+
+    @property
+    def nombre_corto(self):
+        ficha = getattr(self, "ficha_trabajador", None)
+        if ficha and ficha.nombres and ficha.apellido_paterno:
+            return ficha.nombre_corto
+        if self.first_name.strip() and self.last_name.strip():
+            return f"{self.last_name.split()[0]} {self.first_name.split()[0]}"
+        return self.nombre_completo

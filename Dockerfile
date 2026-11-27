@@ -21,9 +21,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Instalar dependencias de Python
 COPY requirements.txt /app/
+COPY requirements.lock.txt /app/
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir gunicorn
+    pip install --no-cache-dir --require-hashes -r requirements.lock.txt
 
 # Copiar el codigo del proyecto
 COPY . /app/
@@ -33,4 +33,4 @@ RUN mkdir -p /app/static /app/media /app/staticfiles
 
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "deploy/start.py"]

@@ -18,11 +18,14 @@ def turno_programado(trabajador, fecha):
     return p.turno if p else trabajador.turno
 
 
-def actualizar_tardanza(resumen, detalle=None):
+def actualizar_tardanza(resumen, detalle=None, *, guardar=True):
     detalle = detalle or detalle_jornada(resumen, incluir_formulario=False)
     if resumen.estado not in {'POR_REVISAR', 'ASISTIO', 'TARDANZA'}:
         return
-    if not detalle['turno'] or not detalle['completa']:
+    if detalle['turno'] and not detalle['turno'].evaluar_tardanzas:
+        resumen.minutos_tardanza = 0
+        resumen.estado = 'ASISTIO' if detalle['completa'] else 'POR_REVISAR'
+    elif not detalle['turno'] or not detalle['completa']:
         resumen.minutos_tardanza = 0
         resumen.estado = 'POR_REVISAR'
     else:
@@ -31,7 +34,8 @@ def actualizar_tardanza(resumen, detalle=None):
         atraso = max(0, (detalle['tramos'][0]['inicio'] - programada).total_seconds())
         resumen.minutos_tardanza = int(atraso // 60) if atraso > turno.tolerancia_minutos * 60 else 0
         resumen.estado = 'TARDANZA' if resumen.minutos_tardanza else 'ASISTIO'
-    resumen.save(update_fields=['estado', 'minutos_tardanza'])
+    if guardar:
+        resumen.save(update_fields=['estado', 'minutos_tardanza'])
 
 
 @transaction.atomic
@@ -42,8 +46,8 @@ def programar_horarios(trabajador, desde, hasta, dias, turno, motivo, actor):
         raise ValidationError('Seleccione un rango de hasta 366 días.')
     if not dias or not set(dias).issubset(set(range(7))):
         raise ValidationError('Seleccione los días de la semana.')
-    if not turno.activo or not motivo.strip():
-        raise ValidationError('Seleccione un turno activo e indique la referencia de la programación.')
+    if not turno.activo:
+        raise ValidationError('Seleccione un turno activo.')
     Trabajador.objects.select_for_update().get(pk=trabajador.pk)
     fechas = [desde + timedelta(days=i) for i in range((hasta-desde).days+1) if (desde+timedelta(days=i)).weekday() in dias]
     if not fechas:

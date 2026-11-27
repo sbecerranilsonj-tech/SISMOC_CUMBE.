@@ -49,6 +49,7 @@ class RevisionPorTrabajadorTests(TestCase):
         self.assertIn('persona_dni=87654321', res.url)
         self.assertEqual(CorreccionEvento.objects.count(), 8, [str(m) for m in res.wsgi_request._messages])
         for jornada in ResumenAsistenciaDiaria.objects.all():
+            self.assertEqual(jornada.turno_aplicado_id, self.turno.pk)
             self.assertEqual(jornada.horas_trabajadas, 8)
             self.assertEqual(jornada.horas_extras_25, 0)
             self.assertEqual(jornada.estado, 'ASISTIO')
@@ -57,6 +58,8 @@ class RevisionPorTrabajadorTests(TestCase):
         respuesta = self.client.get(res.url)
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, '08:00:00')
+        self.assertEqual(respuesta.context['revision_trabajador']['horario_comun_id'], self.turno.pk)
+        self.assertNotContains(respuesta, 'name="turno"')  # La asignación se gestiona en Personal y jornadas.
 
     def test_marca_ajena_cancela_todos_los_cambios(self):
         ajena = MarcacionBiometrica.objects.create(usuario=self.gestor, dni=self.gestor.dni, fecha_hora=timezone.make_aware(datetime.combine(self.desde, time(9))))
@@ -138,10 +141,11 @@ class RevisionPorTrabajadorTests(TestCase):
         self.assertNotIn('Trabajador sin turno asignado.', detalle['alertas'])
         self.assertEqual(detalle['bloqueos'], ['Apruebe la situación del día registrada.'])
         respuesta = self.client.get(reverse('dashboard'), {**self.consulta, 'hasta': str(dia), 'persona_dni': self.ficha.dni, 'detalle': resumen.pk})
-        self.assertIsNone(respuesta.context['detalle_jornada'])
-        self.assertNotContains(respuesta, 'id="detalle-jornada-dialog"')
+        self.assertTrue(respuesta.context['detalle_jornada']['solo_situacion'])
+        self.assertContains(respuesta, 'id="detalle-jornada-dialog"')
+        self.assertContains(respuesta, 'day-situation-panel')
+        self.assertNotContains(respuesta, 'tabla-control-excel')
         self.assertContains(respuesta, 'Seleccionar situación')
-        self.assertContains(respuesta, 'class="dia-no-laborado"')
 
     def test_aprobar_descanso_y_dia_desde_la_fila(self):
         dia = self.hasta + timedelta(days=1)
@@ -209,7 +213,7 @@ class RevisionPorTrabajadorTests(TestCase):
 
     def test_situaciones_excepto_permiso_no_requieren_motivo(self):
         r, incidencia, datos = self.crear_dia_pendiente_justificar()
-        for tipo in ['DESCANSO_SEMANAL', 'FERIADO_NO_LABORADO', 'VACACIONES', 'DESCANSO_MEDICO', 'CAMBIO_DESCANSO']:
+        for tipo in ['DESCANSO_SEMANAL', 'FERIADO_NO_LABORADO', 'NO_LABORO', 'VACACIONES', 'DESCANSO_MEDICO', 'CAMBIO_DESCANSO']:
             incidencia.tipo = 'OTRO'
             incidencia.motivo = 'Día no trabajado pendiente de justificar'
             incidencia.save()
@@ -269,3 +273,148 @@ class RevisionPorTrabajadorTests(TestCase):
         self.assertEqual(det2['anterior_pk'], j1.pk)
         self.assertIsNone(det2['siguiente_pk'])
         self.assertContains(resp_dia2, f'detalle={j1.pk}')
+
+    def test_navegacion_incluye_hueco_y_permite_confirmar_situacion(self):
+        j1 = ResumenAsistenciaDiaria.objects.filter(trabajador=self.ficha).earliest('fecha')
+        hueco = self.hasta + timedelta(days=1)
+        despues = hueco + timedelta(days=1)
+        ultimo = ResumenAsistenciaDiaria.objects.create(trabajador=self.ficha, fecha=despues)
+        consulta = {**self.consulta, 'hasta': str(despues), 'persona_dni': self.ficha.dni}
+        j2 = ResumenAsistenciaDiaria.objects.get(trabajador=self.ficha, fecha=self.hasta)
+        respuesta = self.client.get(reverse('dashboard'), {**consulta, 'detalle': j2.pk})
+        d = respuesta.context['detalle_jornada']
+        self.assertEqual(d['siguiente_fecha'], hueco)
+        self.assertIsNone(d['siguiente_pk'])
+        self.assertContains(respuesta, 'name="navegar_dia"')
+        self.assertFalse(ResumenAsistenciaDiaria.objects.filter(trabajador=self.ficha, fecha=hueco).exists())
+        respuesta = self.client.post(reverse('registrar_trabajo_omitido'), {
+            **consulta, 'navegar_dia': 'si', 'fecha': str(hueco), 'area': 'Boletería',
+        })
+        r = ResumenAsistenciaDiaria.objects.get(trabajador=self.ficha, fecha=hueco)
+        self.assertIn(f'detalle={r.pk}', respuesta.url)
+        self.assertIn('area=', respuesta.url)
+        self.assertFalse(r.verificado_contabilidad)
+        self.assertEqual(r.marcaciones_publicadas, [])
+        respuesta = self.client.get(reverse('dashboard'), {**consulta, 'detalle': r.pk})
+        self.assertContains(respuesta, 'Registrar situación')
+        self.assertEqual(respuesta.context['detalle_jornada']['siguiente_pk'], ultimo.pk)
+        self.assertEqual(respuesta.context['detalle_jornada']['anterior_pk'], j2.pk)
+        respuesta = self.client.post(reverse('accion_jornada', args=[r.pk]), {
+            **consulta, 'accion': 'aprobar_dia_situacion', 'tipo': 'DESCANSO_SEMANAL',
+            'solo_situacion': 'si', 'mantener_detalle': 'si',
+        })
+        self.assertIn(f'detalle={r.pk}', respuesta.url)
+        r.refresh_from_db()
+        self.assertTrue(r.verificado_contabilidad)
+
+    def datos_olvido(self):
+        return {'persona_dni':self.ficha.dni,'desde':'2026-08-01','hasta':'2026-08-10',
+            'fecha':'2026-08-05','entrada_olvido':'2026-08-05T08:00',
+            'inicio_refrigerio_olvido':'2026-08-05T12:00','fin_refrigerio_olvido':'2026-08-05T13:00',
+            'salida_olvido':'2026-08-05T17:00','motivo_olvido':'Olvidó marcar; horas confirmadas con supervisora.'}
+
+    def test_registrar_trabajo_omitido_crea_marcas_manuales_sin_aprobar(self):
+        res=self.client.post(reverse('registrar_trabajo_omitido'),self.datos_olvido())
+        self.assertEqual(res.status_code,302)
+        r=ResumenAsistenciaDiaria.objects.get(fecha=date(2026,8,5))
+        marcas=MarcacionBiometrica.objects.filter(pk__in=r.marcaciones_publicadas).order_by('fecha_hora')
+        self.assertEqual(list(marcas.values_list('tipo_evento',flat=True)),['ENTRADA','SALIDA_REFRIGERIO','RETORNO_REFRIGERIO','SALIDA'])
+        self.assertTrue(all(m.origen=='SISTEMA_MANUAL' and m.registrada_por==self.gestor for m in marcas))
+        self.assertFalse(r.verificado_contabilidad)
+        self.assertEqual(r.horas_trabajadas,8)
+        self.assertEqual(r.estado_revision,'PENDIENTE')
+        self.client.post(reverse('registrar_trabajo_omitido'),self.datos_olvido())
+        self.assertEqual(MarcacionBiometrica.objects.filter(pk__in=r.marcaciones_publicadas).count(),4)
+
+    def test_trabajo_omitido_reemplaza_situacion_con_historial(self):
+        r=ResumenAsistenciaDiaria.objects.create(trabajador=self.ficha,fecha=date(2026,8,5),estado='PERMISO')
+        IncidenciaAsistencia.objects.create(resumen=r,tipo='PERMISO',motivo='Motivo anterior',creado_por=self.gestor)
+        self.client.post(reverse('registrar_trabajo_omitido'),self.datos_olvido())
+        r.refresh_from_db()
+        self.assertFalse(r.incidencias.exists())
+        self.assertTrue(r.historial_revision.filter(detalle__contains='Motivo anterior').exists())
+        self.assertFalse(r.verificado_contabilidad)
+        self.assertEqual(len(r.marcaciones_publicadas),4)
+
+    def test_trabajo_omitido_error_revierte_toda_la_jornada(self):
+        for cambios in [{'motivo_olvido':''},{'salida_olvido':'2026-08-05T07:00'},
+                        {'fin_refrigerio_olvido':''}]:
+            self.client.post(reverse('registrar_trabajo_omitido'),{**self.datos_olvido(),**cambios})
+            self.assertFalse(ResumenAsistenciaDiaria.objects.filter(fecha=date(2026,8,5)).exists())
+        self.assertEqual(MarcacionBiometrica.objects.count(),8)
+
+    def test_trabajo_omitido_respeta_cierre_y_aprobacion(self):
+        r=ResumenAsistenciaDiaria.objects.create(trabajador=self.ficha,fecha=date(2026,8,5),verificado_contabilidad=True,estado_revision='APROBADO')
+        self.client.post(reverse('registrar_trabajo_omitido'),self.datos_olvido())
+        r.refresh_from_db()
+        self.assertTrue(r.verificado_contabilidad)
+        self.assertEqual(MarcacionBiometrica.objects.count(),8)
+        CierreAsistencia.objects.create(fecha_inicio=r.fecha,fecha_fin=r.fecha,total_jornadas=1)
+        self.client.post(reverse('registrar_trabajo_omitido'),self.datos_olvido())
+        self.assertEqual(MarcacionBiometrica.objects.count(),8)
+
+    def test_trabajo_omitido_admite_salida_al_dia_siguiente(self):
+        datos={**self.datos_olvido(),'entrada_olvido':'2026-08-05T20:00',
+            'inicio_refrigerio_olvido':'2026-08-05T23:00','fin_refrigerio_olvido':'2026-08-06T00:00',
+            'salida_olvido':'2026-08-06T07:00'}
+        self.client.post(reverse('registrar_trabajo_omitido'),datos)
+        r=ResumenAsistenciaDiaria.objects.get(fecha=date(2026,8,5))
+        self.assertEqual(r.horas_trabajadas,10)
+        self.assertEqual(len(r.marcaciones_publicadas),4)
+
+    def test_trabajo_sin_marcar_abre_el_mismo_detalle_vacio(self):
+        datos={**self.datos_olvido(),'abrir_detalle':'si'}
+        respuesta=self.client.post(reverse('registrar_trabajo_omitido'),datos)
+        self.assertEqual(respuesta.status_code,302)
+        r=ResumenAsistenciaDiaria.objects.get(fecha=date(2026,8,5))
+        self.assertIn('detalle='+str(r.pk),respuesta.url)
+        self.assertEqual(r.marcaciones_publicadas,[])
+        self.assertFalse(r.verificado_contabilidad)
+        self.assertEqual(MarcacionBiometrica.objects.count(),8)
+        pantalla=self.client.get(respuesta.url)
+        self.assertContains(pantalla,'Control diario')
+        self.assertContains(pantalla,'Agregar marcación manual')
+        self.assertContains(pantalla,'tabla-control-excel')
+        self.assertNotContains(pantalla,'id="trabajo-omitido-dialog"')
+        self.client.post(reverse('accion_jornada',args=[r.pk]),{'accion':'marcacion_manual',
+            'fecha_manual':'2026-08-05','hora_manual':'08:00','tipo_evento_manual':'ENTRADA',
+            'motivo_manual':'Olvido confirmado por la supervisora'})
+        r.refresh_from_db()
+        self.assertEqual(len(r.marcaciones_publicadas),1)
+        self.assertFalse(r.verificado_contabilidad)
+
+    def test_navegar_descanso_y_aprobar_conserva_detalle_y_dia_siguiente(self):
+        descanso=self.hasta+timedelta(days=1)
+        siguiente=descanso+timedelta(days=1)
+        r=ResumenAsistenciaDiaria.objects.create(trabajador=self.ficha,fecha=descanso,estado='DIA_LIBRE')
+        IncidenciaAsistencia.objects.create(resumen=r,tipo='DESCANSO_SEMANAL',motivo='Descanso del martes',creado_por=self.gestor)
+        ultimo=ResumenAsistenciaDiaria.objects.create(trabajador=self.ficha,fecha=siguiente)
+        consulta={'vista':'asistencia','desde':str(self.desde),'hasta':str(siguiente),'persona_dni':self.ficha.dni,'detalle':r.pk}
+        res=self.client.get(reverse('dashboard'),consulta)
+        d=res.context['detalle_jornada']
+        self.assertEqual(d['resumen'].pk,r.pk)
+        self.assertEqual(d['siguiente_pk'],ultimo.pk)
+        self.assertEqual(d['anterior_fecha'],self.hasta)
+        self.assertContains(res,'Descanso del martes')
+        post=self.client.post(reverse('accion_jornada',args=[r.pk]),{'accion':'aprobar_dia_situacion',
+            'tipo':'DESCANSO_SEMANAL','solo_situacion':'si','mantener_detalle':'si',
+            'persona_dni':self.ficha.dni,'desde':str(self.desde),'hasta':str(siguiente)})
+        self.assertIn('detalle='+str(r.pk),post.url)
+        r.refresh_from_db()
+        self.assertTrue(r.verificado_contabilidad)
+
+    def test_detalle_no_renderiza_revision_completa_y_reutiliza_marcas(self):
+        from unittest.mock import patch
+        from asistencia.services.revision_trabajador import detalles_en_lote
+        jornada=ResumenAsistenciaDiaria.objects.filter(trabajador=self.ficha).first()
+        otra=Trabajador.objects.create(nombre_completo='Otra persona',dni='55556666',area='Boletería',sede='CAJAMARCA')
+        ResumenAsistenciaDiaria.objects.create(trabajador=otra,fecha=self.desde)
+        with patch('asistencia.services.revision_trabajador.detalles_en_lote',wraps=detalles_en_lote) as lote:
+            respuesta=self.client.get(reverse('dashboard'),dict(self.consulta,detalle=jornada.pk,persona_dni=self.ficha.dni))
+        self.assertEqual(respuesta.status_code,200)
+        self.assertContains(respuesta,'id="detalle-jornada-dialog"')
+        self.assertNotContains(respuesta,'id="revision-trabajador-dialog"')
+        self.assertFalse(lote.called)
+        for llamada in lote.call_args_list:
+            self.assertTrue(all(r.trabajador_id==self.ficha.pk for r in llamada.args[0]))
+        self.assertNotIn('marcas',respuesta.context['revision_trabajador'])

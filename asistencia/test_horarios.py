@@ -58,6 +58,10 @@ class HorariosTests(TestCase):
         self.assertTrue(RevisionAsistencia.objects.filter(accion='Horario programado',detalle__contains='anterior: Mañana').exists())
 
     def test_tolerancia_limites_y_atraso_total(self):
+        self.tarde.evaluar_tardanzas = True
+        self.tarde.save(update_fields=['evaluar_tardanzas'])
+        self.manana.evaluar_tardanzas = True
+        self.manana.save(update_fields=['evaluar_tardanzas'])
         self.marcas(self.dia,[time(14,10),time(17),time(18),time(23)])
         r=ResumenAsistenciaDiaria.objects.create(trabajador=self.persona,fecha=self.dia,primera_entrada=time(14,10),ultima_salida=time(23),turno_aplicado=self.tarde)
         actualizar_tardanza(r)
@@ -125,3 +129,35 @@ class HorariosTests(TestCase):
         data={'accion':'crear_turno','nuevo-nombre':'Cajamarca tarde confirmado','nuevo-hora_entrada':'14:00','nuevo-hora_salida':'23:00','nuevo-tolerancia_minutos':10}
         self.assertEqual(self.client.post(reverse('programar_horarios'),data).status_code,302)
         self.assertTrue(TurnoHorario.objects.filter(nombre=data['nuevo-nombre']).exists())
+
+    def test_horario_agrupa_sin_evaluar_tardanza_por_defecto(self):
+        self.assertFalse(self.tarde.evaluar_tardanzas)
+        r=ResumenAsistenciaDiaria.objects.create(trabajador=self.persona,fecha=self.dia,turno_aplicado=self.tarde)
+        inicio=timezone.make_aware(datetime.combine(self.dia,time(14,45)))
+        d={'turno':self.tarde,'completa':True,'tramos':[{'inicio':inicio}]}
+        actualizar_tardanza(r,d)
+        self.assertEqual(r.minutos_tardanza,0)
+        self.assertEqual(r.estado,'ASISTIO')
+        self.tarde.evaluar_tardanzas=True
+        actualizar_tardanza(r,d)
+        self.assertEqual(r.minutos_tardanza,45)
+        self.assertEqual(r.estado,'TARDANZA')
+
+    def test_configurar_puntualidad_desde_catalogo(self):
+        response=self.client.post(reverse('programar_horarios'),{'accion':'puntualidad_turno','turno_id':self.tarde.pk,'evaluar_tardanzas':'si'})
+        self.assertEqual(response.status_code,302)
+        self.tarde.refresh_from_db()
+        self.assertTrue(self.tarde.evaluar_tardanzas)
+        self.client.post(reverse('programar_horarios'),{'accion':'puntualidad_turno','turno_id':self.tarde.pk})
+        self.tarde.refresh_from_db()
+        self.assertFalse(self.tarde.evaluar_tardanzas)
+
+    def test_referencia_opcional_y_confirmacion_obligatoria(self):
+        from asistencia.forms_horarios import ProgramarHorarioForm
+        datos={'trabajador':self.persona.pk,'desde':str(self.dia),'hasta':str(self.dia),'dias':[self.dia.weekday()],'turno':self.tarde.pk,'motivo':'','confirmado':'on'}
+        form=ProgramarHorarioForm(datos)
+        self.assertTrue(form.is_valid(),form.errors)
+        resultado=programar_horarios(self.persona,self.dia,self.dia,[self.dia.weekday()],self.tarde,'',self.actor)
+        self.assertEqual(resultado['programadas'],1)
+        datos.pop('confirmado')
+        self.assertFalse(ProgramarHorarioForm(datos).is_valid())

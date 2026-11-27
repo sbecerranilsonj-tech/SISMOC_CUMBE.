@@ -2,8 +2,8 @@
 body.login-page{margin:0;padding:0;min-height:100dvh;background:#f8f9fc;color:#172033;font-family:Geist,'Segoe UI',sans-serif;font-size:15px;display:block}
 .login-page *{box-sizing:border-box}
 .login-layout{display:grid;grid-template-columns:1fr 1fr;width:100%;min-height:100dvh;background:#f8f9fc;border:0;border-radius:0;overflow:visible}
-.login-intro{position:relative;display:flex;flex-direction:column;justify-content:center;min-height:100dvh;padding:64px 48px;isolation:isolate;background:#0c1421 url('img/login-bus.png') center center/cover no-repeat;color:white}
-.login-intro::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(5,12,22,.76),rgba(3,8,14,.84) 60%,#000)}
+.login-intro{position:relative;display:flex;flex-direction:column;justify-content:center;min-height:100dvh;padding:64px 48px;isolation:isolate;background:#0c1421 url('img/login-bus.png') 65% center/cover no-repeat;color:white}
+.login-intro::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(95deg,rgba(8,19,32,.90) 0%,rgba(8,19,32,.66) 38%,rgba(8,19,32,.18) 72%,rgba(8,19,32,.10) 100%)}
 .login-intro-main{max-width:600px;margin:auto 0}
 .login-intro h1{font-family:inherit;font-size:clamp(36px,3.3vw,60px);line-height:1.12;font-weight:800;letter-spacing:-.04em;color:white;margin:0 0 24px;text-wrap:balance}
 .login-intro p{color:#e1e5eb;font-size:clamp(16px,1.25vw,22px);line-height:1.65;max-width:470px;margin:0}
@@ -41,3 +41,11 @@ body.login-page{margin:0;padding:0;min-height:100dvh;background:#f8f9fc;color:#1
 @media(max-width:760px){.login-layout{grid-template-columns:minmax(0,1fr)}.login-intro{display:none}.login-form-panel{min-height:100dvh;padding:36px 22px;align-items:center}.login-form-content{max-width:400px}.login-logo-horizontal{margin:0 auto 22px;object-position:center}.form-heading{text-align:center}.form-heading h2{font-size:30px}}
 @media(max-width:390px){.login-form-panel{padding:28px 16px}.login-form-card{padding:26px 20px}.roles-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.login-page *{transition:none!important}}
+
+/* El texto queda legible sin ocultar el bus de la imagen. */
+.login-intro h1,.login-intro p{text-shadow:0 2px 12px rgba(0,0,0,.45)}
+
+/* app.css carga después: esta regla con mayor especificidad conserva el bus. */
+body.login-page .login-intro{background:#0c1421 url('img/login-bus.png') 65% center/cover no-repeat}
+body.login-page .login-intro::before{background:linear-gradient(95deg,rgba(8,19,32,.90) 0%,rgba(8,19,32,.66) 38%,rgba(8,19,32,.18) 72%,rgba(8,19,32,.10) 100%)}
+body.login-page .login-intro::after{display:none}

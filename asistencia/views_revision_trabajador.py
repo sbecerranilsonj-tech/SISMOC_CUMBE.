@@ -74,12 +74,69 @@ def aprobar_periodo_trabajador(request):
 
 @login_required
 @require_POST
+def registrar_trabajo_omitido(request):
+    if not puede_gestionar(request.user):
+        return HttpResponseForbidden('No tiene permiso para registrar asistencia manual.')
+    dni = request.POST.get('persona_dni', '').strip()[:20]
+    parametros = {'vista': 'asistencia', 'persona_dni': dni}
+    parametros.update({k: request.POST[k] for k in ('sede', 'area', 'trabajador', 'estado', 'revision') if request.POST.get(k)})
+    try:
+        desde = date.fromisoformat(request.POST.get('desde', ''))
+        hasta = date.fromisoformat(request.POST.get('hasta', ''))
+        fecha = date.fromisoformat(request.POST.get('fecha', ''))
+        parametros.update(desde=desde.isoformat(), hasta=hasta.isoformat())
+        if not desde <= fecha <= hasta:
+            raise ValidationError('Seleccione un día del periodo consultado.')
+        with transaction.atomic():
+            fuente = filtrar_persona(queryset_visible(request.user), dni).filter(fecha__range=(desde, hasta)).first()
+            if not fuente:
+                raise ValidationError('El trabajador no está disponible en este periodo.')
+            modelo, pk = (Trabajador, fuente.trabajador_id) if fuente.trabajador_id else (Usuario, fuente.usuario_id)
+            modelo.objects.select_for_update().get(pk=pk)
+            comprobar_abierto(fecha)
+            resumen = filtrar_persona(queryset_visible(request.user), dni).select_for_update(of=('self',)).filter(fecha=fecha).first()
+            if not resumen:
+                resumen = ResumenAsistenciaDiaria.objects.create(trabajador_id=fuente.trabajador_id,
+                    usuario_id=fuente.usuario_id, fecha=fecha, estado='POR_REVISAR', marcaciones_publicadas=[])
+            from asistencia.services.dia_trabajado_manual import registrar_trabajo_omitido as registrar
+            if request.POST.get('navegar_dia') == 'si':
+                # Abrir un hueco del calendario no implica que haya trabajado ni sustituye su situación.
+                pass
+            elif request.POST.get('abrir_detalle') == 'si':
+                from asistencia.services.revision import detalle_jornada, dejar_pendiente
+                detalle = detalle_jornada(resumen, incluir_formulario=False)
+                if resumen.verificado_contabilidad:
+                    raise ValidationError('Reabra el día aprobado antes de registrar trabajo.')
+                if (any(m.es_valida for m in detalle['marcas']) or resumen.ajustes.exists()
+                        or MarcacionBiometrica.objects.filter(marcas_persona(resumen), fecha_hora__date=fecha, es_valida=True).exists()):
+                    raise ValidationError('El día ya tiene marcaciones o ajustes. Ábralo desde Ver detalle.')
+                situacion = detalle['situacion_dia']
+                if situacion:
+                    registrar_historial(resumen, request.user, 'Situación sustituida por trabajo sin marcar',
+                        f'{situacion.get_tipo_display()}: {situacion.motivo}. Aprobación anterior: {situacion.aprobado_el or "pendiente"}. Se abrió el detalle para registrar las horas confirmadas.')
+                    situacion.delete()
+                resumen.estado = 'POR_REVISAR'
+                resumen.marcaciones_publicadas = []
+                resumen.save(update_fields=['estado', 'marcaciones_publicadas'])
+                dejar_pendiente(resumen, request.user, 'Trabajó sin marcar. Pendiente de registrar y verificar las marcaciones manuales.')
+            else:
+                registrar(resumen, request.POST, request.user)
+        parametros['detalle'] = resumen.pk
+        if request.POST.get('abrir_detalle') != 'si' and request.POST.get('navegar_dia') != 'si':
+            messages.success(request, 'Asistencia manual registrada. Revise las horas y el horario antes de aprobar el día.')
+    except (ValueError, ValidationError) as exc:
+        messages.error(request, ' '.join(exc.messages) if isinstance(exc, ValidationError) else 'Seleccione fechas válidas.')
+    return redirect(reverse('dashboard') + '?' + urlencode(parametros))
+
+
+@login_required
+@require_POST
 def registrar_dia_sin_marcas(request):
     if not puede_gestionar(request.user):
         return HttpResponseForbidden("No tiene permiso para registrar días no laborados.")
     dni = request.POST.get("persona_dni", "").strip()[:20]
     parametros = {"vista": "asistencia", "persona_dni": dni}
-    tipos = {"FERIADO_NO_LABORADO": "Feriado no laborado", "DESCANSO_SEMANAL": "Descanso semanal", "NO_TRABAJO": "Día no trabajado pendiente de justificar", "VACACIONES": "Vacaciones", "PERMISO": "Permiso", "DESCANSO_MEDICO": "Descanso médico"}
+    tipos = {"CUMPLEANOS": "Cumpleaños", "FERIADO_NO_LABORADO": "Feriado no laborado", "DESCANSO_SEMANAL": "Descanso semanal", "NO_LABORO": "No laboró", "NO_TRABAJO": "Día no trabajado pendiente de justificar", "VACACIONES": "Vacaciones", "PERMISO": "Permiso", "DESCANSO_MEDICO": "Descanso médico", "CAMBIO_DESCANSO": "Cambio de descanso"}
     try:
         desde, hasta = date.fromisoformat(request.POST.get("desde", "")), date.fromisoformat(request.POST.get("hasta", ""))
         fecha = date.fromisoformat(request.POST.get("fecha", ""))

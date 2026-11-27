@@ -220,8 +220,12 @@ class RevisionAsistenciaTests(TestCase):
         self.client.force_login(self.contadora)
         res = self.client.get(reverse("exportar_asistencia"), {**self.filtros, "sede": "Chiclayo"})
         self.assertEqual(res.status_code, 200)
-        self.assertIn("' =FORMULA".replace("' ", "'"), res.content.decode("utf-8-sig"))
-        self.assertNotIn("Persona reservada", res.content.decode("utf-8-sig"))
+        from io import BytesIO
+        from openpyxl import load_workbook
+        wb = load_workbook(BytesIO(res.content))
+        cells = [cell for ws in wb for row in ws for cell in row]
+        self.assertTrue(any(isinstance(c.value, str) and '=FORMULA' in c.value and c.data_type == 's' for c in cells))
+        self.assertFalse(any(c.value == 'Persona reservada' for c in cells))
 
     def test_cierre_no_ignora_jornadas_ocultas_por_filtros(self):
         revisar(self.resumen, self.contadora, "APROBADO")

@@ -14,11 +14,18 @@ from core.models import Usuario
 
 @receiver(post_save, sender=Usuario)
 def ficha_para_cuenta_existente(sender, instance, raw=False, **kwargs):
+    # El acceso móvil de un conductor sin ficha de personal conserva su catálogo separado.
+    if getattr(instance, '_solo_conductor', False):
+        return
     if raw or not instance.dni or len(instance.dni) != 8 or not instance.dni.isascii() or not instance.dni.isdigit():
         return
     from asistencia.models import Trabajador
     if Trabajador.objects.filter(usuario=instance).exists():
         return
+    if not kwargs.get('created',False) and instance.rol == 'CONDUCTOR':
+        from movil.models import Perfil
+        if Perfil.objects.filter(usuario=instance,conductor__isnull=False,trabajador__isnull=True).exists():
+            return
     ficha, _ = Trabajador.objects.get_or_create(dni=instance.dni, defaults={
         "nombre_completo": instance.nombre_completo[:150], "area": "Por completar",
         "sede": instance.agencia_sede, "usuario": instance,
@@ -92,9 +99,13 @@ def proteger_evidencia(sender, instance, **kwargs):
 @receiver(post_delete, sender=CorreccionEvento)
 def invalidar_por_marcacion(sender, instance, **kwargs):
     marca = instance.marcacion if isinstance(instance, CorreccionEvento) else instance
-    for fuente in [marca, getattr(marca, "_marca_anterior", marca)]:
+    fuentes = [marca]
+    anterior = getattr(marca, '_marca_anterior', None)
+    if anterior is not None and (anterior.fecha_hora, anterior.usuario_id, anterior.identidad_biometrica_id) != (marca.fecha_hora, marca.usuario_id, marca.identidad_biometrica_id):
+        fuentes.append(anterior)
+    for fuente in fuentes:
         dia = timezone.localtime(fuente.fecha_hora).date()
-        qs = resumenes_de_marca(fuente).filter(fecha__range=(dia - timedelta(days=1), dia))
+        qs = resumenes_de_marca(fuente).filter(verificado_contabilidad=True, fecha__range=(dia - timedelta(days=1), dia)).select_related("trabajador__usuario__turno", "usuario__turno", "turno_aplicado")
         for r in qs:
             inicio, fin = ventana_jornada(r)
             if inicio <= fuente.fecha_hora <= fin and r.verificado_contabilidad:

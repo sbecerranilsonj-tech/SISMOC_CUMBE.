@@ -59,7 +59,7 @@ class DuplicadasTests(TestCase):
 
     def test_ui_post_y_permisos(self):
         params={'vista':'asistencia','desde':str(self.dia),'hasta':str(self.dia),'detalle':self.r.pk}
-        self.assertContains(self.client.get(reverse('dashboard'),params),'Excluir por duplicada')
+        self.assertContains(self.client.get(reverse('dashboard'),params),'Duplicada · No computar')
         self.client.post(self.url,{'accion':'excluir_duplicada','marcacion_id':self.marcas[2].pk})
         self.assertContains(self.client.get(reverse('dashboard'),params),'Restaurar')
         self.actor.rol='BOLETERIA';self.actor.save()

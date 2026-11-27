@@ -1,0 +1,20 @@
+<form id="abrir-trabajo-omitido" method="post" action="{% url 'registrar_trabajo_omitido' %}" hidden>
+    {% csrf_token %}{% include 'asistencia/_filtros_post.html' %}
+    <input type="hidden" name="fecha"><input type="hidden" name="abrir_detalle" value="si">
+</form>
+<script>
+(() => {
+    const form = document.getElementById('abrir-trabajo-omitido');
+    if (!form) return;
+    document.addEventListener('change', event => {
+        const select = event.target;
+        if (!(select instanceof HTMLSelectElement) || select.value !== 'TRABAJO_SIN_MARCAR') return;
+        const fecha = select.selectedOptions[0].dataset.fecha;
+        if (!fecha) return;
+        select.value = '';
+        select.disabled = true;
+        form.elements.fecha.value = fecha;
+        form.requestSubmit();
+    });
+})();
+</script>

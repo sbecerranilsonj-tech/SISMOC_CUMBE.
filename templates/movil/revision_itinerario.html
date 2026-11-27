@@ -1,0 +1,22 @@
+{% if revision_itinerario %}
+<dialog class="revision-itinerario" data-revision-itinerario aria-labelledby="revision-itinerario-titulo">
+<header class="movil-zone-heading"><div><h2 id="revision-itinerario-titulo">Revisar cambios del itinerario</h2><p class="cd-muted">{{ revision_itinerario.archivo }}</p></div><button type="button" class="cd-button cd-secondary" data-revision-cerrar aria-label="Cerrar revisión">Cerrar</button></header>
+<p class="cd-notice" role="alert">⚠ Los datos del Excel no coinciden con los registrados. Compara ambas fichas y elige conservar, usar Excel o corregir. Ningún cambio se aplica hasta confirmar.</p>
+<div data-revision-avisos></div>
+<form method="post" class="cd-form" data-revision-form>{% csrf_token %}<input type="hidden" name="accion" value="validar_comparacion"><input type="hidden" name="revision" value="{{ revision_itinerario.token }}">
+<div class="revision-itinerario-cambios">
+{% for c in revision_itinerario.cambios %}<article class="revision-itinerario-fila"><h3>⚠ Fila {{ c.fila }} · {{ c.fecha }} {{ c.hora }}</h3><p>{{ c.recorrido }}</p>
+{% if c.registrada %}<div class="revision-itinerario-datos"><strong>Dato</strong><strong>Ficha registrada</strong><strong>Ficha del Excel</strong>
+<span>Fecha / hora</span><span>{{ c.registrada.fecha }} {{ c.registrada.hora }}</span><span>{{ c.excel.fecha }} {{ c.excel.hora }}</span>
+<span>Bus / placa</span><span>{{ c.registrada.bus }}</span><span>{{ c.excel.bus }}</span>
+<span>Recorrido</span><span>{{ c.registrada.origen }} → {{ c.registrada.destino }}</span><span>{{ c.excel.origen }} → {{ c.excel.destino }}</span>
+<span>Conductores</span><span>{{ c.registrada.conductor_uno }} / {{ c.registrada.conductor_dos }}</span><span>{{ c.excel.conductor_uno }} / {{ c.excel.conductor_dos }}</span></div>{% endif %}
+{% if c.estado == 'CAMBIO' %}<label>¿Qué ficha debe prevalecer?<select name="eleccion_{{ c.fila }}" aria-label="Decisión fila {{ c.fila }}"><option value="corregir">Corregir manualmente los valores</option><option value="conservar">Conservar la ficha registrada</option><option value="excel">Usar los valores del Excel</option></select></label>{% endif %}
+{% if c.estado == 'CAMBIO' %}<div class="revision-itinerario-datos"><strong>Dato</strong><strong>Registrado</strong><strong>Actualizar a</strong>
+{% for d in c.diferencias %}<span>{{ d.campo }}</span><span>{{ d.antes }}</span><label><span class="revision-label">{{ d.campo }} · valor nuevo</span>{% if d.tipo == 'boolean' %}<select name="c_{{ c.fila }}_{{ d.codigo }}"><option value="False" {% if d.valor == 'False' %}selected{% endif %}>Activo</option><option value="True" {% if d.valor == 'True' %}selected{% endif %}>Anulado</option></select>{% else %}<input name="c_{{ c.fila }}_{{ d.codigo }}" type="{{ d.tipo }}" value="{{ d.valor }}" {% if d.tipo == 'number' %}min="0" max="1000" step="1"{% elif d.tipo == 'time' %}step="1" required{% else %}required{% endif %}>{% endif %}</label>{% endfor %}</div>
+{% elif c.estado == 'PENDIENTE' %}<p>El reporte original está pendiente de validar.</p>{% else %}<p>Hay coincidencias ambiguas. Corrija el archivo y vuelva a cargarlo.</p>{% endif %}</article>{% endfor %}
+</div>
+<footer class="movil-actions revision-itinerario-actions"><button class="cd-button cd-secondary" name="accion" value="descartar_comparacion" formnovalidate>Descartar cambios</button>{% if not revision_itinerario.bloqueada %}<button class="cd-button">Validar y actualizar lista</button>{% endif %}</footer>
+</form></dialog>
+<button type="button" class="cd-button cd-secondary" data-revision-abrir>Revisar cambios pendientes</button>
+{% endif %}

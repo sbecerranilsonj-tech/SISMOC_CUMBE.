@@ -16,6 +16,11 @@ def proponer_eventos(resumen, marcas):
         return {}
     efectivos = {m.pk:getattr(getattr(m,'correccion_evento',None),'tipo_evento',m.tipo_evento) for m in validas}
     unicas = len({m.fecha_hora for m in validas}) == len(validas)
+    from asistencia.services.reglas_jornada import es_area_contable, es_area_vigilancia
+    if len(validas) == 2 and unicas and (es_area_contable(resumen) or es_area_vigilancia(resumen)) and (validas[-1].fecha_hora - primera.fecha_hora).total_seconds() < 86400:
+        pareja = ('ENTRADA', 'SALIDA')
+        if all(efectivos[m.pk] in ('SIN_CLASIFICAR', esperado) for m, esperado in zip(validas, pareja)):
+            return {m.pk: evento for m, evento in zip(validas, pareja) if efectivos[m.pk] == 'SIN_CLASIFICAR'}
     completas = len(validas)==4 and unicas and (validas[-1].fecha_hora-primera.fecha_hora).total_seconds()<86400
     # Dos pares separados por un descanso mayor que el trabajo de ambos pares
     # pueden ser el final de una noche y el inicio de otra. Sin horario confirmado,

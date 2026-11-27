@@ -18,7 +18,7 @@
                 {% if m.carga_origen %}<div><dt>Archivo</dt><dd>Lote #{{ m.carga_origen.pk }} · {{ m.carga_origen.nombre_archivo_original }}</dd></div><div><dt>Importado</dt><dd>{{ m.carga_origen.fecha_subida|date:'d/m/Y H:i:s' }}</dd></div>{% else %}<div><dt>Archivo</dt><dd>Sin lote de importación</dd></div>{% endif %}
                 <div><dt>Registro en sistema</dt><dd>{{ m.fecha_registro_sistema|date:'d/m/Y H:i:s' }}</dd></div>
                 <div><dt>Verificación original</dt><dd>{{ m.verificacion_reportada|default:'No reportada' }}</dd></div>
-                {% if m.origen == 'SISTEMA_MANUAL' %}<div><dt>Responsable</dt><dd>{{ m.registrada_por.nombre_completo|default:'No disponible' }}</dd></div><div><dt>Motivo</dt><dd>{{ m.motivo_manual }}</dd></div>{% endif %}
+                {% if m.origen == 'SISTEMA_MANUAL' %}<div><dt>Responsable</dt><dd>{{ m.registrada_por.nombre_corto|default:'No disponible' }}</dd></div><div><dt>Motivo</dt><dd>{{ m.motivo_manual }}</dd></div>{% endif %}
                 <div><dt>Evidencia</dt><dd>{% if m.foto_evidencia %}<a href="{{ m.foto_evidencia.url }}" target="_blank" rel="noopener">Ver fotografía</a>{% elif m.evidencia_manual_url %}<a href="{{ m.evidencia_manual_url }}" target="_blank" rel="noopener noreferrer">Ver referencia</a>{% else %}Sin evidencia adjunta{% endif %}</dd></div>
             </dl>
         </details>

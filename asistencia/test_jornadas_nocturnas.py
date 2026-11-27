@@ -98,3 +98,111 @@ class JornadasNocturnasTests(TestCase):
         self.assertEqual(u.marcaciones_publicadas,[])
         self.assertEqual(u.estado,'POR_REVISAR')
         self.assertFalse(u.incidencias.exists())
+
+    def test_inicio_archivo_con_salida_sin_entrada_no_bloquea_noches(self):
+        madrugada=MarcacionBiometrica.objects.create(identidad_biometrica=self.i,fecha_hora=timezone.make_aware(datetime.combine(self.dia,time(7,46))),tipo_evento='SIN_CLASIFICAR',carga_origen=self.carga)
+        self.r.primera_entrada=time(7,46)
+        self.r.marcaciones_publicadas.insert(0,madrugada.pk)
+        self.r.save()
+        originales=list(MarcacionBiometrica.objects.values_list('pk','fecha_hora','tipo_evento'))
+        self.programar()
+        self.r.refresh_from_db()
+        self.assertEqual(self.r.marcaciones_publicadas,[m.pk for m in self.marcas[:4]])
+        previa=ResumenAsistenciaDiaria.objects.get(trabajador=self.persona,fecha=self.dia-timedelta(days=1))
+        self.assertEqual(previa.marcaciones_publicadas,[madrugada.pk])
+        d=detalle_jornada(previa)
+        self.assertFalse(d['completa'])
+        self.assertIn('Marcación inicial sin pareja',d['estado_asistencia_visible'])
+        self.assertEqual(d['cuadro_excel']['totales']['trabajo'],'Por revisar')
+        self.assertEqual(previa.horas_trabajadas,0)
+        self.assertFalse(previa.verificado_contabilidad)
+        self.assertEqual(originales,list(MarcacionBiometrica.objects.values_list('pk','fecha_hora','tipo_evento')))
+        self.programar()
+        self.assertEqual(ResumenAsistenciaDiaria.objects.filter(trabajador=self.persona,fecha=previa.fecha).count(),1)
+
+    def test_jornada_previa_vacia_no_bloquea_inicio_incompleto(self):
+        previa = ResumenAsistenciaDiaria.objects.create(
+            trabajador=self.persona, fecha=self.dia-timedelta(days=1),
+            marcaciones_publicadas=[], estado='POR_REVISAR')
+        self.test_inicio_archivo_con_salida_sin_entrada_no_bloquea_noches()
+        previa.refresh_from_db()
+        self.assertTrue(previa.conceptos_editados['inicio_archivo_sin_entrada'])
+
+    def test_completar_inicio_incompleto_con_entrada_publicada(self):
+        self.test_inicio_archivo_con_salida_sin_entrada_no_bloquea_noches()
+        previa=ResumenAsistenciaDiaria.objects.get(trabajador=self.persona,fecha=self.dia-timedelta(days=1))
+        entrada=MarcacionBiometrica.objects.create(identidad_biometrica=self.i,fecha_hora=timezone.make_aware(datetime.combine(previa.fecha,time(20))),tipo_evento='SIN_CLASIFICAR',carga_origen=self.carga)
+        previa.marcaciones_publicadas.append(entrada.pk)
+        previa.save()
+        programar_horarios(self.persona,previa.fecha,previa.fecha,[previa.fecha.weekday()],self.turno,'Entrada faltante recibida',self.actor)
+        previa.refresh_from_db()
+        self.assertNotIn('inicio_archivo_sin_entrada',previa.conceptos_editados)
+        self.assertEqual(len(detalle_jornada(previa)['marcas']),2)
+
+    def test_aviso_entrada_conflictiva_indica_fecha_y_hora(self):
+        self.marcas[3].tipo_evento='ENTRADA'
+        self.marcas[3].save(update_fields=['tipo_evento'])
+        with self.assertRaises(ValidationError) as error:
+            self.programar()
+        texto=str(error.exception)
+        self.assertIn('03/08/2026 a las 07:36:18',texto)
+        self.assertIn('02/08/2026 al 03/08/2026',texto)
+        self.assertFalse(ProgramacionHorario.objects.exists())
+
+    def test_vigilancia_dos_marcas_incluye_refrigerio_en_base(self):
+        self.persona.area='VIGILANTE'
+        self.persona.save(update_fields=['area'])
+        self.marcas[1].es_valida=False;self.marcas[1].save(update_fields=['es_valida'])
+        self.marcas[2].es_valida=False;self.marcas[2].save(update_fields=['es_valida'])
+        self.programar();self.r.refresh_from_db()
+        from asistencia.services.cuadro_excel import base_jornada_segundos
+        self.assertEqual(base_jornada_segundos(self.r),31500)
+        d=detalle_jornada(self.r)
+        self.assertEqual(set(d['propuestas_eventos'].values()),{'ENTRADA','SALIDA'})
+        validar_periodo([self.r],d['propuestas_eventos'],{pk:'SIN_CLASIFICAR' for pk in d['propuestas_eventos']},None,'Validación',self.actor)
+        d=detalle_jornada(self.r)
+        self.assertTrue(d['completa'])
+        self.assertFalse(d['falta_refrigerio'])
+        self.assertEqual(d['cuadro_excel']['totales']['base'],'08:45:00')
+        self.assertEqual(d['refrigerio'],'00:00:00')
+
+    def test_vigilancia_cuatro_marcas_base_ocho_horas(self):
+        self.persona.area='VIGILANTE';self.persona.save(update_fields=['area'])
+        self.programar();self.r.refresh_from_db()
+        self.assertEqual(detalle_jornada(self.r)['cuadro_excel']['totales']['base'],'08:00:00')
+
+    def test_nocturnas_vigilancia_vacias_hasta_edicion_manual(self):
+        from asistencia.services.revision import valores_ajustados
+        self.persona.area='VIGILANTE';self.persona.save(update_fields=['area'])
+        self.programar();self.r.refresh_from_db()
+        d=detalle_jornada(self.r)
+        validar_periodo([self.r],d['propuestas_eventos'],{pk:'SIN_CLASIFICAR' for pk in d['propuestas_eventos']},None,'Validación',self.actor)
+        self.assertEqual(detalle_jornada(self.r)['cuadro_excel']['totales']['nocturnas'],'00:00:00')
+        self.assertEqual(valores_ajustados(self.r)['horas_nocturnas'],0)
+        self.r.conceptos_editados['horas_nocturnas']=3600
+        self.assertEqual(detalle_jornada(self.r)['cuadro_excel']['totales']['nocturnas'],'01:00:00')
+
+    def test_interruptor_nocturnas_individual_preserva_revisadas(self):
+        from asistencia.services.configuracion_nocturnas import configurar_nocturnas
+        from asistencia.services.reglas_jornada import nocturnas_automaticas
+        from asistencia.services.revision import valores_ajustados
+        self.persona.area='VIGILANTE';self.persona.save(update_fields=['area'])
+        self.programar();self.r.refresh_from_db()
+        d=detalle_jornada(self.r)
+        validar_periodo([self.r],d['propuestas_eventos'],{pk:'SIN_CLASIFICAR' for pk in d['propuestas_eventos']},None,'Validación',self.actor)
+        self.s.refresh_from_db()
+        self.s.verificado_contabilidad=True;self.s.save(update_fields=['verificado_contabilidad'])
+        cerrada=ResumenAsistenciaDiaria.objects.create(trabajador=self.persona,fecha=self.dia-timedelta(days=10),horas_nocturnas=8)
+        CierreAsistencia.objects.create(fecha_inicio=cerrada.fecha,fecha_fin=cerrada.fecha,total_jornadas=1)
+        self.assertFalse(nocturnas_automaticas(self.r))
+        configurar_nocturnas(self.persona,True,self.actor)
+        self.r.refresh_from_db();self.s.refresh_from_db();cerrada.refresh_from_db()
+        self.assertGreater(valores_ajustados(self.r)['horas_nocturnas'],0)
+        self.assertFalse(nocturnas_automaticas(self.s))
+        self.assertFalse(nocturnas_automaticas(cerrada))
+        self.assertTrue(self.s.verificado_contabilidad)
+        self.assertFalse(self.r.verificado_contabilidad)
+        self.r.conceptos_editados['horas_nocturnas']=3600;self.r.save(update_fields=['conceptos_editados'])
+        configurar_nocturnas(self.persona,False,self.actor)
+        self.r.refresh_from_db()
+        self.assertEqual(valores_ajustados(self.r)['horas_nocturnas'],1)

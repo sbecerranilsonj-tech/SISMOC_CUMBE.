@@ -19,6 +19,9 @@ from asistencia.models import (
 class Command(BaseCommand):
     help = "Puebla la base de datos con los 7 Roles RBAC, turnos y asistencias de El Cumbe S.A.C."
 
+    def add_arguments(self, parser):
+        parser.add_argument('--demo', action='store_true', help='Generar asistencias ficticias solo en una base de demostración.')
+
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.NOTICE("[INFO] Iniciando poblacion de datos para SISMOC-CUMBE..."))
 
@@ -186,6 +189,10 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"  [OK] {len(usuarios_creados)} usuarios creados con los 7 roles y contrasena 'cumbe2026'."))
 
+        if not kwargs.get('demo'):
+            self.stdout.write(self.style.SUCCESS('[OK] Configuración inicial preparada. No se generan asistencias de demostración.'))
+            return
+
         # 3. Generar Historial de Asistencia de Muestra (Semana actual)
         hoy = timezone.now().date()
         for dia_idx in range(6, -1, -1):
@@ -224,7 +231,7 @@ class Command(BaseCommand):
                         "nombre_empleado": yaneli.nombre_completo,
                         "tipo_evento": MarcacionBiometrica.TipoEvento.ENTRADA,
                         "origen": MarcacionBiometrica.OrigenMarcacion.ZKTECO_EN_LINEA,
-                        "dispositivo_ip": "192.168.1.201",
+                        "dispositivo_ip": "192.168.10.202",
                     },
                 )
 

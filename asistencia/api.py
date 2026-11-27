@@ -115,9 +115,13 @@ def subir_excel_zkteco(request, file: UploadedFile = File(...)):
     (como 'ASISTENCIA AGOSTO 2026.xlsx' con 50+ hojas o formato tabular).
     Aplica el algoritmo de Horas Extras (25%/35%), sobretasa nocturna y vueltas de choferes.
     """
+    from django.core.exceptions import ValidationError
+    from core.archivos import validar_archivo_subido
     nombre = file.name
-    if not (nombre.endswith(".xlsx") or nombre.endswith(".xls") or nombre.endswith(".csv")):
-        raise HttpError(400, "El archivo debe ser un libro de Excel (.xlsx, .xls) o CSV de ZKTeco.")
+    try:
+        validar_archivo_subido(file, (".xlsx", ".xls", ".csv"))
+    except ValidationError as exc:
+        raise HttpError(400, " ".join(exc.messages))
 
     usuario = request.auth
     parser = ZKTecoExcelParser(
@@ -130,8 +134,10 @@ def subir_excel_zkteco(request, file: UploadedFile = File(...)):
         with transaction.atomic():
             resultado = parser.procesar()
         return resultado
-    except Exception as e:
-        raise HttpError(500, f"Error al procesar el archivo Excel de ZKTeco: {str(e)}")
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Fallo al procesar Excel ZKTeco")
+        raise HttpError(500, "No se pudo procesar el archivo. El error quedó registrado.")
 
 
 @router.post("/sincronizar-huellero", response=SincronizacionHuelleroOutSchema, auth=auth_contadora_or_admin)
@@ -140,7 +146,9 @@ def sincronizar_huellero_en_tiempo_real(request, ip: Optional[str] = None, puert
     Se conecta directamente por socket TCP/IP al reloj biométrico ZKTeco físico en la agencia.
     Descarga marcaciones en caliente y actualiza el estado de presencia de choferes y administrativos.
     """
-    client = ZKTecoLiveClient(ip=ip, port=puerto)
+    # ip/puerto se conservan en la firma por compatibilidad, pero nunca se
+    # aceptan del llamante: el equipo permitido sale de ZKTECO_CONFIG.
+    client = ZKTecoLiveClient()
     res = client.sincronizar_marcaciones_en_vivo()
     return res
 
@@ -152,6 +160,9 @@ def consultar_asistencia_tiempo_real(request):
     su hora de ingreso, rol, agencia y estado de asistencia.
     """
     client = ZKTecoLiveClient()
+    from core.permissions import solo_consulta
+    if solo_consulta(request.auth):
+        return client.consultar_registros_locales()
     return client.sincronizar_marcaciones_en_vivo()
 
 

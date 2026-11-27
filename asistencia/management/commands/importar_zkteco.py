@@ -19,6 +19,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("archivo")
         parser.add_argument("--simular", action="store_true")
+        parser.add_argument("--sede", help="Sede de hojas genéricas como Sheet 1; las hojas ya nombradas conservan su sede.")
         parser.add_argument("--referencias", help="Libro revisado con hojas individuales para nombrar los códigos locales cortos.")
 
     def handle(self, *args, **options):
@@ -27,7 +28,7 @@ class Command(BaseCommand):
             raise CommandError("No se encontró el archivo de marcaciones.")
         try:
             with transaction.atomic():
-                resultado = ZKTecoExcelParser(str(archivo), archivo.name).procesar()
+                resultado = ZKTecoExcelParser(str(archivo), archivo.name, sede=options['sede']).procesar()
                 nombradas = 0
                 if options["referencias"]:
                     referencias = Path(options["referencias"])

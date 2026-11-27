@@ -7,6 +7,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from asistencia.models_reglas import ReglaJornada, DiaEspecial, DescansoProgramado, PeriodoVacaciones  # noqa: F401
 from asistencia.models_revision import (  # noqa: F401
     IncidenciaAsistencia, AjusteAsistencia, RevisionAsistencia,
     CorreccionEvento, CierreAsistencia,
@@ -23,6 +24,7 @@ class TurnoHorario(models.Model):
         verbose_name="Tolerancia de Tardanza (minutos)",
         help_text="Minutos de gracia permitidos antes de computar tardanza",
     )
+    evaluar_tardanzas = models.BooleanField(default=False, verbose_name="Evaluar tardanzas", help_text="Actívelo solo si este horario también se usa para controlar puntualidad.")
     hora_inicio_refrigerio = models.TimeField(
         blank=True,
         null=True,
@@ -162,6 +164,8 @@ class MarcacionBiometrica(models.Model):
     )
     huella_importacion = models.CharField(max_length=64, null=True, blank=True, unique=True)
     estado_reportado = models.CharField(max_length=60, blank=True)
+    sede = models.CharField(max_length=120, blank=True, db_index=True,
+                            verbose_name="Sede del equipo que registró la marca")
     verificacion_reportada = models.CharField(max_length=40, blank=True)
     registrada_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="marcaciones_manuales")
     motivo_manual = models.TextField(blank=True)
@@ -199,7 +203,14 @@ def generar_codigo_trabajador():
 
 
 class Trabajador(models.Model):
+    calcular_extras_25 = models.BooleanField(default=True)
+    calcular_extras_35 = models.BooleanField(default=True)
+    solo_horas_trabajadas = models.BooleanField(default=False, verbose_name="Solo horas trabajadas")
+    calcular_nocturnas = models.BooleanField(null=True, blank=True, default=None, verbose_name="Calcular horas nocturnas automáticamente")
     nombre_completo = models.CharField(max_length=150)
+    nombres = models.CharField(max_length=75, blank=True, default="")
+    apellido_paterno = models.CharField("Primer apellido", max_length=50, blank=True, default="")
+    apellido_materno = models.CharField("Segundo apellido", max_length=50, blank=True, default="")
     dni = models.CharField(max_length=8, unique=True)
     area = models.CharField(max_length=100)
     sede = models.CharField(max_length=100, blank=True)
@@ -211,6 +222,22 @@ class Trabajador(models.Model):
 
     def __str__(self):
         return f"{self.nombre_completo} · {self.dni}"
+
+    @property
+    def nombre_corto(self):
+        if self.nombres.strip() and self.apellido_paterno.strip():
+            return f"{self.apellido_paterno.strip()} {self.nombres.split()[0]}"
+        # Los nombres antiguos no tienen un orden confirmado: no adivinarlo.
+        return self.nombre_completo
+
+    def save(self, *args, **kwargs):
+        if self.nombres.strip() and self.apellido_paterno.strip():
+            for campo in ("nombres", "apellido_paterno", "apellido_materno"):
+                setattr(self, campo, " ".join(getattr(self, campo).split()))
+            self.nombre_completo = " ".join(filter(None, (self.nombres, self.apellido_paterno, self.apellido_materno)))
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {"nombres", "apellido_paterno", "apellido_materno", "nombre_completo"}
+        super().save(*args, **kwargs)
 
     @property
     def codigo(self):
@@ -254,6 +281,10 @@ class IdentidadBiometrica(models.Model):
     trabajador = models.ForeignKey(Trabajador, null=True, blank=True, on_delete=models.PROTECT, related_name="identidades")
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="identidades_biometricas")
 
+    @property
+    def nombre_corto(self):
+        return self.trabajador.nombre_corto if self.trabajador_id else self.nombre
+
     class Meta:
         constraints = [models.UniqueConstraint(fields=["sede", "equipo", "codigo"], name="identidad_sede_equipo_codigo")]
         ordering = ["sede", "equipo", "codigo"]
@@ -283,12 +314,15 @@ class ResumenAsistenciaDiaria(models.Model):
     - Conductores: Vueltas Simples ('X'=1), Vueltas Dobles ('XX'=2), Descanso SUTRAN.
     """
 
+    conceptos_editados = models.JSONField(default=dict, blank=True)
+
     class EstadoAsistencia(models.TextChoices):
         FERIADO = "FERIADO", _("Feriado no laborado")
         POR_REVISAR = "POR_REVISAR", _("Por revisar marcaciones")
         ASISTIO = "ASISTIO", _("✅ Asistió Normal")
         TARDANZA = "TARDANZA", _("⚠️ Tardanza")
         FALTA = "FALTA", _("❌ Falta Injustificada")
+        NO_LABORO = "NO_LABORO", _("No laboró")
         PERMISO = "PERMISO", _("📝 Permiso Autorizado")
         DESCANSO_MEDICO = "DESCANSO_MEDICO", _("🏥 Descanso Médico")
         DESCANSO_SUTRAN = "DESCANSO_SUTRAN", _("🛑 Descanso Obligatorio SUTRAN (8h)")
@@ -370,6 +404,7 @@ class ResumenAsistenciaDiaria(models.Model):
         default=EstadoAsistencia.ASISTIO,
         verbose_name="Estado de Asistencia",
     )
+    observacion_dia = models.TextField(blank=True, default="", verbose_name="Observación del día")
     observaciones = models.TextField(
         blank=True,
         default="",

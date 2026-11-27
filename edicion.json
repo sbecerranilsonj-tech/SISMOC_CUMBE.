@@ -1,0 +1,7 @@
+{
+  "edicion": "empresa",
+  "repositorio": "https://github.com/sbecerranilsonj-tech/SISMOC_CUMBE..git",
+  "componentes": ["sistema_web", "app_movil"],
+  "datos_reales_incluidos": false,
+  "version": "1.0.0"
+}

@@ -1,0 +1,19 @@
+<section class="day-situation-panel" aria-label="Situación registrada del día">
+    <div class="day-situation-main">
+        <span class="day-situation-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-calendar"></use></svg></span>
+        <div><h4>{% if d.situacion_dia.tipo == "CUMPLEANOS" %}{% include "asistencia/_etiqueta_cumpleanos.html" %}{% else %}{{ d.situacion_dia.get_tipo_display }}{% endif %}</h4>
+            <p class="day-situation-reason">{{ d.situacion_dia.motivo|linebreaksbr }}</p>
+            <small>Día sin actividad laboral registrada. No se computan horas trabajadas.</small>
+        </div>
+    </div>
+    <aside class="day-situation-review" aria-label="Revisión de la situación">
+        <strong>{% if d.resumen.verificado_contabilidad %}Día aprobado{% else %}Pendiente de revisión{% endif %}</strong>
+        {% if d.situacion_dia.aprobado_el %}<p>{{ d.situacion_dia.aprobado_el|date:'d/m/Y H:i' }}{% if d.situacion_dia.aprobado_por %}<br>{{ d.situacion_dia.aprobado_por.nombre_corto }}{% endif %}</p>{% endif %}
+        {% if not d.cerrada %}
+            {% if d.resumen.verificado_contabilidad and puede_gestionar %}
+            <form method="post" action="{% url 'accion_jornada' d.resumen.pk %}">{% csrf_token %}{% include 'asistencia/_filtros_post.html' %}<input type="hidden" name="accion" value="reabrir"><button type="submit" class="btn-dark-outline">Reabrir para corregir</button></form>
+            {% elif puede_aprobar and not d.periodo_vacaciones %}{% with mantener_detalle=True %}{% include 'asistencia/_seleccionar_situacion_aprobacion.html' %}{% endwith %}
+            {% endif %}
+        {% else %}<p>Periodo cerrado · Solo consulta</p>{% endif %}
+    </aside>
+</section>

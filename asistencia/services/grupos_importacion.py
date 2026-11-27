@@ -25,8 +25,9 @@ def grupo_importacion(parametros):
     ultimo=archivos_base.order_by('-fecha_hora').values_list('fecha_hora',flat=True).first()
     from django.utils import timezone
     mes=parametros.get('grupo_mes','').strip() or (timezone.localtime(ultimo).strftime('%Y-%m') if ultimo else '')
+    todos = mes == 'todos'
     inicio=fin=None
-    if mes:
+    if mes and not todos:
         try:
             inicio=date.fromisoformat(mes+'-01')
             if inicio.strftime('%Y-%m')!=mes: raise ValueError
@@ -36,19 +37,19 @@ def grupo_importacion(parametros):
     marcas=archivos_base
     if inicio: marcas=marcas.filter(fecha_hora__date__range=(inicio,fin))
     if error: marcas=marcas.none()
-    del_mes=base.filter(fecha_hora__date__range=(inicio,fin)) if inicio else base.none()
+    del_mes=base if todos else (base.filter(fecha_hora__date__range=(inicio,fin)) if inicio else base.none())
     cargas=CargaArchivoAsistencia.objects.filter(
         Q(pk__in=FilaImportacionBiometrica.objects.filter(marcacion__in=del_mes).values('carga_id')) |
         Q(pk__in=del_mes.values('carga_origen_id'))
-    ) if inicio else CargaArchivoAsistencia.objects.none()
-    return {'mes':mes,'carga_id':carga_texto,'carga':carga,'inicio':inicio,'fin':fin,'marcas':marcas,'fuente':archivos_base.none() if error else archivos_base,'activo':bool(meses or carga_texto or mes),'error':error,'meses':[{'valor':m['mes'].strftime('%Y-%m'),'nombre':f"{MESES[m['mes'].month-1]} {m['mes'].year}",'total':m['total']} for m in meses],'cargas':cargas.order_by('-fecha_subida')}
+    ) if inicio or todos else CargaArchivoAsistencia.objects.none()
+    return {'todos':todos,'total_marcas':sum(m['total'] for m in meses),'mes':mes,'carga_id':carga_texto,'carga':carga,'inicio':inicio,'fin':fin,'marcas':marcas,'fuente':archivos_base.none() if error else archivos_base,'activo':bool(meses or carga_texto or mes),'error':error,'meses':[{'valor':m['mes'].strftime('%Y-%m'),'nombre':f"{MESES[m['mes'].month-1]} {m['mes'].year}",'total':m['total']} for m in meses],'cargas':cargas.order_by('-fecha_subida')}
 
 
 def validar_grupo_envio(parametros, desde, hasta):
     grupo=grupo_importacion(parametros)
     if grupo['error']: raise ValidationError(grupo['error'])
     if grupo['activo']:
-        if not grupo['inicio'] or not grupo['inicio'] <= desde <= hasta <= grupo['fin']:
+        if not grupo['todos'] and (not grupo['inicio'] or not grupo['inicio'] <= desde <= hasta <= grupo['fin']):
             raise ValidationError('El rango de envío debe estar dentro del mes seleccionado.')
         if not grupo['marcas'].exists(): raise ValidationError('No hay marcaciones en el grupo seleccionado.')
     return grupo

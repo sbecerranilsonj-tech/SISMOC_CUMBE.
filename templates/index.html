@@ -599,16 +599,33 @@
             padding: 24px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
         }
-    
-
+        .top-notificaciones{position:relative}
+        .top-notificaciones summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;padding:9px 12px;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-card);color:var(--text-main)}
+        .top-notificaciones summary::-webkit-details-marker{display:none}
+        .top-notificaciones summary svg{width:18px;height:18px;fill:none;stroke:var(--cumbe-orange);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+        .top-notificaciones .top-badge{display:inline-flex;min-width:20px;height:20px;align-items:center;justify-content:center;border-radius:10px;background:#f26522;color:#fff;font-size:11px;font-weight:800;padding:0 5px}
+        .top-notificaciones-popover{position:absolute;right:0;top:calc(100% + 8px);width:min(340px,86vw);max-height:70vh;overflow:auto;background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;box-shadow:0 20px 44px rgba(0,0,0,.35);padding:14px;z-index:1200}
+        .top-notificaciones-popover h4{margin:0 0 10px;font-size:13px;color:var(--text-main)}
+        .top-notificaciones-popover a{display:block;padding:10px;border-radius:9px;text-decoration:none;color:var(--text-main);border:1px solid var(--border-color);margin-bottom:8px}
+        .top-notificaciones-popover a:hover{border-color:#f26522;background:rgba(242,101,34,.08)}
+        .top-notificaciones-popover strong{display:block;font-size:12px}
+        .top-notificaciones-popover small{display:block;font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:3px}
+        .top-notificaciones-popover .top-vacio{font-size:12px;color:var(--text-muted)}
     </style>
-    <link rel="stylesheet" href="{% static 'asistencia.css' %}?v=20261023-zkpopup-1">
+    <link rel="stylesheet" href="{% static 'importacion_progreso.css' %}?v=20261024-1">
+    <link rel="stylesheet" href="{% static 'asistencia.css' %}?v=20261107-fechas">
     <link rel="stylesheet" href="{% static 'dashboard_contable.css' %}?v=20261023-2">
-    <link rel="stylesheet" href="{% static 'interfaz.css' %}?v=20261023-zkpopup-1">
-    <link rel="stylesheet" href="{% static 'app.css' %}?v=20261023-zkpopup-1">
+    <link rel="stylesheet" href="{% static 'interfaz.css' %}?v=20261030-filtros-area-1">
+    <link rel="stylesheet" href="{% static 'vendor/flatpickr/flatpickr.min.css' %}">
+<link rel="stylesheet" href="{% static 'app.css' %}?v=20261114-hoy-1">
     {% include '_theme_head.html' %}
+    <link rel="stylesheet" href="{% static 'envio_asistencia.css' %}?v=20261024-2">
+    <link rel="stylesheet" href="{% static 'ediciones.css' %}">
+    {% block extra_head %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'alineacion.css' %}?v=20261115-1">
+    {% if solo_consulta %}<link rel="stylesheet" href="{% static 'solo_consulta.css' %}?v=20261127-1">{% endif %}
 </head>
-<body>
+<body class="compact-tables{% if solo_consulta %} solo-consulta{% endif %}">
     {% include "_icons.html" %}
     <button type="button" class="sidebar-scrim" id="cerrar-navegacion" aria-label="Cerrar navegación" tabindex="-1"></button>
 
@@ -621,11 +638,17 @@
                  class="brand-logo" alt="El Cumbe Logo">
             <div>
                 <div class="brand-title">Panel operativo</div>
-                <div class="brand-sub">SISMOC-CUMBE</div>
+                <div class="brand-sub">SISMOC-CUMBE</div><span class="sismoc-edition">{{ sismoc_edicion }}</span>
             </div>
         </div>
 
         <ul class="menu-list">
+            {% if sismoc_movil_habilitado and user.rol == 'BOLETERIA' %}
+            <li class="menu-category">Ventas y embarque</li>
+            <li class="menu-item"><a class="menu-link" href="{% url 'movil_buses' %}"><span class="menu-icon"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span><span>Programación y embarque</span></a></li>
+            <li class="menu-item"><a class="menu-link" href="{% url 'movil_ventas' %}"><span class="menu-icon"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span><span>Itinerarios</span></a></li>
+            {% else %}
+
             <li class="menu-category">Operación & Asistencia</li>
             <li class="menu-item">
                 <button class="menu-link active" onclick="mostrarSeccion('dashboard')">
@@ -645,20 +668,9 @@
                     <span>Asistencia & HH.EE.</span>
                 </button>
             </li>
-            {% if puede_gestionar %}
-            <li class="menu-item">
-                <button class="menu-link" onclick="mostrarSeccion('contabilidad')">
-                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bank"></use></svg></span>
-                    <span>Resumen contable</span>
-                </button>
-            </li>
+            {% if sismoc_mostrar_personal %}
+            <li class="menu-item"><button class="menu-link" onclick="mostrarSeccion('personal')"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-users"></use></svg></span><span>Personal y jornadas</span></button></li>
             {% endif %}
-            <li class="menu-item">
-                <button class="menu-link" onclick="mostrarSeccion('conductores')">
-                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span>
-                    <span>Vueltas Chofer & SUTRAN</span>
-                </button>
-            </li>
             <li class="menu-item">
                 <button class="menu-link" onclick="mostrarSeccion('excel-zk')">
                     <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-file"></use></svg></span>
@@ -666,39 +678,32 @@
                 </button>
             </li>
 
-            <li class="menu-category">Administración & Roles</li>
+            <li class="menu-category">Gestión bancaria</li>
+            <li class="menu-item"><a class="menu-link" href="{% url 'bancos_control' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bank"></use></svg></span><span>Control bancario</span></a></li>
+
             <li class="menu-item">
-                <button class="menu-link" onclick="mostrarSeccion('roles')">
-                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-users"></use></svg></span>
-                    <span>7 Roles RBAC (Matriz)</span>
-                </button>
-            </li>
-            <li class="menu-item">
-                <button class="menu-link" onclick="mostrarSeccion('flota')">
-                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span>
-                    <span>Buses & Flota (1 y 2 Pisos)</span>
-                </button>
-            </li>
-            <li class="menu-item">
-                <button class="menu-link" onclick="mostrarSeccion('bcp')">
+                <button class="menu-link" onclick="window.location.href='{% url 'bancos_importar' %}'">
                     <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bank"></use></svg></span>
-                    <span>Conciliación BCP (Sprint 2)</span>
+                    <span>Importar y validar estados BCP</span>
                 </button>
             </li>
 
-            <li class="menu-category">Enlaces Técnicos</li>
+<li class="menu-category">Gestión de conductores</li>
+            <li class="menu-item"><a class="menu-link" data-conductores="control" href="{% url 'conductores_control' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span><span>Control de conductores</span></a></li>
+            <li class="menu-item"><a class="menu-link" data-conductores="importar" href="{% url 'conductores_importar' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-file"></use></svg></span><span>Importar itinerarios</span></a></li>
+
+            <li class="menu-category">Administración & Roles</li>
+            {% if sismoc_movil_habilitado and user.es_contadora %}<li class="menu-item"><a class="menu-link" href="{% url 'movil_panel' %}"><span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-users"></use></svg></span><span>Aplicativo de trabajadores</span></a></li>{% endif %}
+            {% if user.rol != 'CONTADORA' %}
             <li class="menu-item">
-                <a class="menu-link" href="/api/docs" target="_blank">
-                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-file"></use></svg></span>
-                    <span>Swagger API Docs</span>
+                <a class="menu-link" href="{% url 'movil_buses' %}">
+                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-bus"></use></svg></span>
+                    <span>Programación y embarque</span>
                 </a>
             </li>
-            <li class="menu-item">
-                <a class="menu-link" href="/admin/" target="_blank">
-                    <span class="menu-icon" aria-hidden="true"><svg class="ui-icon"><use href="#icon-shield"></use></svg></span>
-                    <span>Django Admin</span>
-                </a>
-            </li>
+            {% endif %}
+
+            {% endif %}
         </ul>
         <!-- Pie del Sidebar: Perfil de Usuario y Cerrar Sesion juntos abajo -->
         <div class="sidebar-footer">
@@ -711,8 +716,8 @@
                     {% endif %}
                 </div>
                 <div class="user-badge-info">
-                    <div class="user-badge-name" title="{{ request.user.nombre_completo }}">
-                        {{ request.user.nombre_completo }}
+                    <div class="user-badge-name" title="{{ request.user.nombre_corto }}">
+                        {{ request.user.nombre_corto }}
                     </div>
                     <div class="user-badge-role">
                         {{ request.user.get_rol_display }}
@@ -720,7 +725,7 @@
                 </div>
             </div>
 
-            <a href="{% url 'logout' %}" class="btn-sidebar-logout" title="Cerrar sesión de {{ request.user.nombre_completo }}">
+            <a href="{% url 'logout' %}" class="btn-sidebar-logout" title="Cerrar sesión de {{ request.user.nombre_corto }}">
                 <svg class="ui-icon" aria-hidden="true"><use href="#icon-exit"></use></svg>
                 <span>Cerrar Sesión</span>
             </a>
@@ -739,14 +744,33 @@
                 <nav class="workspace-breadcrumb" aria-label="Ubicación"><span>SISMOC</span><svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg><strong id="workspace-location">Inicio</strong></nav>
             </div>
             <div class="header-account">
+                {% if solo_consulta %}<span class="solo-consulta-badge">Solo consulta</span>{% endif %}
                 {% include '_theme_toggle.html' %}
+                {% if puede_ver_notificaciones %}
+                <details class="top-notificaciones">
+                    <summary aria-label="Solicitudes pendientes" title="Solicitudes pendientes">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+                        <span class="top-badge">{{ solicitudes_notificacion|length }}</span>
+                    </summary>
+                    <div class="top-notificaciones-popover">
+                        <h4>Solicitudes pendientes</h4>
+                        {% for s in solicitudes_notificacion %}
+                        <a href="{% url 'movil_panel' %}?solicitud={{ s.id }}">
+                            <strong>{{ s.nombre }} · {{ s.tipo }}</strong>
+                            <small>{{ s.desde }} — {{ s.hasta }} · {{ s.detalle|truncatechars:90 }}</small>
+                        </a>
+                        {% empty %}<p class="top-vacio">Sin solicitudes pendientes.</p>{% endfor %}
+                    </div>
+                </details>
+                {% endif %}
                 <span class="account-role">{{ request.user.get_rol_display }}</span>
                 <details class="account-menu">
-                    <summary aria-label="Menú de la cuenta"><span class="account-avatar">{{ request.user.nombre_completo|slice:":1"|upper }}</span></summary>
+                    <summary aria-label="Menú de la cuenta"><span class="account-avatar">{{ request.user.nombre_corto|slice:":1"|upper }}</span></summary>
                     <div class="account-popover">
-                        <strong>{{ request.user.nombre_completo }}</strong>
+                        <strong>{{ request.user.nombre_corto }}</strong>
                         <small>{{ request.user.get_rol_display }}</small>
                         <a href="?vista=dashboard"><svg class="ui-icon" aria-hidden="true"><use href="#icon-grid"></use></svg> Ir al inicio</a>
+                        <a href="{% url 'cambiar_credenciales' %}"><svg class="ui-icon" aria-hidden="true"><use href="#icon-lock"></use></svg> Cambiar usuario y contraseña</a>
                         <a href="{% url 'logout' %}"><svg class="ui-icon" aria-hidden="true"><use href="#icon-exit"></use></svg> Cerrar sesión</a>
                     </div>
                 </details>
@@ -756,71 +780,32 @@
         <!-- Mensajes Flash de Django (Bienvenida / Avisos RBAC) -->
         {% if messages %}
             <div style="margin-bottom: 20px;">
-                {% for message in messages %}
-                    <div class="app-alert" data-level="{{ message.level_tag }}"{% if 'welcome' in message.tags %} data-auto-dismiss="5000" role="status"{% endif %} style="padding: 12px 18px; border-radius: 10px; font-size: 0.88rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; {% if message.level_tag == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;{% elif message.level_tag == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #6ee7b7;{% else %}background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4); color: #67e8f9;{% endif %}">
+                {% for message in messages %}{% if 'personal-config' not in message.tags or not personal_ficha %}
+                    <div class="app-alert" data-level="{{ message.level_tag }}" data-auto-dismiss="5000" role="status" style="padding: 12px 18px; border-radius: 10px; font-size: 0.88rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; {% if message.level_tag == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;{% elif message.level_tag == 'success' %}background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #6ee7b7;{% else %}background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.4); color: #67e8f9;{% endif %}">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span style="font-size: 1.1rem;">{% if message.level_tag == 'error' %}⚠️{% elif message.level_tag == 'success' %}✓{% else %}ℹ️{% endif %}</span>
                             <span>{{ message }}</span>
                         </div>
                         <button type="button" onclick="this.parentElement.style.display='none'" style="background: transparent; border: none; color: inherit; font-size: 1.2rem; cursor: pointer;">×</button>
                     </div>
-                {% endfor %}
+                {% endif %}{% endfor %}
             </div>
         {% endif %}
 
         <!-- ===============================================================
              DASHBOARD GENERAL Y HUELLERO EN APARTADOS INDEPENDIENTES
         =============================================================== -->
-        <div id="view-dashboard" class="view-section active" role="region" aria-label="Dashboard general">
-            <div class="dashboard-welcome"><h3>Hola, {{ request.user.first_name|default:request.user.username }}</h3><p><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> {% now "j \d\e F \d\e Y" %}</p></div>
-            <form method="get" class="filtros-asistencia filtros-dashboard">
-                <div class="dashboard-filter-title"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Filtros del periodo</div>
-                <input type="hidden" name="vista" value="dashboard">
-                <label>Desde<input type="date" name="desde" value="{{ filtros.desde }}" required></label>
-                <label>Hasta<input type="date" name="hasta" value="{{ filtros.hasta }}" required></label>
-                <button type="submit" class="btn-cumbe">Consultar estadísticas</button>
-            </form>
+        {% block workspace %}
+        <div id="view-dashboard" class="view-section active" role="region" aria-label="Dashboard general">{% if not detalle_jornada %}
+            <div class="dashboard-top-row"><div class="dashboard-welcome"><h3>Hola, {{ request.user.first_name|default:request.user.username }}</h3></div></div>
             {% if filtros.error %}<p class="aviso aviso-error" role="alert">{{ filtros.error }}</p>{% endif %}
+        {% include 'dashboard/hoy.html' %}
+        {% include 'dashboard/indicadores_graficos.html' %}
         {% if dashboard_contable %}
             {% include 'dashboard/contabilidad.html' %}
-        {% else %}
-        <p class="ayuda">Periodo de horas, jornadas y servicios: <strong>{{ filtros.desde }} al {{ filtros.hasta }}</strong>. Personal activo y marcaciones de hoy se muestran por separado.</p>
-        <!-- Tarjetas KPI Resumen -->
-        <div class="kpi-grid">
-            <div class="kpi-box">
-                <div class="kpi-top-bar bar-orange"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg></div>
-                <div class="kpi-title">Con marcación hoy</div>
-                <div class="kpi-value" id="kpiPresentes">{{ info_huellero.total_presentes_hoy }} <span style="font-size: 1rem; color: #ffa94d;">trabajadores</span></div>
-                <div class="kpi-sub">Personas con registros guardados hoy</div>
-            </div>
-
-            <div class="kpi-box">
-                <div class="kpi-top-bar bar-emerald"><svg class="ui-icon" aria-hidden="true"><use href="#icon-clock"></use></svg></div>
-                <div class="kpi-title">Horas extras del periodo</div>
-                <div class="kpi-value">{{ totales_asistencia.horas_extras_25|floatformat:2 }} <span style="font-size: 1rem; color: #34d399;">h al 25 %</span></div>
-                <div class="kpi-sub">{{ totales_asistencia.horas_extras_35|floatformat:2 }} h al 35 % · Incluye pendientes de revisión</div>
-            </div>
-
-            <div class="kpi-box">
-                <div class="kpi-top-bar bar-cyan"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg></div>
-                <div class="kpi-title">Jornadas por revisar</div>
-                <div class="kpi-value">{{ conteos_revision.PENDIENTE|add:conteos_revision.OBSERVADO }} <span style="font-size: 1rem; color: #38bdf8;">jornadas</span></div>
-                <div class="kpi-sub">{{ conteos_revision.APROBADO }} de {{ total_jornadas }} aprobadas · {{ conteos_revision.OBSERVADO }} observadas</div>
-            </div>
-
-            <div class="kpi-box">
-                <div class="kpi-top-bar bar-purple"><svg class="ui-icon" aria-hidden="true"><use href="#icon-users"></use></svg></div>
-                <div class="kpi-title">Personal activo registrado</div>
-                <div class="kpi-value">{{ total_usuarios }} <span style="font-size: 1rem; color: #c084fc;">activos</span></div>
-                <div class="kpi-sub">Distribuido en los 7 Roles RBAC</div>
-            </div>
-        </div>
-
         {% endif %}
-        {% if not dashboard_contable %}
-            {% include 'dashboard/modulos.html' %}
-        {% endif %}
-        </div>
+        {% include 'dashboard/grafico_jornadas.html' %}
+        {% endif %}</div>
 
         <div id="view-huellero" class="view-section">
             {% include 'asistencia/huellero.html' %}
@@ -834,9 +819,8 @@
         </div>
 
         {% if puede_gestionar %}
-        <div id="view-contabilidad" class="view-section">
-            {% include "asistencia/contabilidad.html" %}
-        </div>
+        {% if not detalle_jornada %}{% include 'asistencia/_resumen_contable_popup.html' %}{% endif %}
+        <div id="view-personal" class="view-section">{% include 'asistencia/personal.html' %}</div>
         {% endif %}
 
         <!-- ===============================================================
@@ -871,7 +855,7 @@
                             {% if r.usuario.rol == 'CONDUCTOR' %}
                             <tr>
                                 <td>{{ r.fecha|date:"d/m/Y" }}</td>
-                                <td><strong>{{ r.usuario.nombre_completo }}</strong></td>
+                                <td><strong>{{ r.usuario.nombre_corto }}</strong></td>
                                 <td><span class="status-pill pill-purple">{{ r.usuario.licencia_conducir|default:"A-IIIc" }}</span></td>
                                 <td>{{ r.usuario.agencia_sede }}</td>
                                 <td>
@@ -911,10 +895,11 @@
                     <input type="file" id="excelInput" accept=".xlsx,.xls" hidden onchange="procesarExcel(this.files[0])">
                 </div>
 
-                <div id="resultadoExcelBox" style="margin-top: 20px; display: none;" class="content-panel">
+                <div id="resultadoExcelBox" data-import-url="{% url 'importar_excel_web' %}" data-csrf="{{ csrf_token }}" style="margin-top: 20px; display: none;" class="content-panel">
                     <!-- Dinamico con JS -->
                 </div>
             </div>
+            {% include 'asistencia/_progreso_importacion.html' %}
             {% include 'asistencia/identidades.html' %}
         </div>
 
@@ -1014,53 +999,8 @@
         <!-- ===============================================================
              SECCION 6: FLOTA DE BUSES (1 Y 2 PISOS - DE TRABAJOS ANTERIORES)
         =============================================================== -->
-        <div id="view-flota" class="view-section">
-            <div class="content-panel">
-                <div class="panel-header-custom">
-                    <div class="panel-title-text">
-                        <span>🚍</span>
-                        <span>Flota de Buses Interprovinciales — Transportes El Cumbe S.A.C.</span>
-                    </div>
-                    <span class="status-pill pill-orange">Servicios: Ejecutivo (1 Piso) y Suite Imperial (2 Pisos)</span>
-                </div>
-
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <div class="kpi-box">
-                            <div class="kpi-top-bar bar-orange"><svg class="ui-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg></div>
-                            <h4 style="font-weight: 800; color: white;">Bus Suite Imperial (2 Pisos)</h4>
-                            <p style="color: var(--text-muted); font-size: 0.85rem;">Placa: <strong>T4A-954</strong> • Capacidad: 54 Asientos (Piso 1: Sofá Cama 160° / Piso 2: Semicama)</p>
-                            <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;">
-                                <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                                    <span class="status-pill pill-emerald">Asiento 01 (Ocupado)</span>
-                                    <span class="status-pill pill-emerald">Asiento 02 (Ocupado)</span>
-                                    <span class="status-pill pill-cyan">Asiento 03 (Libre)</span>
-                                    <span class="status-pill pill-cyan">Asiento 04 (Libre)</span>
-                                    <span class="status-pill pill-orange">Asiento 05 (En Ruta)</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="kpi-box">
-                            <div class="kpi-top-bar bar-cyan"><svg class="ui-icon" aria-hidden="true"><use href="#icon-file"></use></svg></div>
-                            <h4 style="font-weight: 800; color: white;">Bus Ejecutivo Clásico (1 Piso)</h4>
-                            <p style="color: var(--text-muted); font-size: 0.85rem;">Placa: <strong>M3B-812</strong> • Capacidad: 42 Asientos Ejecutivos • Ruta: Chiclayo - Chota</p>
-                            <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;">
-                                <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                                    <span class="status-pill pill-emerald">Asiento 01 (Ocupado)</span>
-                                    <span class="status-pill pill-cyan">Asiento 02 (Libre)</span>
-                                    <span class="status-pill pill-cyan">Asiento 03 (Libre)</span>
-                                    <span class="status-pill pill-emerald">Asiento 04 (Ocupado)</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        {% if user.rol != 'CONTADORA' %}
+        {% endif %}
         <!-- ===============================================================
              SECCION 7: CONCILIACIÓN BCP (ADELANTO SPRINT 2)
         =============================================================== -->
@@ -1083,12 +1023,14 @@
                         Eliminará las 31 hojas de cálculo manuales cruzando automáticamente el extracto bancario BCP (Excel) contra los cobros registrados en agencias por Yape, Plin y POS de pasajes y encomiendas.
                     </p>
                     <span class="status-pill pill-emerald" style="font-size: 0.9rem; padding: 8px 16px;">
-                        ✓ Planificado y Modelado en el Plan de Prácticas Pre Profesionales (USS)
+                        Planificado · Integración pendiente
                     </span>
+                    <p style="margin-top: 18px;"><a class="btn-cumbe" href="{% url 'prototipos_iq2' %}#conciliacion">Abrir prototipo de conciliación</a></p>
                 </div>
             </div>
         </div>
 
+        {% endblock workspace %}
     </div>
 
     <!-- ===================================================================
@@ -1103,7 +1045,7 @@
             <div class="mb-3">
                 <label class="form-label" style="font-size: 0.85rem; color: var(--text-muted);">Colaborador / DNI:</label>
                 <select class="form-select bg-dark text-white border-secondary" id="dniSelect">
-                    {% for u in usuarios_asistencia %}<option value="{{ u.dni }}">{{ u.nombre_completo }} · {{ u.dni }}</option>{% endfor %}
+                    {% for u in usuarios_asistencia %}<option value="{{ u.dni }}">{{ u.nombre_corto }} · {{ u.dni }}</option>{% endfor %}
                 </select>
             </div>
 
@@ -1131,10 +1073,16 @@
         </div>
     </div>
 
-    <script src="{% static 'huellero.js' %}"></script>
+    <script src="{% static 'huellero.js' %}?v=20261127-3"></script>
     <!-- Scripts de Interacción -->
     <script>
         function mostrarSeccion(seccionId) {
+            if (seccionId === 'conductores') { window.location.href = '{% url "conductores_control" %}'; return; }
+            if (seccionId === 'contabilidad' && document.getElementById('resumen-contable-popup')) { mostrarSeccion('asistencia'); document.getElementById('resumen-contable-popup').showModal(); return; }
+            if (document.getElementById('bancos-workspace') || document.querySelector('.conductores-workspace')) { window.location.href = '{% url "dashboard" %}?vista=' + encodeURIComponent(seccionId); return; }
+            const vistaServidor = new URLSearchParams(window.location.search).get('vista');
+            if (new URLSearchParams(window.location.search).has('detalle') && seccionId !== 'asistencia') { window.location.href = '?vista=' + encodeURIComponent(seccionId); return; }
+            if (['personal', 'excel-zk'].includes(seccionId) && vistaServidor !== seccionId) { window.location.href = '?vista=' + encodeURIComponent(seccionId); return; }
             document.querySelectorAll('.menu-link').forEach(btn => { btn.classList.remove('active'); btn.removeAttribute('aria-current'); });
             document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
 
@@ -1205,38 +1153,19 @@
             }
         }
 
-        async function procesarExcel(file) {
-            if (!file) return;
-
-            const box = document.getElementById('resultadoExcelBox');
-            box.style.display = 'block';
-            box.innerHTML = '<p style="color: #38bdf8;">⚙️ Procesando con Pandas y extrayendo marcaciones...</p>';
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const res = await fetch('{% url "importar_excel_web" %}', {
-                method: 'POST',
-                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-                body: formData
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                box.textContent = 'Archivo: ' + data.archivo + '. Filas: ' + data.filas_procesadas + '. Marcas nuevas: ' + data.marcaciones_nuevas + '. Repetidas: ' + data.marcaciones_repetidas + '. Códigos guardados: ' + data.codigos_biometricos + '. Pendientes de identificar: ' + data.identidades_pendientes + '. ' + data.alertas.join(' ');
-                const enlace = document.createElement('a');
-                enlace.href = '?vista=excel-zk&grupo_carga=' + encodeURIComponent(data.carga_id);
-                enlace.textContent = ' Ver códigos guardados y asociar trabajadores';
-                enlace.style.color = '#7dd3fc';
-                box.appendChild(enlace);
-                window.location.assign(enlace.href);
-            } else {
-                const error = await res.json(); box.textContent = error.detail || 'Error al procesar el archivo Excel.';
-            }
-        }
         const vistaInicial = new URLSearchParams(window.location.search).get('vista');
+        if (vistaInicial === 'contabilidad' && document.getElementById('resumen-contable-popup')) mostrarSeccion('contabilidad');
+        if (vistaInicial === 'bcp') window.location.replace('{% url "bancos_importar" %}');
         if (vistaInicial && document.getElementById('view-' + vistaInicial)) mostrarSeccion(vistaInicial);
     </script>
-    <script src="{% static 'interfaz.js' %}?v=20261019-welcome-1" defer></script>
+    <script src="{% static 'importacion_progreso.js' %}?v=20261024-1" defer></script>
+    <script src="{% static 'interfaz.js' %}?v=20261127-menu-centro-aplicativo" defer></script>
+    {% if solo_consulta %}<script src="{% static 'solo_consulta.js' %}?v=20261127-1" defer></script>{% endif %}
+    <script src="{% static 'resumen_contable_popup.js' %}?v=20261106-1" defer></script>
+<script src="{% static 'vendor/flatpickr/flatpickr.min.js' %}" defer></script>
+<script src="{% static 'vendor/flatpickr/es.js' %}" defer></script>
+<script src="{% static 'filtros_visuales.js' %}?v=20261114-hoy-1" defer></script>
+<script src="{% static 'movimiento.js' %}?v=20261112-video-1" defer></script>
 </body>
 </html>
+
