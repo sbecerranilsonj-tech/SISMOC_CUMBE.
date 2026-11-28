@@ -1,4 +1,5 @@
 """Directorios y base separados de cualquier instalación de desarrollo o nube."""
+import hashlib
 import os
 import secrets
 import sqlite3
@@ -20,7 +21,9 @@ def preparar_entorno(data_dir=None):
     key=keyfile.read_text(encoding='utf-8').strip()
     if len(key)<50:raise ValueError('La clave local está dañada. Restaure una copia de seguridad.')
     os.environ.update(SISMOC_EDITION='escritorio',SISMOC_LOAD_DOTENV='False',
-        SISMOC_DESKTOP_SECRET=key,SISMOC_DESKTOP_DATA=str(root),DJANGO_SETTINGS_MODULE='config.settings_desktop')
+        SISMOC_DESKTOP_SECRET=key,SECRET_KEY=key,
+        JWT_SIGNING_KEY=hashlib.sha256((key+'|jwt').encode()).hexdigest(),
+        SISMOC_DESKTOP_DATA=str(root),DJANGO_SETTINGS_MODULE='config.settings_desktop')
     for sub in ('media','private_bancos','private_conductores','backups','logs'):
         (root/sub).mkdir(exist_ok=True)
     return root

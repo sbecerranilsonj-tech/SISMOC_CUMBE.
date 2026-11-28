@@ -19,6 +19,9 @@ class RuntimeTests(SimpleTestCase):
             self.assertEqual((root/'.secret_key').read_text(),key)
             self.assertEqual(os.environ['DJANGO_SETTINGS_MODULE'],'config.settings_desktop')
             self.assertEqual(os.environ['SISMOC_LOAD_DOTENV'],'False')
+            self.assertEqual(os.environ['SECRET_KEY'],key)
+            self.assertGreaterEqual(len(os.environ['JWT_SIGNING_KEY']),32)
+            self.assertNotEqual(os.environ['JWT_SIGNING_KEY'],key)
             self.assertTrue((root/'private_bancos').is_dir())
 
     def test_respaldo_conserva_base_original(self):

@@ -6,7 +6,8 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files, coll
 root=Path(SPECPATH).parent
 os.environ.update(DJANGO_SETTINGS_MODULE='config.settings_desktop',SISMOC_EDITION='escritorio',
     SISMOC_LOAD_DOTENV='False',SISMOC_DESKTOP_SECRET='solo-analisis-de-compilacion-'+'x'*64)
-apps=['core','asistencia','bancos','conductores','movil','config','desktop']
+apps=['core','asistencia','bancos','conductores','movil','config','desktop',
+      'corsheaders','ninja','whitenoise']
 hidden=sum((collect_submodules(app,filter=lambda name: not any(part.startswith('test') for part in name.split('.'))) for app in apps),[])
 data=[(str(root/'templates'),'templates'),(str(root/'static'),'static')]
 data+=collect_data_files('webview')
