@@ -49,6 +49,21 @@ class PanelOperativoTests(TestCase):
         self.assertEqual(len(respuesta.context['todas_solicitudes']), 2)
         self.assertEqual(respuesta.context['todas_solicitudes'][0].estado, 'RECHAZADO')
 
+    def test_panel_muestra_boton_y_estados_de_todas_las_solicitudes(self):
+        gestor, perfil = self.gestor()
+        dia = timezone.now().date()
+        Solicitud.objects.create(perfil=perfil, tipo='PERMISO', desde=dia, hasta=dia,
+                                 detalle='Solicitud aprobada de prueba', estado='APROBADO')
+        Solicitud.objects.create(perfil=perfil, tipo='VACACIONES', desde=dia, hasta=dia,
+                                 detalle='Solicitud rechazada de prueba', estado='RECHAZADO')
+        respuesta = self.client.get('/movil/')
+        self.assertContains(respuesta, 'Todas las solicitudes')
+        self.assertContains(respuesta, 'data-open-solicitudes')
+        self.assertContains(respuesta, 'Solicitud aprobada de prueba')
+        self.assertContains(respuesta, 'Solicitud rechazada de prueba')
+        self.assertContains(respuesta, 'APROBADO')
+        self.assertContains(respuesta, 'RECHAZADO')
+
     def test_comision_por_fecha_cubre_el_dia_completo(self):
         from datetime import date
         _, perfil = self.gestor()

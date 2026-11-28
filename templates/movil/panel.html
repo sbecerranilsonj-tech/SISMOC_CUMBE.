@@ -10,17 +10,27 @@
  <div class="movil-actions">
   <button type="button" class="cd-button cd-secondary" data-open-regla>Regla de descanso</button>
   <button type="button" class="cd-button cd-secondary" data-open-cuentas>Cuentas de Boletería por sede</button>
+  <button type="button" class="cd-button cd-secondary" data-open-solicitudes>Todas las solicitudes</button>
  </div>
 </div>
 <dialog class="movil-activated-dialog" aria-labelledby="solicitudes-title" data-solicitudes-dialog>
- <div class="movil-access-heading"><h2 id="solicitudes-title">Solicitudes pendientes</h2><button type="button" class="cd-button cd-secondary" data-close-solicitudes>Cerrar</button></div>
- {% for s in solicitudes %}
- <article class="movil-solicitud">
-  <h3>{{ s.perfil.trabajador.nombre_completo|default:s.perfil.usuario.get_full_name }} · {{ s.tipo }}</h3>
-  <p>{{ s.desde }} — {{ s.hasta }} · {{ s.detalle }}</p>
-  <form method="post" class="cd-form cd-inline movil-form-grid movil-form-respuesta">{% csrf_token %}<input type="hidden" name="accion" value="revisar_solicitud"><input type="hidden" name="id" value="{{ s.pk }}"><label>Respuesta (opcional)<input name="respuesta"></label><button class="cd-button cd-secondary" name="decision" value="aprobar">Aprobar</button><button class="cd-button cd-secondary" name="decision" value="rechazar">Rechazar</button></form>
- </article>
- {% empty %}<p>Sin solicitudes pendientes.</p>{% endfor %}
+ <div class="movil-access-heading"><h2 id="solicitudes-title">Todas las solicitudes</h2><button type="button" class="cd-button cd-secondary" data-close-solicitudes>Cerrar</button></div>
+ <p class="cd-muted">Pendientes, aprobadas y rechazadas. Solo las pendientes se pueden decidir.</p>
+ <div class="cd-table-wrap"><table class="cd-table"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Tipo</th><th>Detalle</th><th>Desde/Hasta</th><th>Estado</th><th>Respuesta</th><th>Revisado por</th><th>Decisión</th></tr></thead><tbody>
+ {% for s in todas_solicitudes %}
+ <tr>
+  <td>{{ s.creado|date:'d/m/Y H:i' }}</td>
+  <td>{{ s.perfil.trabajador.nombre_completo|default:s.perfil.usuario.get_full_name }}</td>
+  <td>{{ s.tipo }}</td>
+  <td>{{ s.detalle|truncatechars:300 }}</td>
+  <td>{{ s.desde|date:'d/m/Y' }} — {{ s.hasta|date:'d/m/Y' }}</td>
+  <td>{{ s.estado }}</td>
+  <td>{{ s.respuesta|default:'—' }}</td>
+  <td>{% if s.revisado_por %}{{ s.revisado_por.get_full_name|default:s.revisado_por.username }}{% else %}—{% endif %}</td>
+  <td>{% if s.estado == 'PENDIENTE' %}<form method="post" class="cd-form cd-inline movil-form-grid movil-form-respuesta">{% csrf_token %}<input type="hidden" name="accion" value="revisar_solicitud"><input type="hidden" name="id" value="{{ s.pk }}"><label>Respuesta (opcional)<input name="respuesta"></label><label>Turno (si aplica)<input name="turno"></label><button class="cd-button cd-secondary" name="decision" value="aprobar">Aprobar</button><button class="cd-button cd-secondary" name="decision" value="rechazar">Rechazar</button></form>{% else %}—{% endif %}</td>
+ </tr>
+ {% empty %}<tr><td colspan="9">No hay solicitudes registradas.</td></tr>{% endfor %}
+ </tbody></table></div>
 </dialog>
 <dialog class="movil-activated-dialog" aria-labelledby="comisiones-title" data-comisiones-dialog>
  <div class="movil-access-heading"><h2 id="comisiones-title">Comisiones registradas</h2><button type="button" class="cd-button cd-secondary" data-close-comisiones>Cerrar</button></div>
