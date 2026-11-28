@@ -6,6 +6,8 @@ from zoneinfo import ZoneInfo
 from django.db import transaction
 from django.utils import timezone
 
+from core.models import ROLES_GESTION
+
 from .models import Auditoria, EventoViaje, Operacion
 from .views import PERU, Problema, asignado, exigir, aviso_operacion
 
@@ -30,7 +32,7 @@ def regularizar_llegada(datos, perfil):
     op = Operacion.objects.select_for_update().select_related('salida').get(
         pk=datos.get('viaje'))
     exigir(asignado(op, perfil) or perfil.usuario.rol in {
-        'CONTADORA', 'ADMINISTRADOR', 'GERENTE_GENERAL'},
+        *sorted(ROLES_GESTION)},
         'No está autorizado a regularizar este viaje.', 403)
     exigir(op.estado == 'EN_CURSO' and op.salida_real and not op.llegada_real,
            'Este viaje no tiene una llegada pendiente.', 409)

@@ -7,6 +7,7 @@ from django.db import transaction
 from django.http import HttpResponse,HttpResponseForbidden
 from django.shortcuts import redirect,render
 from django.utils import timezone
+from core.validaciones import rango_fechas_valido
 from conductores.models import Salida
 from .models import Operacion,Perfil,Auditoria
 from .views import PERU,VENTAS,Problema,exigir,aviso_operacion
@@ -27,7 +28,7 @@ def buses(request):
         response=HttpResponse(buffer.getvalue(),content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');response['Content-Disposition']='attachment; filename="plantilla_pasajeros.xlsx"';return response
     try:
         desde=date.fromisoformat(request.GET.get('desde',''));hasta=date.fromisoformat(request.GET.get('hasta',''))
-        exigir(desde<=hasta and (hasta-desde).days<=366,'Seleccione un período de hasta un año.')
+        exigir(rango_fechas_valido(desde, hasta, 366),'Seleccione un período de hasta un año.')
     except (ValueError,Problema):
         desde=timezone.localdate().replace(day=1)
         hasta=(desde.replace(year=desde.year+1,month=1)

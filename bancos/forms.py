@@ -1,4 +1,5 @@
 from django import forms
+from core.archivos import TAMANO_MAXIMO_DOCUMENTOS
 from .models import Movimiento
 
 
@@ -7,7 +8,7 @@ class ImportarForm(forms.Form):
 
     def clean_pdf(self):
         archivo = self.cleaned_data['pdf']
-        if archivo.size > 20 * 1024 * 1024:
+        if archivo.size > TAMANO_MAXIMO_DOCUMENTOS:
             raise forms.ValidationError('El límite es de 20 MB.')
         if not archivo.name.strip().lower().endswith('.pdf'):
             raise forms.ValidationError('El archivo debe tener extensión .pdf.')

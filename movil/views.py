@@ -17,11 +17,13 @@ from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from core.models import ROLES_GESTION
+from core.validaciones import rango_fechas_valido
 from .models import (Perfil, Sesion, Zona, Comision, Registro, Solicitud, Operacion,
     EventoViaje, Descanso, ReglaDescanso, Pasajero, Incidencia, Pago, Aviso, Auditoria, IntentoAcceso)
 
 PERU = ZoneInfo('America/Lima')
-GESTION = {'CONTADORA', 'ADMINISTRADOR', 'GERENTE_GENERAL'}
+GESTION = ROLES_GESTION
 VENTAS = GESTION | {'BOLETERIA'}
 TIPOS = ['ENTRADA', 'SALIDA_REFRIGERIO', 'RETORNO_REFRIGERIO', 'SALIDA']
 
@@ -366,7 +368,7 @@ def solicitud(p, d):
     tipo = d['tipo']
     exigir(tipo in ['PERMISO', 'VACACIONES', 'CAMBIO_HORARIO', 'CORRECCION'], 'Solicitud inválida.')
     desde, hasta = fecha(d['desde']), fecha(d['hasta'])
-    exigir(desde <= hasta and (hasta-desde).days <= 366, 'Rango de fechas inválido.')
+    exigir(rango_fechas_valido(desde, hasta, 366), 'Rango de fechas inválido.')
     detalle = str(d.get('detalle', '')).strip()
     exigir(5 <= len(detalle) <= 2000, 'Explique la solicitud (5 a 2000 caracteres).')
     exigir(tipo == 'CORRECCION' or d.get('emergencia') or desde > timezone.now().astimezone(PERU).date(), 'Debe solicitarlo como máximo el día anterior; explique si es una emergencia.')

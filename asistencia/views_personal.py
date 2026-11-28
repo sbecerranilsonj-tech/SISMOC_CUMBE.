@@ -2,6 +2,7 @@ from datetime import date
 from calendar import monthrange
 from urllib.parse import urlencode
 from django import forms
+from core.validaciones import rango_fechas_valido
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -39,7 +40,7 @@ class DescansoForm(forms.Form):
 
     def clean(self):
         datos = super().clean()
-        if datos.get('desde') and datos.get('hasta') and not 0 <= (datos['hasta'] - datos['desde']).days <= 365:
+        if datos.get('desde') and datos.get('hasta') and not rango_fechas_valido(datos['desde'], datos['hasta']):
             raise ValidationError('Seleccione una vigencia de hasta 366 días, con inicio anterior o igual al fin.')
         return datos
 

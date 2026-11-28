@@ -1,9 +1,10 @@
 """Configurar la cuenta de Contabilidad en una instalación nueva, sin clave predefinida."""
+from core.models import ROLES_GESTION
 
 def crear_cuenta_inicial():
     from django.contrib.auth import get_user_model
     User=get_user_model()
-    if User.objects.filter(is_active=True,rol__in=['CONTADORA','ADMINISTRADOR','GERENTE_GENERAL']).exists():
+    if User.objects.filter(is_active=True,rol__in=ROLES_GESTION).exists():
         return True
     import tkinter as tk
     from tkinter import ttk,messagebox

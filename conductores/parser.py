@@ -5,6 +5,7 @@ import unicodedata
 from datetime import date, datetime, time, timedelta
 from io import BytesIO
 from decimal import Decimal, InvalidOperation
+from core.archivos import TAMANO_MAXIMO_DOCUMENTOS
 
 
 def abrir_xls(contenido):
@@ -121,7 +122,7 @@ def interpretar_filas(filas):
 
 
 def extraer(archivo):
-    if archivo.size > 20 * 1024 * 1024:
+    if archivo.size > TAMANO_MAXIMO_DOCUMENTOS:
         raise ValueError('El archivo no debe superar 20 MB.')
     contenido = archivo.read()
     if archivo.name.lower().endswith('.xls'):

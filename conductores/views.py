@@ -1,8 +1,6 @@
 import hashlib
 import logging
-from functools import wraps
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction, DatabaseError
 from django.http import FileResponse, HttpResponse, HttpResponseForbidden, JsonResponse
@@ -11,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render as django_rende
 from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
 from django.urls import reverse
+from core.permissions import acceso_gestion
 from .forms import ImportarForm, PeriodoForm, SituacionForm, ConductorForm
 from .listados import listado_importaciones
 from .models import Auditoria, Conductor, IdentidadConductor, Importacion, Salida, SituacionConductor
@@ -25,15 +24,7 @@ def render(request, plantilla, contexto):
     return django_render(request, plantilla, contexto)
 
 
-def acceso(vista):
-    @login_required
-    @wraps(vista)
-    def protegida(request, *args, **kwargs):
-        u = request.user
-        if not u.is_active or not u.esta_activo or not (u.is_superuser or u.rol in {'ADMINISTRADOR', 'CONTADORA', 'GERENTE_GENERAL'}):
-            return HttpResponseForbidden('No tiene permiso para gestionar conductores.')
-        return vista(request, *args, **kwargs)
-    return protegida
+acceso = acceso_gestion('No tiene permiso para gestionar conductores.')
 
 
 @acceso

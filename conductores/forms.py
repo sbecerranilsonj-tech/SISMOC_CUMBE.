@@ -1,4 +1,5 @@
 from django import forms
+from core.archivos import TAMANO_MAXIMO_DOCUMENTOS
 from .models import Conductor, SituacionConductor
 
 
@@ -9,7 +10,7 @@ class ImportarForm(forms.Form):
         archivo = self.cleaned_data['archivo']
         if not archivo.name.lower().endswith(('.xls', '.xlsx', '.xlsm')):
             raise forms.ValidationError('Seleccione un archivo XLS, XLSX o XLSM.')
-        if archivo.size > 20 * 1024 * 1024:
+        if archivo.size > TAMANO_MAXIMO_DOCUMENTOS:
             raise forms.ValidationError('El archivo no debe superar 20 MB.')
         return archivo
 

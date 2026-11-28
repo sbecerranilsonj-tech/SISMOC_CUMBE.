@@ -2,6 +2,7 @@ from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
+from core.validaciones import rango_fechas_valido
 from asistencia.models import Trabajador, ResumenAsistenciaDiaria, CierreAsistencia, MarcacionBiometrica
 from asistencia.services.reglas_jornada import programacion_descanso
 from asistencia.services.revision import puede_aprobar, detalle_jornada, marcas_persona
@@ -11,7 +12,7 @@ from asistencia.services.aprobacion_situacion import aprobar_situacion_del_dia
 def validar_descansos(trabajador, desde, hasta, actor):
     if not puede_aprobar(actor):
         raise ValidationError('Solo Contabilidad o Gerencia puede validar descansos.')
-    if not 0 <= (hasta-desde).days <= 365:
+    if not rango_fechas_valido(desde, hasta):
         raise ValidationError('Seleccione un intervalo de hasta 366 días.')
     Trabajador.objects.select_for_update().get(pk=trabajador.pk)
     aprobadas = omitidas = 0

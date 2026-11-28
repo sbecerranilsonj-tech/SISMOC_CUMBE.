@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from django.conf import settings
 from ninja.security import HttpBearer
-from core.models import Usuario
+from core.models import Usuario, ROLES_GESTION
 
 
 JWT_SECRET_KEY = getattr(settings, "JWT_SIGNING_KEY", "")
@@ -87,7 +87,7 @@ class AuthBearer(HttpBearer):
 # Instancias reutilizables de AuthBearer por nivel de acceso
 auth_any = AuthBearer()
 auth_admin_only = AuthBearer(roles_permitidos=[Usuario.Rol.ADMINISTRADOR, Usuario.Rol.GERENTE_GENERAL])
-auth_contadora_or_admin = AuthBearer(roles_permitidos=[Usuario.Rol.CONTADORA, Usuario.Rol.ADMINISTRADOR, Usuario.Rol.GERENTE_GENERAL])
+auth_contadora_or_admin = AuthBearer(roles_permitidos=sorted(ROLES_GESTION))
 auth_conductor = AuthBearer(roles_permitidos=[Usuario.Rol.CONDUCTOR, Usuario.Rol.ADMINISTRADOR])
 auth_operador = AuthBearer(roles_permitidos=[Usuario.Rol.OPERADOR_EMBARQUE, Usuario.Rol.CONDUCTOR, Usuario.Rol.ADMINISTRADOR])
 auth_boleteria = AuthBearer(roles_permitidos=[Usuario.Rol.BOLETERIA, Usuario.Rol.ADMINISTRADOR])

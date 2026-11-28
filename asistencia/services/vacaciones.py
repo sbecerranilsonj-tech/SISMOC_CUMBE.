@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
+from core.validaciones import rango_fechas_valido
 from asistencia.models import Trabajador, PeriodoVacaciones, ResumenAsistenciaDiaria, IncidenciaAsistencia, MarcacionBiometrica
 from asistencia.services.revision import puede_aprobar, comprobar_abierto, detalle_jornada, registrar_historial, marcas_persona
 
@@ -23,7 +24,7 @@ def comprobar_sin_trabajo(r):
 def asignar_vacaciones(trabajador, desde, hasta, actor):
     if not puede_aprobar(actor):
         raise ValidationError('Solo Contabilidad o Gerencia puede asignar vacaciones.')
-    if not 0 <= (hasta-desde).days <= 365:
+    if not rango_fechas_valido(desde, hasta):
         raise ValidationError('Seleccione un periodo válido de hasta 366 días.')
     Trabajador.objects.select_for_update().get(pk=trabajador.pk)
     if PeriodoVacaciones.objects.filter(trabajador=trabajador, desde__lte=hasta, hasta__gte=desde).exists():

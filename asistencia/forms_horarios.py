@@ -1,4 +1,5 @@
 from django import forms
+from core.validaciones import rango_fechas_valido
 from asistencia.models import Trabajador, TurnoHorario
 
 DIAS = list(enumerate(['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']))
@@ -27,7 +28,7 @@ class ProgramarHorarioForm(forms.Form):
 
     def clean(self):
         data=super().clean()
-        if data.get('desde') and data.get('hasta') and not 0 <= (data['hasta']-data['desde']).days <= 365:
+        if data.get('desde') and data.get('hasta') and not rango_fechas_valido(data['desde'], data['hasta']):
             raise forms.ValidationError('El rango debe ser de 1 a 366 días, con la fecha final posterior o igual a la inicial.')
         return data
 

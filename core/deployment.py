@@ -6,6 +6,8 @@ from django.http import Http404, FileResponse, HttpResponse
 from django.views.decorators.http import require_GET
 from django.views.decorators.cache import never_cache
 
+from core.models import ROLES_GESTION
+
 
 @require_GET
 def health(request):
@@ -19,7 +21,7 @@ def archivo_media(request,path):
     user=request.user
     if not user.is_active or not user.esta_activo:
         raise Http404
-    gestor=user.is_superuser or user.rol in {'ADMINISTRADOR','CONTADORA','GERENTE_GENERAL'}
+    gestor=user.is_superuser or user.rol in ROLES_GESTION
     if not gestor and (not user.foto or user.foto.name != path):
         raise Http404
     base=Path(settings.MEDIA_ROOT).resolve()

@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from core.validaciones import rango_fechas_valido
 from asistencia.models import ProgramacionHorario, Trabajador, ResumenAsistenciaDiaria, CierreAsistencia
 from asistencia.services.revision import puede_gestionar, comprobar_abierto, dejar_pendiente, registrar_historial, detalle_jornada
 
@@ -42,7 +43,7 @@ def actualizar_tardanza(resumen, detalle=None, *, guardar=True):
 def programar_horarios(trabajador, desde, hasta, dias, turno, motivo, actor):
     if not puede_gestionar(actor):
         raise ValidationError('No tiene permiso para programar horarios.')
-    if hasta < desde or (hasta - desde).days > 365:
+    if not rango_fechas_valido(desde, hasta):
         raise ValidationError('Seleccione un rango de hasta 366 días.')
     if not dias or not set(dias).issubset(set(range(7))):
         raise ValidationError('Seleccione los días de la semana.')

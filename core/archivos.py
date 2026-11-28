@@ -2,6 +2,7 @@
 from django.core.exceptions import ValidationError
 
 TAMANO_MAXIMO = 10 * 1024 * 1024
+TAMANO_MAXIMO_DOCUMENTOS = 20 * 1024 * 1024
 
 
 def validar_archivo_subido(archivo, extensiones, tamano_maximo=TAMANO_MAXIMO,

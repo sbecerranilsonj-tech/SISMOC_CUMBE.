@@ -8,6 +8,9 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 
+# Única definición del conjunto de roles con acceso de gestión.
+ROLES_GESTION = frozenset({'ADMINISTRADOR', 'CONTADORA', 'GERENTE_GENERAL'})
+
 
 class UsuarioManager(BaseUserManager):
     """Manager personalizado para el modelo Usuario usando DNI o Username."""
@@ -173,7 +176,7 @@ class Usuario(AbstractUser):
 
     @property
     def es_contadora(self):
-        return self.rol in [self.Rol.CONTADORA, self.Rol.ADMINISTRADOR, self.Rol.GERENTE_GENERAL] or self.is_superuser
+        return self.rol in ROLES_GESTION or self.is_superuser
 
     @property
     def es_conductor(self):

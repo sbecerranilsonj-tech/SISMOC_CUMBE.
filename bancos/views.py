@@ -1,16 +1,15 @@
 import hashlib
 import logging
-from functools import wraps
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count
-from django.http import FileResponse, HttpResponseForbidden, HttpResponse
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.urls import reverse
 from django.views.decorators.http import require_GET
+from core.permissions import acceso_gestion
 from .forms import ImportarForm, MovimientoForm
 from .models import EstadoCuenta, Movimiento, Revision
 from .parser import extraer
@@ -19,15 +18,7 @@ from .listados import contexto_importador
 logger = logging.getLogger(__name__)
 
 
-def acceso(vista):
-    @login_required
-    @wraps(vista)
-    def protegida(request, *args, **kwargs):
-        u = request.user
-        if not u.is_active or not u.esta_activo or not (u.is_superuser or u.rol in {'ADMINISTRADOR', 'CONTADORA', 'GERENTE_GENERAL'}):
-            return HttpResponseForbidden('No tiene permiso para consultar información bancaria.')
-        return vista(request, *args, **kwargs)
-    return protegida
+acceso = acceso_gestion('No tiene permiso para consultar información bancaria.')
 
 
 @acceso

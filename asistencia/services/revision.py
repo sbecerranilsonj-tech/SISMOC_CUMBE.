@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 
+from core.models import ROLES_GESTION
+
 from asistencia.models import (
     MarcacionBiometrica, ResumenAsistenciaDiaria, RevisionAsistencia,
     CierreAsistencia,
@@ -13,7 +15,7 @@ from asistencia.models import (
 from asistencia.services.cuadro_excel import construir_cuadro_excel, base_jornada_segundos
 
 CONCEPTOS_HORAS = ("horas_trabajadas", "horas_extras_25", "horas_extras_35", "horas_nocturnas")
-GESTORES = {"ADMINISTRADOR", "CONTADORA", "GERENTE_GENERAL"}
+GESTORES = ROLES_GESTION
 
 
 def puede_gestionar(usuario):
