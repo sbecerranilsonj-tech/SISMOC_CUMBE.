@@ -22,7 +22,7 @@ from core.schemas import (
     MensajeSchema,
 )
 from core.security import create_access_token, auth_any, auth_admin_only, auth_contadora_or_admin
-from core.seguridad_login import esta_bloqueado, registrar_intento
+from core.seguridad_login import esta_bloqueado, registrar_intento, minutos_de_espera
 
 router = Router()
 
@@ -38,7 +38,8 @@ def login(request, data: LoginSchema):
     password = data.password
     ip = getattr(request, 'META', {}).get('REMOTE_ADDR', '') if request else ''
     if esta_bloqueado(identificador, ip):
-        raise HttpError(429, "Demasiados intentos fallidos. Intente en unos minutos.")
+        raise HttpError(429, "Demasiados intentos fallidos. Espere "
+                        f"{minutos_de_espera(identificador, ip)} minutos.")
 
     # Buscar usuario por username o por DNI
     try:

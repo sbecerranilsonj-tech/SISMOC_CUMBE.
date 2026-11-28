@@ -13,7 +13,7 @@ from django.contrib import messages
 from django.conf import settings
 from django.utils.http import url_has_allowed_host_and_scheme
 from core.models import Usuario
-from core.seguridad_login import esta_bloqueado, registrar_intento
+from core.seguridad_login import esta_bloqueado, registrar_intento, minutos_de_espera
 from asistencia.models import MarcacionBiometrica, ResumenAsistenciaDiaria, TurnoHorario
 from asistencia.services.zkteco_live import ZKTecoLiveClient
 from asistencia.views import contexto_asistencia, datos_registros_huellero
@@ -37,7 +37,8 @@ def login_view(request):
         if esta_bloqueado(identificador, ip):
             messages.error(
                 request,
-                'Demasiados intentos fallidos. Espere unos minutos e intente nuevamente.')
+                f'Demasiados intentos fallidos. Espere {minutos_de_espera(identificador, ip)} '
+                'minutos e intente nuevamente.')
             return render(request, 'login.html')
         if not identificador or not password:
             messages.error(request, 'Por favor ingrese su DNI/Usuario y su Contrasena.')
