@@ -30,5 +30,5 @@
     </dialog>
 <dialog id="registrar-horario-dialog" class="schedule-editor schedule-dialog schedule-catalog-dialog" aria-labelledby="titulo-registrar-horario" {% if mostrar_catalogo %}data-auto-open{% endif %}><header class="schedule-dialog-heading"><h2 id="titulo-registrar-horario">Registrar horario</h2><button type="button" class="schedule-secondary" data-close-schedule>Cerrar</button></header><form method="post" class="schedule-new">{% csrf_token %}<input type="hidden" name="accion" value="crear_turno">{{ catalogo.non_field_errors }}{% for field in catalogo %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<button class="schedule-primary">Registrar horario</button></form></dialog>
 <script src="{% static 'horarios_dialogs.js' %}?v=20261105" defer></script>
-<script src="{% static 'buscador_inteligente.js' %}?v=20261127-1" defer></script>
+<script src="{% static 'autocompletado.js' %}?v=20261128-1" defer></script><script src="{% static 'buscador_inteligente.js' %}?v=20261127-1" defer></script>
 </main></body></html>

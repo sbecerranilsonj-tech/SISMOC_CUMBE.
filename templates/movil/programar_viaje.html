@@ -3,4 +3,4 @@
 {% if salida_edit and salida_edit.original.origen_programacion == 'MANUAL' %}
 {% include 'movil/_viaje_form.html' with dialog_id='editar-viaje' prefijo='editar' titulo='Editar viaje' nota='El viaje aparece con los datos registrados. Pasajeros, distribución y responsable de embarque se conservan; si cambias la asignación, Control debe volver a verificar el descanso.' accion='editar' salida_edit=salida_edit es_edicion=True %}
 {% endif %}
-<script src="{% static 'programar_viaje.js' %}?v=20261125-3" defer></script>
+<script src="{% static 'autocompletado.js' %}?v=20261128-1" defer></script><script src="{% static 'programar_viaje.js' %}?v=20261125-3" defer></script>

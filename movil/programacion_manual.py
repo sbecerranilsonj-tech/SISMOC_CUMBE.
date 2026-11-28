@@ -234,51 +234,40 @@ def comprobar_descanso(op):
     return not razones, ' '.join(razones)
 
 
+def _publicar_descanso(salida_id, usuario, accion):
+    """Valida, firma, guarda y audita la publicación; la transacción la impone el llamador."""
+    salida = Salida.objects.select_for_update().get(
+        pk=salida_id, original__origen_programacion='MANUAL')
+    op = Operacion.objects.select_for_update().get(salida=salida)
+    exigir(op.estado == 'PROGRAMADO' and not salida.anulado
+           and salida.estado_operativo != 'CANCELADO',
+           'Este viaje ya no se puede publicar.', 409)
+    exigir(salida.fecha >= timezone.localdate(),
+           'Los viajes históricos son de solo lectura.', 409)
+    publicada, motivo = comprobar_descanso(op)
+    exigir(publicada, motivo or 'No se pudo comprobar el descanso.', 409)
+    salida.original['publicacion_descanso_autorizada'] = True
+    salida.original['firma_asignacion_publicada'] = firma_asignacion(salida)
+    salida.save(update_fields=['original'])
+    Auditoria.objects.create(
+        actor=usuario, accion=accion,
+        detalle={'salida': salida.pk, 'viaje': op.pk,
+                 'conductores': [salida.conductor_uno_id, salida.conductor_dos_id]},
+    )
+    return op
+
+
 @transaction.atomic
 def publicar_pendiente(salida_id, usuario):
     """Solo Control confirma una programación manual pendiente, con auditoría."""
     from .views import GESTION
     exigir(usuario.rol in GESTION, 'Solo Control puede revisar el descanso.', 403)
-    salida = Salida.objects.select_for_update().get(
-        pk=salida_id, original__origen_programacion='MANUAL')
-    op = Operacion.objects.select_for_update().get(salida=salida)
-    exigir(op.estado == 'PROGRAMADO' and not salida.anulado
-           and salida.estado_operativo != 'CANCELADO',
-           'Este viaje ya no se puede publicar.', 409)
-    exigir(salida.fecha >= timezone.localdate(),
-           'Los viajes históricos son de solo lectura.', 409)
-    publicada, motivo = comprobar_descanso(op)
-    exigir(publicada, motivo or 'No se pudo comprobar el descanso.', 409)
-    salida.original['publicacion_descanso_autorizada'] = True
-    salida.original['firma_asignacion_publicada'] = firma_asignacion(salida)
-    salida.save(update_fields=['original'])
-    Auditoria.objects.create(
-        actor=usuario, accion='publicar_programacion_manual',
-        detalle={'salida': salida.pk, 'viaje': op.pk,
-                 'conductores': [salida.conductor_uno_id, salida.conductor_dos_id]},
-    )
-    return op
+    return _publicar_descanso(
+        salida_id, usuario, 'publicar_programacion_manual')
 
 
 @transaction.atomic
 def publicar_automatico(salida_id, usuario):
     """Publica si ambos conductores ya tienen 8 h desde su llegada real."""
-    salida = Salida.objects.select_for_update().get(
-        pk=salida_id, original__origen_programacion='MANUAL')
-    op = Operacion.objects.select_for_update().get(salida=salida)
-    exigir(op.estado == 'PROGRAMADO' and not salida.anulado
-           and salida.estado_operativo != 'CANCELADO',
-           'Este viaje ya no se puede publicar.', 409)
-    exigir(salida.fecha >= timezone.localdate(),
-           'Los viajes históricos son de solo lectura.', 409)
-    publicada, motivo = comprobar_descanso(op)
-    exigir(publicada, motivo or 'No se pudo comprobar el descanso.', 409)
-    salida.original['publicacion_descanso_autorizada'] = True
-    salida.original['firma_asignacion_publicada'] = firma_asignacion(salida)
-    salida.save(update_fields=['original'])
-    Auditoria.objects.create(
-        actor=usuario, accion='publicar_descanso_automatico',
-        detalle={'salida': salida.pk, 'viaje': op.pk,
-                 'conductores': [salida.conductor_uno_id, salida.conductor_dos_id]},
-    )
-    return op
+    return _publicar_descanso(
+        salida_id, usuario, 'publicar_descanso_automatico')
