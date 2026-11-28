@@ -18,6 +18,9 @@ from core.models import Usuario
 from asistencia.models import MarcacionBiometrica, ResumenAsistenciaDiaria
 
 def run_tests():
+    if not os.environ.get("SISMOC_PRUEBA_USUARIO") or not os.environ.get("SISMOC_PRUEBA_PASSWORD"):
+        print("Defina SISMOC_PRUEBA_USUARIO y SISMOC_PRUEBA_PASSWORD antes de ejecutar este script.")
+        return
     print("=" * 70)
     print("INICIANDO PRUEBAS DE AUTOMATIZACION - SPRINT 1 (SISMOC-CUMBE)")
     print("=" * 70)
@@ -28,10 +31,11 @@ def run_tests():
     print("\n1. Test: Autenticacion Login (Contadora Yaneli Terrones)...")
     res_login = client.post(
         "/api/auth/login",
-        data={"username_or_dni": "yaneli.terrones", "password": "cumbe2026"},
+        data={"username_or_dni": os.environ["SISMOC_PRUEBA_USUARIO"],
+              "password": os.environ["SISMOC_PRUEBA_PASSWORD"]},
         content_type="application/json"
     )
-    assert res_login.status_code == 200, f"Error en login: {res_login.status_code} - {res_login.content}"
+    assert res_login.status_code == 200, f"Error en login: {res_login.status_code}"
     data_login = res_login.json()
     token = data_login["access_token"]
     user_info = data_login["user"]
@@ -43,7 +47,7 @@ def run_tests():
     print("\n2. Test: Endpoint Perfil /api/auth/me...")
     res_me = client.get("/api/auth/me", **auth_header)
     assert res_me.status_code == 200, f"Error en me: {res_me.status_code}"
-    print(f"   [OK] Perfil validado para DNI: {res_me.json()['dni']}")
+    print("   [OK] Perfil validado.")
 
     # 3. Test 7 Roles
     print("\n3. Test: Matriz Oficial de 7 Roles RBAC /api/auth/roles...")

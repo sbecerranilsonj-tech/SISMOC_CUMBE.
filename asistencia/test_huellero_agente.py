@@ -69,7 +69,9 @@ class AgenteHuelleroTests(TestCase):
             self._agente("agente_reportar", {}, "post", agente_id="OTRO").status_code, 403)
 
     def test_configuracion_publica_no_incluye_token(self):
-        self.assertNotIn("token", configuracion_agente())
+        config = configuracion_agente()
+        self.assertNotIn("token", config)
+        self.assertNotIn("clave_comunicacion", config)
 
     def test_agente_necesita_token(self):
         self.assertEqual(self.client.get(reverse("agente_comando")).status_code, 403)

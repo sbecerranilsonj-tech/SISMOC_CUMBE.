@@ -38,6 +38,8 @@ pip install -r requirements.txt
 
 # Migrar y poblar datos iniciales
 python manage.py migrate
+# Defina primero una contraseña propia; el comando no usa claves fijas.
+# PowerShell: $env:SISMOC_SEED_PASSWORD = 'su-clave-segura'
 python manage.py seed_sismoc
 
 # Iniciar servidor

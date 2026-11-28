@@ -4,9 +4,10 @@
 # Empresa de Transportes El Cumbe S.A.C. — RUC: 20480397731
 # ==============================================================================
 
+import os
 from datetime import datetime, date, time, timedelta
 from decimal import Decimal
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from core.models import Usuario
 from asistencia.models import (
@@ -183,11 +184,18 @@ class Command(BaseCommand):
                     is_staff=u_info.get("is_staff", False),
                     is_superuser=u_info.get("is_superuser", False),
                 )
-                user_obj.set_password("cumbe2026")
+                password = os.environ.get('SISMOC_SEED_PASSWORD', '')
+                if len(password) < 12:
+                    raise CommandError(
+                        'Defina SISMOC_SEED_PASSWORD con al menos 12 caracteres '
+                        'antes de ejecutar seed_sismoc.')
+                user_obj.set_password(password)
                 user_obj.save()
             usuarios_creados[u_info["username"]] = user_obj
 
-        self.stdout.write(self.style.SUCCESS(f"  [OK] {len(usuarios_creados)} usuarios creados con los 7 roles y contrasena 'cumbe2026'."))
+        self.stdout.write(self.style.SUCCESS(
+            f"  [OK] {len(usuarios_creados)} usuarios creados con los 7 roles; "
+            "las contraseñas se tomaron de SISMOC_SEED_PASSWORD y no se muestran."))
 
         if not kwargs.get('demo'):
             self.stdout.write(self.style.SUCCESS('[OK] Configuración inicial preparada. No se generan asistencias de demostración.'))

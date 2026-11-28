@@ -10,8 +10,8 @@ from pydantic import Field
 
 class LoginSchema(Schema):
     """Credenciales para inicio de sesión (puede usar username o DNI)."""
-    username_or_dni: str = Field(..., description="Nombre de usuario o DNI de 8 dígitos", example="48039773")
-    password: str = Field(..., description="Contraseña de acceso", example="cumbe2026")
+    username_or_dni: str = Field(..., description="Nombre de usuario o DNI de 8 dígitos")
+    password: str = Field(..., description="Contraseña de acceso")
 
 
 class UsuarioOutSchema(Schema):

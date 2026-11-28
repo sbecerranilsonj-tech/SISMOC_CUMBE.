@@ -84,7 +84,6 @@
                 <div class="cfg-field"><label>Dirección IP</label><input id="cfgIp" value="{{ info_huellero.config_agente.ip }}" readonly></div>
                 <div class="cfg-field"><label>Puerto TCP/IP</label><input id="cfgPuerto" value="{{ info_huellero.config_agente.puerto }}" readonly></div>
                 <div class="cfg-field"><label>Número de equipo</label><input id="cfgNumero" value="{{ info_huellero.config_agente.numero_equipo }}" readonly></div>
-                <div class="cfg-field"><label>Clave de comunicación</label><input id="cfgClave" value="{{ info_huellero.config_agente.clave_comunicacion }}" readonly></div>
             </div>
             <p class="cfg-section">CONFIGURACIÓN DEL AGENTE</p>
             <div class="cfg-copy"><div><label class="cfg-section" for="cfgAgente">SEDE / AGENTE</label><select id="cfgAgente" class="cfg-select">{% for a in info_huellero.config_agente.agentes %}<option value="{{ a.id }}">{{ a.sede }} · {{ a.ip }}</option>{% endfor %}</select></div></div>

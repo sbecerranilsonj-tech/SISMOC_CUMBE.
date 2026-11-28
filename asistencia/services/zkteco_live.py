@@ -51,7 +51,6 @@ def configuracion_agente():
         "ip": equipo.get("IP", ""),
         "puerto": equipo.get("PORT", ""),
         "numero_equipo": equipo.get("DEVICE_NUMBER", ""),
-        "clave_comunicacion": equipo.get("COMM_KEY", ""),
         "intervalo": getattr(settings, "HUELLERO_AGENT_INTERVALO", 30),
         "ventanas": getattr(settings, "HUELLERO_REFRIGERIO", {}),
     }
